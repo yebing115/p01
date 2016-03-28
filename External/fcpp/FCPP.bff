@@ -1,0 +1,85 @@
+// FCPP
+//------------------------------------------------------------------------------
+.FCPPBasePath			= '../External/fcpp'
+.FCPP_Windows_MSVC	= 	[	.FCPPIncludePaths		= ' /I"$FCPPBasePath$"'
+							.FCPPCompilerOptions	= ' /wd6262'	// Function uses '%u' bytes of stack:  exceeds /analyze:stacksize '16384'.  Consider moving some data to heap.
+													+ ' /wd28251'	// warning C28251: Inconsistent annotation for '_setjmp': this instance has no annotations. See <no file>(0).
+						]
+
+{
+	.ProjectName		= 'FCPP'
+	.ProjectPath		= '$FCPPBasePath$'
+
+	// Visual Studio Project Generation
+	//--------------------------------------------------------------------------
+	VCXProject( '$ProjectName$-proj' )
+	{
+		.ProjectOutput				= '../tmp/VisualStudio/Projects/$ProjectName$.vcxproj'
+		.ProjectInputPaths			= '$ProjectPath$\'
+		.ProjectFilesToExclude      = { '$ProjectPath$\usecpp.c' }
+		.ProjectBasePath			= '$ProjectPath$\'
+	}
+	
+	// Only build specific files
+	.CompilerInputPath        		= '$FCPPBasePath$\'
+	.CompilerInputExcludedFiles		= { '$FCPPBasePath$\usecpp.c' }
+
+	// Windows (MSVC)
+	//--------------------------------------------------------------------------
+	ForEach( .Config in .Configs_Windows_MSVC )
+	{
+		Using( .Config )
+		.OutputBase + '\$Platform$-$Config$'
+
+		Using( .FCPP_Windows_MSVC )
+
+		// Static Library
+		Library( '$ProjectName$-Lib-$Platform$-$Config$' )
+		{
+			.CompilerOptions			+ .FCPPIncludePaths
+										+ .FCPPCompilerOptions
+                                        + ' /wd6319' // use of the comma-operator in a tested expression causes the left argument to be ignored when it has no side-effects
+                                        + ' /wd6385'
+                                        + ' /wd4458'
+										+ ' /wd6031'
+										+ ' /wd6255'
+										+ ' /wd6011'
+										+ ' /wd6386'
+										+ ' /wd28251'
+										+ ' /wd28252'
+										+ ' /wd28253'
+										+ ' /wd28182'
+										+ ' /wd28199'
+										+ ' /wd4244'
+										+ ' /wd4055'
+										+ ' /wd6330'
+										+ ' /wd6308'
+										+ ' /wd6001'
+										+ ' /wd4701'
+										+ ' /wd4706'
+            .LibrarianOptions           + ' /ignore:4221'
+
+			// Output
+			.CompilerOutputPath			= '$OutputBase$\$ProjectName$\'
+ 			.LibrarianOutput 			= '$OutputBase$\$ProjectName$\$ProjectName$.lib'
+		}
+		Alias( '$ProjectName$-$Platform$-$Config$' ) { .Targets = '$ProjectName$-Lib-$Platform$-$Config$' }
+	}
+
+	// Aliases
+	//--------------------------------------------------------------------------
+	// Per-Config
+	Alias( '$ProjectName$-Debug' )		{ .Targets = { '$ProjectName$-X86-Debug',   '$ProjectName$-X64-Debug' } }
+	Alias( '$ProjectName$-Profile' )	{ .Targets = { '$ProjectName$-X86-Profile', '$ProjectName$-X64-Profile' } }
+	Alias( '$ProjectName$-Release' )	{ .Targets = { '$ProjectName$-X86-Release', '$ProjectName$-X64-Release' } }
+
+	// Per-Platform
+	Alias( '$ProjectName$-X86' )		{ .Targets = { '$ProjectName$-X86-Debug', '$ProjectName$-X64-Release', '$ProjectName$-X86-Profile' } }
+	Alias( '$ProjectName$-X64' )		{ .Targets = { '$ProjectName$-X64-Debug', '$ProjectName$-X64-Release', '$ProjectName$-X64-Profile' } }
+
+	// All
+	Alias( '$ProjectName$' )
+	{
+		.Targets = { '$ProjectName$-Debug', '$ProjectName$-Profile', '$ProjectName$-Release' }
+	}
+}

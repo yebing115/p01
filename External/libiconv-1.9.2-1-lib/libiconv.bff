@@ -1,0 +1,36 @@
+// LibIconv
+//------------------------------------------------------------------------------
+.LibIconvBasePath			= '../External/libiconv-1.9.2-1-lib'
+.LibIconv_Windows_MSVC	= [	.LibIconvIncludePaths		= ' /I"$LibIconvBasePath$/include"'
+							.LibIconvLibrary 			= '$LibIconvBasePath$/lib/libiconv.lib' ]
+
+{
+	.ProjectName		= 'LibIconv'
+	.ProjectPath		= '$LibIconvBasePath$/include'
+
+	// Visual Studio Project Generation
+	//--------------------------------------------------------------------------
+	VCXProject( '$ProjectName$-proj' )
+	{
+		.ProjectOutput				= '../tmp/VisualStudio/Projects/$ProjectName$.vcxproj'
+		.ProjectInputPaths			= '$ProjectPath$\'
+        .ProjectFiles               = '../External/libiconv-1.9.2-1-lib/libiconv.bff'
+		.ProjectBasePath			= '$ProjectPath$\'
+	}
+	ForEach( .Config in .Configs_Windows_MSVC )
+	{
+		Using( .Config )
+		.OutputBase + '\$Platform$-$Config$'
+		
+		Copy( 'Copy-$ProjectName$-DLL-$Platform$-$Config$' )
+		{
+			.Source   = { '$LibIconvBasePath$/bin/libiconv2.dll' }
+			.Dest     = '$OutputBase$/'
+		}
+		Alias( '$ProjectName$-Lib-$Platform$-$Config$' )
+		{
+			Using( .LibIconv_Windows_MSVC )
+ 			.Targets 				= '$LibIconvLibrary$'
+		}
+	}
+}

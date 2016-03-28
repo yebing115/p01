@@ -1,0 +1,416 @@
+; FBuild 
+;-------------------------------------------------------------------------------
+
+;-------------------------------------------------------------------------------
+; Windows Platform
+;-------------------------------------------------------------------------------
+.VSBasePath         = 'D:/Program Files/Microsoft Visual Studio 14.0'
+.WindowsSDKBasePath = 'C:/Program Files (x86)/Windows Kits/10'
+.WindowsSDKSubVer   = '10.0.10586.0'
+
+;-------------------------------------------------------------------------------
+; Settings
+;-------------------------------------------------------------------------------
+Settings
+{
+    #if __WINDOWS__
+        .Environment    = { "PATH=$VSBasePath$\Common7\IDE\;$VSBasePath$\VC\bin\",
+                            "TMP=C:\Windows\Temp",
+                            "SystemRoot=C:\Windows" }
+        .CachePath      = "C:\.fbuild.cache"
+    #endif
+    #if __OSX__
+        .CachePath      = "/tmp/.fbuild.cache"
+    #endif
+    #if __LINUX__
+        .CachePath      = "/tmp/.fbuild.cache"
+    #endif
+}
+
+//------------------------------------------------------------------------------
+// Compilers
+//------------------------------------------------------------------------------
+Compiler( 'Compiler-x86' )
+{
+    .Root       = '$VSBasePath$\VC\bin'
+    .Executable = '$Root$\cl.exe'
+    .ExtraFiles = { '$Root$\c1.dll'
+                    '$Root$\c1xx.dll',
+                    '$Root$\c2.dll',
+                    '$Root$\msobj140.dll'
+                    '$Root$\mspdb140.dll'
+                    '$Root$\mspdbsrv.exe'
+                    '$Root$\mspdbcore.dll'
+                    '$Root$\mspft140.dll'
+                    '$Root$\2052\clui.dll'
+                    '$VSBasePath$\VC\redist\x86\Microsoft.VC140.CRT\msvcp140.dll'
+                    '$VSBasePath$\VC\redist\x86\Microsoft.VC140.CRT\vccorlib140.dll'
+                  }
+}
+Compiler( 'Compiler-x64' )
+{
+    .Root       = '$VSBasePath$\VC\bin'
+    .Executable = '$Root$\x86_amd64\cl.exe'
+    .ExtraFiles = { '$Root$\x86_amd64\c1.dll'
+                    '$Root$\x86_amd64\c1xx.dll',
+                    '$Root$\x86_amd64\c2.dll',
+                    '$Root$\x86_amd64\2052\clui.dll'
+                    '$Root$\msobj140.dll'
+                    '$Root$\mspdb140.dll'
+                    '$Root$\mspdbsrv.exe'
+                    '$Root$\mspdbcore.dll'
+                    '$Root$\mspft140.dll'
+                    '$VSBasePath$\VC\redist\x86\Microsoft.VC140.CRT\msvcp140.dll'
+                    '$VSBasePath$\VC\redist\x86\Microsoft.VC140.CRT\vccorlib140.dll'
+                  }
+}
+
+//------------------------------------------------------------------------------
+// Configurations
+//------------------------------------------------------------------------------
+.MSVCBaseConfig =
+[
+    .AdditionalWarnings     = ' /we4062' // enumerator 'identifier' in a switch of enum 'enumeration' is not handled
+                            + ' /we4263' // 'function' : member function does not override any base class virtual member function
+                            // + ' /we4265' // 'class': class has virtual functions, but destructor is not virtual
+                            + ' /we4296' // 'operator': expression is always false
+                            + ' /we4555' // expression has no effect; expected expression with side-effect
+                            + ' /we4619' // #pragma warning : there is no warning number 'number'
+                            + ' /we4640' // 'instance' : construction of local static object is not thread-safe
+                            + ' /we4826' // Conversion from 'type1 ' to 'type_2' is sign-extended. This may cause unexpected runtime behavior.
+                            + ' /we4836' // nonstandard extension used : 'type' : local types or unnamed types cannot be used as template arguments
+                            + ' /we4905' // wide string literal cast to 'LPSTR'
+                            + ' /we4906' // string literal cast to 'LPWSTR'
+
+	.CompilerInputPattern   = { '*.cpp', '*.c' }
+    .CompilerOptions        = '"%1" /Z7 /nologo /c /W4 /WX'
+                            + ' /Zc:inline'         // Remove unreferenced COMDATs at compile time (VS2013.2+)
+                            + ' /Zc:strictStrings'  // Require const only usage of string literals (VS2013+)
+                            + .AdditionalWarnings
+                            + ' /fp:fast'
+                            + ' /D_WIN32 /DON_WINDOWS=1'
+                            + ' /D"_CRT_SECURE_NO_WARNINGS"' // don't warn about unsafe functions
+                            + ' /D"_WINSOCK_DEPRECATED_NO_WARNINGS"' // don't warn about deprecated winsock functions - TODO:C Update API use
+                            + ' /D"_HAS_EXCEPTIONS=0"'
+							+ ' /D"_UNICODE"'
+							+ ' /D"UNICODE"'
+    .PCHOptions             = .CompilerOptions
+                            + ' /Fp"%2" /Fo"%3"'
+    .CompilerOptions        + ' /Fo"%2"'
+    .LibrarianOptions       = '/NODEFAULTLIB /WX /NOLOGO /OUT:"%2" "%1"'
+    .LinkerOptions          = '/NODEFAULTLIB /WX /NOLOGO /INCREMENTAL:NO /OUT:"%2" "%1" /DEBUG'
+
+    // Optimizations
+    .CompilerDebugOptimizations     = ' /MDd /Od /RTC1 /GS /Oy- /GR- /analyze'
+    .CompilerReleaseOptimizations   = ' /MD /Ox /Oy /Oi /GS- /GF /GL /Gy /Gw /GR- /analyze'
+    .LibrarianDebugOptimizations    = ''
+    .LibrarianReleaseOptimizations  = ' /LTCG'
+    .LinkerDebugOptimizations       = ' msvcrtd.lib vcruntimed.lib ucrtd.lib msvcprtd.lib'
+    .LinkerReleaseOptimizations     = ' /LTCG /OPT:REF,ICF msvcrt.lib vcruntime.lib ucrt.lib msvcprt.lib'
+
+    .BaseIncludePaths       = ' /I"./"'
+                            + ' /I"$VSBasePath$/VC/include/"'
+                            + ' /I"$WindowsSDKBasePath$/include/$WindowsSDKSubVer$/um"'
+                            + ' /I"$WindowsSDKBasePath$/include/$WindowsSDKSubVer$/shared"'
+                            + ' /I"$WindowsSDKBasePath$/include/$WindowsSDKSubVer$/ucrt"'
+    .CompilerOptions        + .BaseIncludePaths
+    .PCHOptions             + .BaseIncludePaths
+
+    .WindowsLibPaths        = '$WindowsSDKBasePath$/lib/$WindowsSDKSubVer$/um'
+    .WindowsUcrtLibPaths    = '$WindowsSDKBasePath$/lib/$WindowsSDKSubVer$/ucrt'
+
+    .UseExceptions          = ' /EHsc'
+]
+
+// X86
+//------------------------------------------------------------------------------
+.X86BaseConfig = 
+[
+    Using( .MSVCBaseConfig )
+    .ToolsBasePath          = '$VSBasePath$\VC\bin'
+    .Compiler               = 'Compiler-x86'
+    .Librarian              = '$ToolsBasePath$\lib.exe'
+    .Linker                 = '$ToolsBasePath$\link.exe'
+    .CompilerOptions        + ' /arch:SSE2'
+                            + ' /DWIN32'
+    .PCHOptions             + ' /arch:SSE2'
+                            + ' /DWIN32'
+    .LinkerOptions          + ' /MACHINE:X86'
+    .Platform               = 'x86'
+    .LinkerOptions          + ' /LIBPATH:"$WindowsLibPaths$/x86" /LIBPATH:"$WindowsUcrtLibPaths$/x86" /LIBPATH:"$VSBasePath$/VC/lib"'
+]
+.X86DebugConfig =
+[
+    Using( .X86BaseConfig )
+    .Config                 = 'Debug'
+    .CompilerOptions        + ' /DDEBUG /DPROFILING_ENABLED'
+                            + .CompilerDebugOptimizations
+    .PCHOptions             + ' /DDEBUG /DPROFILING_ENABLED'
+                            + .CompilerDebugOptimizations
+    .LibrarianOptions       + .LibrarianDebugOptimizations
+    .LinkerOptions          + .LinkerDebugOptimizations
+]
+.X86ReleaseConfig =
+[
+    Using( .X86BaseConfig )
+    .Config                 = 'Release'
+    .CompilerOptions        + ' /DRELEASE'
+                            + ' /d2Zi+'     // Improve optimized debugging VS2013.3+
+    .PCHOptions             + ' /DRELEASE'
+
+    // Setup de-optimization options (FASTBUILD_DEOPTIMIZE_OBJECT)
+    .DeoptimizeWritableFilesWithToken   = true
+    .CompilerOptionsDeoptimized     = '$CompilerOptions$ /Od'
+    .PCHOptionsDeoptimized          = '$PCHOptions$ /Od'
+
+    .CompilerOptions        + .CompilerReleaseOptimizations                         
+    .PCHOptions             + .CompilerReleaseOptimizations                         
+    .LibrarianOptions       + .LibrarianReleaseOptimizations
+    .LinkerOptions          + .LinkerReleaseOptimizations
+]
+.X86ProfileConfig =
+[
+    Using( .X86ReleaseConfig ) // Note: based on Release config
+    .Config                 = 'Profile'
+    .CompilerOptions        + ' /DPROFILING_ENABLED'
+    .PCHOptions             + ' /DPROFILING_ENABLED'
+
+    .DeoptimizeWritableFilesWithToken = false
+]
+
+// X64
+//------------------------------------------------------------------------------
+.X64BaseConfig = 
+[
+    Using( .MSVCBaseConfig )
+    .ToolsBasePath          = '$VSBasePath$\VC\bin\x86_amd64'
+    .Compiler               = 'Compiler-x64'
+    .Librarian              = '$ToolsBasePath$\lib.exe'
+    .Linker                 = '$ToolsBasePath$\link.exe'
+    .CompilerOptions        + ' /DWIN64'
+    .PCHOptions             + ' /DWIN64'
+    .LinkerOptions          + ' /MACHINE:X64'
+    .Platform               = 'x64'
+    .LinkerOptions          + ' /LIBPATH:"$WindowsLibPaths$/x64" /LIBPATH:"$WindowsUcrtLibPaths$/x64" /LIBPATH:"$VSBasePath$/VC/lib/amd64"'
+]
+.X64DebugConfig =
+[
+    Using( .X64BaseConfig )
+    .Config                 = 'Debug'
+    .CompilerOptions        + ' /DDEBUG /DPROFILING_ENABLED'
+                            + .CompilerDebugOptimizations                           
+    .PCHOptions             + ' /DDEBUG /DPROFILING_ENABLED'
+                            + .CompilerDebugOptimizations                           
+    .LibrarianOptions       + .LibrarianDebugOptimizations
+    .LinkerOptions          + .LinkerDebugOptimizations
+]
+.X64ReleaseConfig =
+[
+    Using( .X64BaseConfig )
+    .Config                 = 'Release'
+    .CompilerOptions        + ' /DRELEASE'
+    .PCHOptions             + ' /DRELEASE'
+
+    // Setup de-optimization options (FASTBUILD_DEOPTIMIZE_OBJECT)
+    .DeoptimizeWritableFilesWithToken   = true
+    .CompilerOptionsDeoptimized     = '$CompilerOptions$ /Od'
+    .PCHOptionsDeoptimized          = '$PCHOptions$ /Od'
+
+    .CompilerOptions        + .CompilerReleaseOptimizations                         
+    .PCHOptions             + .CompilerReleaseOptimizations                         
+    .LibrarianOptions       + .LibrarianReleaseOptimizations
+    .LinkerOptions          + .LinkerReleaseOptimizations
+]
+.X64ProfileConfig =
+[
+    Using( .X64ReleaseConfig ) // Note: based on Release config
+    .Config                 = 'Profile'
+    .CompilerOptions        + ' /DPROFILING_ENABLED'
+    .PCHOptions             + ' /DPROFILING_ENABLED'
+
+    .DeoptimizeWritableFilesWithToken = false
+]
+
+// Resource Compiler
+//------------------------------------------------------------------------------
+.ResourceCompiler =
+[
+    .Compiler                   = '$WindowsSDKBasePath$\Bin\x86\RC.exe'
+    .CompilerOutputExtension    = '.res'
+    .CompilerOptions            = '/nologo /fo"%2" "%1"'
+]
+
+//------------------------------------------------------------------------------
+// 
+//------------------------------------------------------------------------------
+.OutputBase = '../tmp'
+
+//------------------------------------------------------------------------------
+// Unity/Blob files (shared across configs)
+//------------------------------------------------------------------------------
+.UnityInputIsolateWritableFiles = true
+
+//------------------------------------------------------------------------------
+// VisualStudio Project Generation
+//------------------------------------------------------------------------------
+.ProjectCommon = 
+[
+    .ProjectBuildCommand        = 'cd ^$(SolutionDir)\..\..\Code\ &amp; fbuild -vs -dist -cache ^$(ProjectName)-^$(Configuration)'
+    .ProjectRebuildCommand      = 'cd ^$(SolutionDir)\..\..\Code\ &amp; fbuild -vs -dist -cache -clean ^$(ProjectName)-^$(Configuration)'
+    .OutputDirectory            = '^$(SolutionDir)\..\tmp2'
+    .IntermediateDirectory      = '^$(SolutionDir)\..\tmp2'
+    .Platform = 'Win32' // unused
+    .PlatformToolset = 'v120'
+    .IncludeSearchPath          = '^$(SolutionDir)..\..\External\MathGeoLib-20160215\src;'
+								+ '^$(SolutionDir)..\..\External\imgui-20160326;'
+								+ '^$(SolutionDir)..\..\External\libiconv-1.9.2-1-lib\include;'
+								+ '^$(SolutionDir)..\..\Code\C3;'
+								+ '^$(SolutionDir)..\..\Code\Game;'
+								+ '.\'
+    .X86Defines                 = 'WIN32_LEAN_AND_MEAN;_WIN32;ON_WINDOWS=1;WIN32;'
+    .X64Defines                 = 'WIN32_LEAN_AND_MEAN;_WIN32;ON_WINDOWS=1;WIN64;'
+    .DebugDefines               = 'DEBUG;PROFILING_ENABLED'
+    .ProfileDefines             = 'RELEASE;PROFILING_ENABLED'
+    .ReleaseDefines             = 'RELEASE'
+]
+
+.ProjectX86Debug        = [ Using( .ProjectCommon ) .Config = 'x86-Debug'   .PreprocessorDefinitions = .X86Defines + .DebugDefines ]
+.ProjectX86Profile      = [ Using( .ProjectCommon ) .Config = 'x86-Profile' .PreprocessorDefinitions = .X86Defines + .ProfileDefines ]
+.ProjectX86Release      = [ Using( .ProjectCommon ) .Config = 'x86-Release' .PreprocessorDefinitions = .X86Defines + .ReleaseDefines ]
+.ProjectX64Debug        = [ Using( .ProjectCommon ) .Config = 'x64-Debug'   .PreprocessorDefinitions = .X64Defines + .DebugDefines ]
+.ProjectX64Profile      = [ Using( .ProjectCommon ) .Config = 'x64-Profile' .PreprocessorDefinitions = .X64Defines + .ProfileDefines ]
+.ProjectX64Release      = [ Using( .ProjectCommon ) .Config = 'x64-Release' .PreprocessorDefinitions = .X64Defines + .ReleaseDefines ]
+
+.ProjectConfigs = { .ProjectX86Debug, .ProjectX86Profile, .ProjectX86Release,
+                    .ProjectX64Debug, .ProjectX64Profile, .ProjectX64Release }
+
+// Project to compile everything
+VCXProject( 'All-proj' )
+{
+    .ProjectOutput              = '../tmp/VisualStudio/Projects/All.vcxproj'
+    .ProjectFiles           = { '.\fbuild.bff' }
+    .ProjectBasePath            = '.\'
+}
+
+// Project to regenerate projects/solutions
+VCXProject( 'UpdateSolution-proj' )
+{
+    .ProjectOutput              = '../tmp/VisualStudio/Projects/UpdateSolution.vcxproj'
+    .ProjectFiles           	= { '.\fbuild.bff' }
+    .ProjectBasePath            = '.\'
+
+    .GenerateProjectsCommands =
+    [
+        .ProjectBuildCommand        = 'cd ^$(SolutionDir)\..\..\Code\ &amp; fbuild solution -vs'
+        .ProjectRebuildCommand      = 'cd ^$(SolutionDir)\..\..\Code\ &amp; fbuild solution -vs -clean'
+    ]
+
+    .ProjectX86Debug        = [ Using( .ProjectX86Debug )       Using( .GenerateProjectsCommands ) ]
+    .ProjectX86Profile      = [ Using( .ProjectX86Profile )     Using( .GenerateProjectsCommands ) ]
+    .ProjectX86Release      = [ Using( .ProjectX86Release )     Using( .GenerateProjectsCommands ) ]
+    .ProjectX64Debug        = [ Using( .ProjectX64Debug )       Using( .GenerateProjectsCommands ) ]
+    .ProjectX64Profile      = [ Using( .ProjectX64Profile )     Using( .GenerateProjectsCommands ) ]
+    .ProjectX64Release      = [ Using( .ProjectX64Release )     Using( .GenerateProjectsCommands ) ]
+
+    .ProjectConfigs = { .ProjectX86Debug, .ProjectX86Profile, .ProjectX86Release,
+                        .ProjectX64Debug, .ProjectX64Profile, .ProjectX64Release }
+}
+
+// Configurations
+//------------------------------------------------------------------------------
+.Configs = { .X86DebugConfig, .X86ProfileConfig, .X86ReleaseConfig,
+             .X64DebugConfig, .X64ProfileConfig, .X64ReleaseConfig }
+
+.Configs_Windows_MSVC   = { .X86DebugConfig, .X86ProfileConfig, .X86ReleaseConfig,
+                            .X64DebugConfig, .X64ProfileConfig, .X64ReleaseConfig }
+
+// External
+#include "../External/MathGeoLib-20160215/MathGeoLib.bff"
+#include "../External/libiconv-1.9.2-1-lib/libiconv.bff"
+#include "../External/imgui-20160326/IMGUI.bff"
+#include "../External/fcpp/FCPP.bff"
+
+// Engine
+#include "C3/C3.bff"
+
+// Tool
+#include "../Tool/slc/slc.bff"
+
+// Game
+#include "Game/p01.bff"
+
+// Aliases : All-$Platform$-$Config$
+//------------------------------------------------------------------------------
+ForEach( .Config in .Configs )
+{
+    Using( .Config )
+
+    Alias( 'All-$Platform$-$Config$' )
+    {
+        .Targets        = { // executables
+                            'p01-$Platform$-$Config$'
+                          }
+    }
+}
+
+// Aliases : All-$Platform$
+//------------------------------------------------------------------------------
+.Platforms = { 'x86', 'x64' }
+ForEach( .Platform in .Platforms )
+{
+    Alias( 'All-$Platform$' )
+    {
+        .Targets        = { 'All-$Platform$-Debug',
+                            'All-$Platform$-Profile',
+                            'All-$Platform$-Release'
+                          }
+    }
+}
+
+// Aliases : All
+//------------------------------------------------------------------------------
+#if __WINDOWS__
+    Alias( 'All' )
+    {
+        .Targets        = { 'All-x86',
+                            'All-x64'
+                          }
+    }
+#endif
+
+// Visual Studio Solution
+//------------------------------------------------------------------------------
+VSSolution( 'solution' )
+{
+    .SolutionOutput     = '../tmp/VisualStudio/p01.sln'
+    .SolutionProjects   = { 'All-proj',
+                            'UpdateSolution-proj',
+                          }
+    .SolutionBuildProject = 'All-proj'
+    .SolutionConfigs    = .ProjectConfigs
+
+    .Folder_0_External =
+    [ 
+        .Path           = '0. External'
+        .Projects       = { 'MathGeoLib-proj', 'LibIconv-proj', 'IMGUI-proj', 'FCPP-proj' }
+    ]
+    .Folder_1_Engine =
+    [ 
+        .Path           = '1. Engine'
+        .Projects       = { 'C3-proj' }
+    ]
+    .Folder_2_Tool =
+    [ 
+        .Path           = '2. Tool'
+        .Projects       = { 'slc-proj' }
+    ]
+    .Folder_3_Game =
+    [ 
+        .Path           = '3. Game'
+        .Projects       = { 'p01-proj' }
+    ]
+    .SolutionFolders    = { .Folder_0_External, .Folder_1_Engine, .Folder_2_Tool, .Folder_3_Game }
+    .SolutionVisualStudioVersion = '14.0.24720.00'
+}
+
+//------------------------------------------------------------------------------

@@ -104,7 +104,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     //ProcessXInput();
 
     GraphicsRenderer::Instance()->Reset((u16)s_window_size.x, (u16)s_window_size.y,
-                                        C3_RESET_NONE);
+                                        C3_RESET_FULLSCREEN);
 
     IO.KeyCtrl = (GetKeyState(VK_LCONTROL) & 0x8000) || (GetKeyState(VK_RCONTROL) & 0x8000);
     IO.KeyShift = (GetKeyState(VK_LSHIFT) & 0x8000) || (GetKeyState(VK_RSHIFT) & 0x8000);
@@ -115,7 +115,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     s_app->Update(dt);
     s_app->Render(dt);
 
-    //ImGui::Text("Hello, world!");
+    ImGui::Text("Hello, world!");
     ImGui::ShowTestWindow();
     ImGui::Render();
 

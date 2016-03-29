@@ -72,8 +72,6 @@ Compiler( 'Compiler-x64' )
 [
     .AdditionalWarnings     = ' /we4062' // enumerator 'identifier' in a switch of enum 'enumeration' is not handled
                             + ' /we4263' // 'function' : member function does not override any base class virtual member function
-                            // + ' /we4265' // 'class': class has virtual functions, but destructor is not virtual
-                            + ' /we4296' // 'operator': expression is always false
                             + ' /we4555' // expression has no effect; expected expression with side-effect
                             + ' /we4619' // #pragma warning : there is no warning number 'number'
                             + ' /we4640' // 'instance' : construction of local static object is not thread-safe
@@ -82,8 +80,8 @@ Compiler( 'Compiler-x64' )
                             + ' /we4905' // wide string literal cast to 'LPSTR'
                             + ' /we4906' // string literal cast to 'LPWSTR'
 
-	.CompilerInputPattern   = { '*.cpp', '*.c' }
-    .CompilerOptions        = '"%1" /Z7 /nologo /c /W4 /WX'
+	.CompilerInputPattern   = { '*.cpp', '*.cc', '*.c' }
+    .CompilerOptions        = '"%1" /Z7 /nologo /c /W3'
                             + ' /Zc:inline'         // Remove unreferenced COMDATs at compile time (VS2013.2+)
                             + ' /Zc:strictStrings'  // Require const only usage of string literals (VS2013+)
                             + .AdditionalWarnings
@@ -97,12 +95,12 @@ Compiler( 'Compiler-x64' )
     .PCHOptions             = .CompilerOptions
                             + ' /Fp"%2" /Fo"%3"'
     .CompilerOptions        + ' /Fo"%2"'
-    .LibrarianOptions       = '/NODEFAULTLIB /WX /NOLOGO /OUT:"%2" "%1"'
-    .LinkerOptions          = '/NODEFAULTLIB /WX /NOLOGO /INCREMENTAL:NO /OUT:"%2" "%1" /DEBUG'
+    .LibrarianOptions       = '/NODEFAULTLIB /NOLOGO /OUT:"%2" "%1"'
+    .LinkerOptions          = '/NODEFAULTLIB /NOLOGO /INCREMENTAL:NO /OUT:"%2" "%1" /DEBUG'
 
     // Optimizations
-    .CompilerDebugOptimizations     = ' /MDd /Od /RTC1 /GS /Oy- /GR- /analyze'
-    .CompilerReleaseOptimizations   = ' /MD /Ox /Oy /Oi /GS- /GF /GL /Gy /Gw /GR- /analyze'
+    .CompilerDebugOptimizations     = ' /MDd /Od /RTC1 /GS /Oy- /GR-'
+    .CompilerReleaseOptimizations   = ' /MD /Ox /Oy /Oi /GS- /GF /GL /Gy /Gw /GR-'
     .LibrarianDebugOptimizations    = ''
     .LibrarianReleaseOptimizations  = ' /LTCG'
     .LinkerDebugOptimizations       = ' msvcrtd.lib vcruntimed.lib ucrtd.lib msvcprtd.lib'
@@ -329,12 +327,14 @@ VCXProject( 'UpdateSolution-proj' )
 #include "../External/libiconv-1.9.2-1-lib/libiconv.bff"
 #include "../External/imgui-20160326/IMGUI.bff"
 #include "../External/fcpp/FCPP.bff"
+#include "../External/assimp-3.1.1/assimp.bff"
 
 // Engine
 #include "C3/C3.bff"
 
 // Tool
 #include "../Tool/slc/slc.bff"
+#include "../Tool/modelc/modelc.bff"
 
 // Game
 #include "Game/p01.bff"
@@ -348,7 +348,9 @@ ForEach( .Config in .Configs )
     Alias( 'All-$Platform$-$Config$' )
     {
         .Targets        = { // executables
-                            'p01-$Platform$-$Config$'
+                            'slc-$Platform$-$Config$',
+							'modelc-$Platform$-$Config$',
+							'p01-$Platform$-$Config$',
                           }
     }
 }
@@ -392,7 +394,7 @@ VSSolution( 'solution' )
     .Folder_0_External =
     [ 
         .Path           = '0. External'
-        .Projects       = { 'MathGeoLib-proj', 'LibIconv-proj', 'IMGUI-proj', 'FCPP-proj' }
+        .Projects       = { 'MathGeoLib-proj', 'LibIconv-proj', 'IMGUI-proj', 'FCPP-proj', 'Assimp-proj' }
     ]
     .Folder_1_Engine =
     [ 
@@ -402,7 +404,7 @@ VSSolution( 'solution' )
     .Folder_2_Tool =
     [ 
         .Path           = '2. Tool'
-        .Projects       = { 'slc-proj' }
+        .Projects       = { 'modelc-proj', 'slc-proj' }
     ]
     .Folder_3_Game =
     [ 

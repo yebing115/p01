@@ -10,6 +10,7 @@
 #define C3_CHUNK_MAGIC_TEX MAKE_FOURCC('T', 'E', 'X', ' ')
 #define C3_CHUNK_MAGIC_VSH MAKE_FOURCC('V', 'S', 'H', ' ')
 #define C3_CHUNK_MAGIC_FSH MAKE_FOURCC('F', 'S', 'H', ' ')
+#define C3_CHUNK_MAGIC_MEX MAKE_FOURCC('M', 'E', 'X', ' ')
 
 #define TEXTURE_COMPONENT 0x1000
 #define VERTEX_BUFFER_COMPONENT 0x1001

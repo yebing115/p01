@@ -7,7 +7,7 @@ String AppConfig::RESOURCES_FOLDER = "Assets";
 String AppConfig::WINDOW_TITLE = "Untitled";
 String AppConfig::ICON_FILENAME{"icon.ico"};
 bool AppConfig::USE_SYSTEM_CURSOR = true;
-int AppConfig::MAX_FPS = 60;
+int AppConfig::MAX_FPS = 12000;
 float2 AppConfig::RESOLUTION{1600, 900};
 bool AppConfig::USE_FULL_SCREEN = false;
 bool AppConfig::USE_VSYNC = false;

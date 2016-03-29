@@ -337,6 +337,12 @@ String& String::RemoveLastSection(char sep) {
   return *this;
 }
 
+String String::GetLastSection(char sep) {
+  auto p = GetLastSeparator(sep);
+  if (!p) return EMPTY_STRING;
+  return String(p + 1);
+}
+
 String& String::ChangeSuffix(const String& suffix) {
   return RemoveSuffix().Append(suffix);
 }

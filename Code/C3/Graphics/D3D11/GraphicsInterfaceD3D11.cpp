@@ -1055,6 +1055,7 @@ void GraphicsInterfaceD3D11::Init() {
   _scd.BufferDesc.RefreshRate.Numerator = 0;
   _scd.BufferDesc.RefreshRate.Denominator = 1;
   _scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+  _scd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
   _scd.SampleDesc.Count = 1;
   _scd.SampleDesc.Quality = 0;
   _scd.BufferCount = 1;                                    // one back buffer

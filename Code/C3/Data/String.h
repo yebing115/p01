@@ -82,6 +82,7 @@ public:
   String GetSuffixName() const;
   String& RemoveSuffix();
   String& RemoveLastSection(char sep = '/');
+  String GetLastSection(char sep = '/');
   String& ChangeSuffix(const String& suffix);
   String MakeWithoutSuffix() const;
   String MakeWithAnotherSuffix(const String& suffix) const;

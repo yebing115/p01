@@ -17,6 +17,7 @@
 {
 	.ProjectName		= 'C3'
 	.ProjectPath		= '$C3BasePath$/'
+	.PCHName			= 'C3PCH'
 
 	// Visual Studio Project Generation
 	//--------------------------------------------------------------------------
@@ -46,16 +47,26 @@
 		// Static Library
 		Library( '$ProjectName$-Lib-$Platform$-$Config$' )
 		{
-			.CompilerOptions			+ .C3IncludePaths
+			.BaseCompilerOptions		= .CompilerOptions
+										+ .C3IncludePaths
 										+ .C3CompilerOptions
 										+ .MathGeoLibIncludePaths
 										+ .LibIconvIncludePaths
 										+ .IMGUIIncludePaths
 										+ .Lz4IncludePaths
 
+			.PCHInputFile				= '$AssimpBasePath$\code\$PCHName$.cpp'
+			.PCHOutputFile				= '$OutputBase$\$ProjectName$\$PCHName$.pch'
+			.PCHOptions					+ .BaseCompilerOptions
+										+ ' /Yc"$PCHName$.h"'
+
 			// Output
 			.CompilerOutputPath			= '$OutputBase$\$ProjectName$\'
  			.LibrarianOutput 			= '$OutputBase$\$ProjectName$\$ProjectName$.lib'
+
+			.CompilerOptions			+ .BaseCompilerOptions
+										+ ' /Yu"$PCHName$.h"'
+										+ ' /Fp"$PCHOutputFile$"'
 		}
 		Alias( '$ProjectName$-$Platform$-$Config$' ) { .Targets = '$ProjectName$-Lib-$Platform$-$Config$' }
 	}

@@ -2,6 +2,8 @@
 #include "Data/DataType.h"
 #include "Data/String.h"
 
+#define CACHELINE_SIZE 64
+
 struct PlatformData {
   void* ndt;            //!< Native display type
   void* nwh;            //!< Native window handle
@@ -9,5 +11,6 @@ struct PlatformData {
   void* back_buffer;    //!< GL backbuffer, or D3D render target view
   void* back_buffer_ds; //!< Backbuffer depth/stencil.
   vector<String> arguments;
+  bool use_archive;
 };
 extern PlatformData g_platform_data;

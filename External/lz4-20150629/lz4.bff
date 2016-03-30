@@ -1,22 +1,14 @@
-// C3
+// Lz4
 //------------------------------------------------------------------------------
-.C3BasePath			= 'C3'
-.C3_Windows_MSVC	= [	
-						.C3IncludePaths		= ' /I"$C3BasePath$"'
-						.C3CompilerOptions	= ' /wd6262'	// Function uses '%u' bytes of stack:  exceeds /analyze:stacksize '16384'.  Consider moving some data to heap.
-											+ ' /wd6319'
-                      + ' /wd6385'
-                      + ' /wd6011'
-                      + ' /wd6255'
-											+ ' /wd28251'	// warning C28251: Inconsistent annotation for '_setjmp': this instance has no annotations. See <no file>(0).
-											+ ' /wd28252'
-											+ ' /wd28253'
-                      + ' /wd4100'
-					  ]
+.Lz4BasePath			= '../External/lz4-20150629'
+.Lz4_Windows_MSVC	= 	[	.Lz4IncludePaths		= ' /I"$Lz4BasePath$"'
+							.Lz4CompilerOptions	= ' /wd6262'	// Function uses '%u' bytes of stack:  exceeds /analyze:stacksize '16384'.  Consider moving some data to heap.
+												+ ' /wd28251'	// warning C28251: Inconsistent annotation for '_setjmp': this instance has no annotations. See <no file>(0).
+						]
 
 {
-	.ProjectName		= 'C3'
-	.ProjectPath		= '$C3BasePath$/'
+	.ProjectName		= 'lz4'
+	.ProjectPath		= '$Lz4BasePath$'
 
 	// Visual Studio Project Generation
 	//--------------------------------------------------------------------------
@@ -28,7 +20,7 @@
 	}
 	
 	// Only build specific files
-	.CompilerInputPath        		= '$C3BasePath$\'
+	.CompilerInputPath        		= '$Lz4BasePath$\'
 
 	// Windows (MSVC)
 	//--------------------------------------------------------------------------
@@ -37,21 +29,14 @@
 		Using( .Config )
 		.OutputBase + '\$Platform$-$Config$'
 
-		Using( .C3_Windows_MSVC )
-		Using( .MathGeoLib_Windows_MSVC )
-		Using( .LibIconv_Windows_MSVC )
-		Using( .IMGUI_Windows_MSVC )
 		Using( .Lz4_Windows_MSVC )
 
 		// Static Library
 		Library( '$ProjectName$-Lib-$Platform$-$Config$' )
 		{
-			.CompilerOptions			+ .C3IncludePaths
-										+ .C3CompilerOptions
-										+ .MathGeoLibIncludePaths
-										+ .LibIconvIncludePaths
-										+ .IMGUIIncludePaths
-										+ .Lz4IncludePaths
+			.CompilerOptions			+ .Lz4IncludePaths
+										+ .Lz4CompilerOptions
+            .LibrarianOptions           + ' /ignore:4221'
 
 			// Output
 			.CompilerOutputPath			= '$OutputBase$\$ProjectName$\'

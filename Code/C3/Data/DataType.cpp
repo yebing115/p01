@@ -13,3 +13,15 @@ u16 DATA_TYPE_SIZE[DATA_TYPE_COUNT] = {
   sizeof(float), sizeof(double)
 };
 
+const char* DATA_TYPE_NAMES[DATA_TYPE_COUNT] = {
+  "INT8",
+  "UINT8",
+  "INT16",
+  "UINT16",
+  "INT32",
+  "UINT32",
+  "INT64",
+  "UINT64",
+  "FLOAT",
+  "DOUBLE",
+};

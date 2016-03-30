@@ -33,3 +33,8 @@ template <typename T>
 inline void clear_bit(T& n, u8 bit) { n &= ~(1 << bit); }
 template <typename T>
 inline void flip_bit(T& n, u8 bit) { n ^= (1 << bit); }
+
+template <typename T>
+T clamp(const T& value, const T& min_value, const T& max_value) {
+  return max<T>(min<T>(value, max_value), min_value);
+}

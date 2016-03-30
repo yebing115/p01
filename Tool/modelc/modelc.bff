@@ -61,6 +61,7 @@
 										+ .AssimpIncludePaths
 										+ ' /wd4201'
 										+ ' /wd28183'
+										+ ' -D"NO_LOG_MANAGER"'
 		}
 
 		// Executable

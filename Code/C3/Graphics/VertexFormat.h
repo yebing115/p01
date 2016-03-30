@@ -5,13 +5,6 @@
 #include "Algorithm/Hasher.h"
 #include "Debug/C3Debug.h"
 
-extern const String POSITION_ATTRIBUTE_NAME;
-extern const String TEXCOORD_ATTRIBUTE_NAME;
-extern const String NORMAL_ATTRIBUTE_NAME;
-extern const String INDEX_ATTRIBUTE_NAME;
-extern const String JOINT_ID_ATTRIBUTE_NAME;
-extern const String JOINT_WEIGHT_ATTRIBUTE_NAME;
-
 struct VertexAttribute {
   int index;
   String name;
@@ -106,6 +99,7 @@ enum VertexAttr {
   VERTEX_ATTR_WEIGHT,
   VERTEX_ATTR_COUNT,
 };
+extern const char* VERTEX_ATTR_NAMES[VERTEX_ATTR_COUNT];
 
 enum InstanceAttr {
   INSTANCE_ATTR_I_DATA0 = VERTEX_ATTR_COUNT,
@@ -166,10 +160,11 @@ struct VertexDecl {
       bool normalized;
       bool as_int;
       if (Query((VertexAttr)i, num, data_type, normalized, as_int)) {
-        c3_log("  attrib = %s, offset = %2d, type = %s, %c%c\n",
-               i,
+        c3_log("%12s, offset = %2d, %6s%d %c%c\n",
+               VERTEX_ATTR_NAMES[i],
                offsets[i],
-               data_type,
+               DATA_TYPE_NAMES[data_type],
+               (int)num,
                normalized ? 'N' : ' ',
                as_int ? 'I' : ' ');
       }

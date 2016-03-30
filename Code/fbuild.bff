@@ -99,8 +99,8 @@ Compiler( 'Compiler-x64' )
     .LinkerOptions          = '/NODEFAULTLIB /NOLOGO /INCREMENTAL:NO /OUT:"%2" "%1" /DEBUG'
 
     // Optimizations
-    .CompilerDebugOptimizations     = ' /MDd /Od /RTC1 /GS /Oy- /GR-'
-    .CompilerReleaseOptimizations   = ' /MD /Ox /Oy /Oi /GS- /GF /GL /Gy /Gw /GR-'
+    .CompilerDebugOptimizations     = ' /MDd /Od /RTC1 /GS /Oy- /GR'
+    .CompilerReleaseOptimizations   = ' /MD /Ox /Oy /Oi /GS- /GF /GL /Gy /Gw /GR'
     .LibrarianDebugOptimizations    = ''
     .LibrarianReleaseOptimizations  = ' /LTCG'
     .LinkerDebugOptimizations       = ' msvcrtd.lib vcruntimed.lib ucrtd.lib msvcprtd.lib'
@@ -328,6 +328,7 @@ VCXProject( 'UpdateSolution-proj' )
 #include "../External/imgui-20160326/IMGUI.bff"
 #include "../External/fcpp/FCPP.bff"
 #include "../External/assimp-3.1.1/assimp.bff"
+#include "../External/lz4-20150629/lz4.bff"
 
 // Engine
 #include "C3/C3.bff"
@@ -394,7 +395,7 @@ VSSolution( 'solution' )
     .Folder_0_External =
     [ 
         .Path           = '0. External'
-        .Projects       = { 'MathGeoLib-proj', 'LibIconv-proj', 'IMGUI-proj', 'FCPP-proj', 'Assimp-proj' }
+        .Projects       = { 'MathGeoLib-proj', 'LibIconv-proj', 'IMGUI-proj', 'FCPP-proj', 'Assimp-proj', 'lz4-proj' }
     ]
     .Folder_1_Engine =
     [ 

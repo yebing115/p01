@@ -9,58 +9,10 @@
 #include "Graphics/GraphicsTypes.h"
 #include "Graphics/VertexFormat.h"
 #include "Graphics/GraphicsRenderer.h"
+#include "Graphics/Model/Mesh.h"
 
-#define MAX_MESH_ATTRS  12
-
-enum MeshAttrFlag {
-  MESH_ATTR_DEFAULT = 0,
-  MESH_ATTR_NORMALIZED = 1,
-  MESH_ATTR_AS_INT = 2,
-};
-
-#pragma pack(push, 1)
-/************************************************************************/
-/* MeshHeader
-/* MeshStringTable + strings
-/* MeshPart[num_parts]
-/* Vertex[num_vertices]
-/************************************************************************/
-struct MeshStringTable {
-  u32 size;
-  char data[];
-};
-
-struct MeshAttr {
-  u8 attr;
-  u8 num;
-  u8 data_type;
-  u8 flags;
-};
-
-struct MeshPart {
-  stringid name;
-  stringid material;
-  u32 start_index;
-  u32 num_indices;
-};
-
-struct MeshHeader {
-  u32 magic;
-  u32 num_vertices;
-  u32 num_indices;
-  u16 vertex_stride;
-  u16 num_attrs;
-  u16 num_parts;
-  u16 pad0;
-  u32 part_data_offset;
-  u32 vertex_data_offset;
-  u32 index_data_offset;
-  MeshAttr attrs[MAX_MESH_ATTRS];
-};
-static_assert(sizeof(MeshHeader) == 80, "Bad sizeof MeshHeader.");
-#pragma pack(pop)
-
-static const stringid INPUT_TYPE_OBJ = hash_string("obj");
+static const stringid INPUT_TYPE_OBJ = String::GetID("obj");
+static const stringid INPUT_TYPE_FBX = String::GetID("fbx");
 
 struct ProgramOption {
   stringid input_type;
@@ -95,10 +47,12 @@ void process(const aiScene* scene) {
   MeshHeader header;
   memset(&header, 0, sizeof(header));
   header.magic = C3_CHUNK_MAGIC_MEX;
+  header.aabb.SetNegativeInfinity();
   vector<MeshPart> parts;
   VertexDecl decl;
   unordered_set<String> part_names;
   unordered_set<String> material_names;
+  unordered_map<String, int> dup_part_names;
   if (scene->mNumMeshes == 0) error("No mesh.\n");
   aiMesh* first_mesh = scene->mMeshes[0];
   auto attr = header.attrs;
@@ -163,6 +117,22 @@ void process(const aiScene* scene) {
   u8* index_buf = nullptr;
   u32 num_indices = 0;
   u32 index_size = 2;
+  auto patch_part_name = [](const unordered_set<String>& names, unordered_map<String, int>& dups,
+                            String& part_name, const String& last_part_name) {
+    if (names.count(part_name) == 0 && part_name != "defaultobject") return;
+    auto dup_it = dups.find(last_part_name);
+    if (dup_it == dups.end()) {
+      dups.insert(make_pair(last_part_name, 1));
+      part_name = last_part_name + "_1";
+    } else {
+      ++dup_it->second;
+      char buf[512];
+      snprintf(buf, sizeof(buf), "%s_%d", last_part_name.GetCString(), dup_it->second);
+      part_name.Set(buf);
+    }
+    if (names.count(part_name) > 0) error("Failed to patch mesh part name to %s.\n", part_name.GetCString());
+  };
+  String last_part_name;
   for (u32 i = 0; i < scene->mRootNode->mNumChildren; ++i) {
     const aiNode* child = scene->mRootNode->mChildren[i];
     for (u32 mi = 0; mi < child->mNumMeshes; ++mi) {
@@ -170,12 +140,16 @@ void process(const aiScene* scene) {
       MeshPart& part = parts.back();
       aiMesh* sub_mesh = scene->mMeshes[child->mMeshes[mi]];
       if (sub_mesh->mPrimitiveTypes != aiPrimitiveType_TRIANGLE) {
-        error("Contains non-triangles: %s.", sub_mesh->mName.C_Str());
+        printf("Ignore non-triangles: %s.\n", sub_mesh->mName.C_Str());
+        parts.resize(parts.size() - 1);
+        continue;
       }
       String part_name(child->mName.C_Str());
-      if (g_options.input_type == INPUT_TYPE_OBJ) part_name = part_name.Substr(2);
-      part.name = part_name.GetID();
+      if (g_options.input_type == INPUT_TYPE_OBJ && part_name.StartsWith("g ")) part_name = part_name.Substr(2);
+      patch_part_name(part_names, dup_part_names, part_name, last_part_name);
+      last_part_name = part_name;
       part_names.insert(part_name);
+      part.name = part_name.GetID();
       if (scene->HasMaterials()) {
         aiMaterial* material = scene->mMaterials[sub_mesh->mMaterialIndex];
         aiString material_name;
@@ -194,6 +168,8 @@ void process(const aiScene* scene) {
       copy_vertex_attr(vertex_buf + vstart_offset,
                        sub_mesh->mNumVertices, decl.stride,
                        sub_mesh->mVertices, sizeof(float) * 3);
+      part.aabb.SetFrom((vec*)sub_mesh->mVertices, sub_mesh->mNumVertices);
+      header.aabb.Enclose(part.aabb);
       if (sub_mesh->HasNormals()) {
         copy_vertex_attr(vertex_buf + vstart_offset + decl.offsets[VERTEX_ATTR_NORMAL],
                          sub_mesh->mNumVertices, decl.stride,
@@ -289,6 +265,21 @@ void process(const aiScene* scene) {
   fclose(f);
   if (vertex_buf) free(vertex_buf);
   if (index_buf) free(index_buf);
+
+  if (g_options.verbose) {
+    auto find_string = [](const unordered_set<String>& table, stringid name) -> const char* {
+      for (auto& s : table) if (s.GetID() == name) return s.GetCString();
+      return "";
+    };
+
+    printf("Vertices: %d, Tris: %d, Parts: %d, %s\n", header.num_vertices,
+           header.num_indices / 3, header.num_parts, header.aabb.ToString().c_str());
+    for (auto& p : parts) {
+      printf("%16s: Tris: %d, Material: %s\n", find_string(part_names, p.name),
+             p.num_indices / 3, find_string(material_names, p.material));
+    }
+    decl.Dump();
+  }
 }
 
 int main(int argc, char* argv[]) {
@@ -300,23 +291,25 @@ int main(int argc, char* argv[]) {
   g_options.model_name.RemoveSuffix();
   g_options.input_type = g_options.input_filename.GetLastSection('.').MakeLower().GetID();
   g_options.attr_mask = (1 << VERTEX_ATTR_POSITION);
+  g_options.verbose = 1;
   int idx = max(g_options.model_name.FindLast('/'), g_options.model_name.FindLast('\\'));
   if (idx != -1) g_options.model_name = g_options.model_name.Substr(idx + 1);
 
   Assimp::Importer importer;
-  auto scene = importer.ReadFile(argv[1], aiProcess_CalcTangentSpace |
-                                 aiProcess_JoinIdenticalVertices |
-                                 aiProcess_Triangulate |
-                                 aiProcess_JoinIdenticalVertices |
-                                 aiProcess_SortByPType |
-                                 aiProcess_OptimizeMeshes |
-                                 aiProcess_ImproveCacheLocality);
+  unsigned int flags = aiProcess_CalcTangentSpace |
+    aiProcess_Triangulate |
+    aiProcess_JoinIdenticalVertices |
+    aiProcess_OptimizeMeshes |
+    aiProcess_ImproveCacheLocality |
+    aiProcess_SortByPType;
+  if (g_options.input_type == INPUT_TYPE_FBX) flags |= aiProcess_PreTransformVertices;
+  auto scene = importer.ReadFile(argv[1], flags);
   if (!scene) {
     error("Failed to read file %s.", argv[1]);
     exit(-1);
   }
 
   process(scene);
-
+  system("pause");
   return 0;
 }

@@ -40,6 +40,7 @@
 		Using( .MathGeoLib_Windows_MSVC )
 		Using( .LibIconv_Windows_MSVC )
 		Using( .IMGUI_Windows_MSVC )
+		Using( .Lz4_Windows_MSVC )
 		
 		// Objects
 		ObjectList( '$ProjectName$-Lib-$Platform$-$Config$' )
@@ -57,6 +58,7 @@
 										+ .MathGeoLibIncludePaths
 										+ .LibIconvIncludePaths
 										+ .IMGUIIncludePaths
+										+ .Lz4IncludePaths
 		}
 
 		// Executable
@@ -69,6 +71,7 @@
 				'LibIconv-Lib-$Platform$-$Config$',
 				'MathGeoLib-Lib-$Platform$-$Config$',
 				'IMGUI-Lib-$Platform$-$Config$',
+				'Lz4-Lib-$Platform$-$Config$',
 			}
 			.LinkerOutput				= '$OutputBase$\p01.exe'
 			.LinkerOptions				+ ' /SUBSYSTEM:WINDOWS'
@@ -78,10 +81,10 @@
 										+ ' OpenGL32.LIB'
 										+ ' Shell32.lib'
 										+ ' DbgHelp.lib'
-                    + ' dxgi.lib'
-                    + ' d3d11.lib'
-                    + ' d3dcompiler.lib'
-                    + ' imm32.lib'
+										+ ' dxgi.lib'
+										+ ' d3d11.lib'
+										+ ' d3dcompiler.lib'
+										+ ' imm32.lib'
 		}
 		Alias( '$ProjectName$-$Platform$-$Config$' )
 		{

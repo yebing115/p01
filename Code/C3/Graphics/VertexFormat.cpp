@@ -1,5 +1,18 @@
 #include "VertexFormat.h"
 
+const char* VERTEX_ATTR_NAMES[VERTEX_ATTR_COUNT] = {
+  "POSITION",
+  "NORMAL",
+  "TANGENT",
+  "BITANGENT",
+  "COLOR0",
+  "COLOR1",
+  "TEXCOORD0",
+  "TEXCOORD1",
+  "INDEX",
+  "WEIGHT",
+};
+
 VertexDecl VERTEX_DECLS[VERTEX_FORMAT_COUNT];
 
 void init_builtin_vertex_decls(GraphicsAPI api) {

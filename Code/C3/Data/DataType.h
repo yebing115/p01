@@ -55,3 +55,4 @@ enum DataType {
 
 extern bool IS_FIXED_POINT_TYPE[DATA_TYPE_COUNT];
 extern u16 DATA_TYPE_SIZE[DATA_TYPE_COUNT];
+extern const char* DATA_TYPE_NAMES[DATA_TYPE_COUNT];

@@ -127,3 +127,8 @@ namespace std {
 }
 
 extern const String EMPTY_STRING;
+
+inline bool is_utf8_bom(u8* c) {
+  return (c[0] == 0xef) && (c[1] == 0xbb) && (c[2] == 0xbf);
+}
+

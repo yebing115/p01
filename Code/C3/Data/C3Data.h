@@ -8,3 +8,6 @@
 #include "mpmc-bounded-queue.hpp"
 #include "spsc-queue.hpp"
 #include "spsc-bounded-queue.hpp"
+#include "SPSCQueue.h"
+#include "MPSCQueue.h"
+#include "MPMCQueue.h"

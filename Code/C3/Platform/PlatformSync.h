@@ -1,13 +1,14 @@
 #pragma once
 
 #include "PlatformConfig.h"
-#include "Data/C3Data.h"
+#include "Data/DataType.h"
 #include "Debug/C3Debug.h"
 #if ON_WINDOWS
 #include "Windows/WindowsHeader.h"
 #endif
 #include <atomic>
 #include <thread>
+using std::thread;
 typedef std::atomic_int32_t atomic_i32;
 typedef std::atomic_uint32_t atomic_u32;
 typedef std::atomic_int64_t atomic_i64;
@@ -191,6 +192,10 @@ private:
   i32 _exit_code;
   bool _running;
 };
+extern thread_local u32 g_thread_id;
+extern u32 MAIN_THREAD_ID;
+extern u32 RENDER_THREAD_ID;
+#define WORKER_THREAD_ID(i) MAKE_FOURCC('W', 'O', 'K', '0' + (i))
 
 class TlsData {
 public:

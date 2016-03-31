@@ -6,38 +6,23 @@
 
 struct JobNode {
   Job _job;
-  Fiber* _fiber;
-  Handle _wait_handle;
-  list_head _wait_link;
+  atomic_int* _label;
 };
-
-struct JobWaitingList {
-  Fiber* _fiber; // suspended
-  SpinLock _spin_lock;
-  atomic_int _num;
-  list_head _waiting_job_nodes;
-};
+typedef MPMCQueue<JobNode> JobQueue;
 
 class JobScheduler {
 public:
-  JobScheduler();
+  JobScheduler(int num_workers = thread::hardware_concurrency());
   ~JobScheduler();
 
-  Handle Submit(Job* job, int num_jobs = 1);
-  void WaitFor(Handle handle);
+  void Submit(Job* start_job, int num_jobs = 1, atomic_int* label = nullptr);
+  void Wait(atomic_int* label, int value = 0);
   JobNode* GetNext();
   void Finish(JobNode* job_node);
 
 private:
-  SpinLock _waiting_list_lock;
-  HandleAlloc<C3_MAX_JOBS, true> _wait_handle_alloc;
-  JobWaitingList _waiting_lists[C3_MAX_JOBS];
-  ThreadSafePoolAllocator _job_node_allocator;
-  Fiber _fibers[C3_MAX_FIBERS];
-  SpinLock _fiber_lock;
-  u16 _num_free_fibers;
-  u16 _free_fiber_index[C3_MAX_FIBERS];
-  mpmc_bounded_queue_t<JobNode*> _job_queue;
-  mpmc_bounded_queue_t<JobNode*> _wait_fiber_queue;
+  void DoJob();
+  JobQueue* _job_queues[NUM_JOB_AFFINITIES][NUM_JOB_PRIORITIES];
+  int _num_workers;
   SUPPORT_SINGLETON(JobScheduler);
 };

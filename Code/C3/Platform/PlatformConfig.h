@@ -51,4 +51,3 @@
 
 #define C3_MAX_ASSETS 4096
 #define C3_MAX_JOBS 2048
-#define C3_MAX_FIBERS 128

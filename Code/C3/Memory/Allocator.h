@@ -1,5 +1,5 @@
 #pragma once
-#include "Platform/C3Platform.h"
+#include "Platform/PlatformConfig.h"
 #include "Data/DataType.h"
 #include <memory.h>
 

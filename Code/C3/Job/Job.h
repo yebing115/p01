@@ -2,22 +2,23 @@
 #include "Platform/C3Platform.h"
 
 enum JobPriority {
-  JOB_PRIORITY_LOW,
-  JOB_PRIORITY_NORMAL,
   JOB_PRIORITY_HIGH,
+  JOB_PRIORITY_NORMAL,
+  JOB_PRIORITY_LOW,
+  NUM_JOB_PRIORITIES,
 };
 
-enum JobFlag {
-  JOB_FLAG_DEFAULT = 0,           // run on any threads.
-  JOB_FLAG_MAIN = (1 << 0),       // run on main thread.
-  JOB_FLAG_RENDER = (1 << 1),     // run on render thread.
-  JOB_FLAG_BACKGROUND = (1 << 2), // run on worker threads.
+enum JobAffinity {
+  JOB_AFFINITY_ANY,        // run on any threads.
+  JOB_AFFINITY_MAIN,       // run on main thread.
+  JOB_AFFINITY_RENDER,     // run on render thread.
+  NUM_JOB_AFFINITIES,
 };
 
 struct Job {
   typedef void(*JobFn)(void* user_data);
   JobFn* _fn;
   void* _user_data;
-  JobPriority _prio;
-  int _flags;
+  JobPriority _priority;
+  JobAffinity _affinity;
 };

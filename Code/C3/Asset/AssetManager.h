@@ -41,12 +41,14 @@ struct AssetOperations {
 
 struct AssetMemoryHeader;
 struct Asset {
-  AssetState _state;
+  atomic<AssetState> _state;
   u32 _ref;
   AssetDesc _desc;
   AssetMemoryHeader* _header;
 };
 
+#define ASSET_MEMORY_SIZE(num_depends, content_size) \
+  ALIGN_MASK(ALIGN_MASK(sizeof(AssetMemoryHeader) + (num_depends) * sizeof(AssetDesc), POINTER_ALIGN_MASK) + (content_size), POINTER_SIZE)
 struct AssetMemoryHeader {
   u32 _size;
   u16 _num_depends;

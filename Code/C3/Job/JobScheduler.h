@@ -17,12 +17,17 @@ public:
 
   void Submit(Job* start_job, int num_jobs = 1, atomic_int* label = nullptr);
   void Wait(atomic_int* label, int value = 0);
-  JobNode* GetNext();
-  void Finish(JobNode* job_node);
 
 private:
   void DoJob();
+  void DoJob(const JobNode& job_node);
+  inline bool GetJob(JobAffinity affinity, JobPriority priority, JobNode& out_job_node) {
+    return _job_queues[affinity][priority]->Read(out_job_node);
+  }
+  static i32 WorkerThread(void* arg);
   JobQueue* _job_queues[NUM_JOB_AFFINITIES][NUM_JOB_PRIORITIES];
+  Thread _worker_threads[C3_MAX_WORKER_THREADS];
   int _num_workers;
+  int _require_exit;
   SUPPORT_SINGLETON(JobScheduler);
 };

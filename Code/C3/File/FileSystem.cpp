@@ -53,10 +53,10 @@ FileSystem::FileSystem() {
 FileSystem::~FileSystem() {
 }
 
-IFile* FileSystem::Open(const String& filename, bool writable) {
+IFile* FileSystem::Open(const char* filename, bool writable) {
   IFile* f = nullptr;
   if (g_platform_data.use_archive) {
-    auto it = _filename_map.find(filename.GetID());
+    auto it = _filename_map.find(String::GetID(filename));
     if (it == _filename_map.end()) {
       f = new CrtFile(filename, writable);
     } else f = new Lz4File(&it->second);
@@ -74,10 +74,10 @@ void FileSystem::Close(IFile* f) {
   }
 }
 
-bool FileSystem::Exists(const String& filename) const {
+bool FileSystem::Exists(const char* filename) const {
   if (g_platform_data.use_archive) {
     for (const char* s : _string_table) {
-      if (strcmp(filename.GetCString(), s) == 0) return true;
+      if (strcmp(filename, s) == 0) return true;
     }
   } else {
     FILE* f = nullptr;

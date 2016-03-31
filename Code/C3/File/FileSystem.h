@@ -27,15 +27,15 @@ public:
   FileSystem();
   ~FileSystem();
 
-  IFile* OpenRead(const String& filename) { return Open(filename, false); }
-  IFile* OpenWrite(const String& filename) { return Open(filename, true); }
+  IFile* OpenRead(const char* filename) { return Open(filename, false); }
+  IFile* OpenWrite(const char* filename) { return Open(filename, true); }
   void Close(IFile* f);
-  bool Exists(const String& filename) const;
+  bool Exists(const char* filename) const;
   vector<String> GetFileList(const String& dir, bool recursive = true);
   
 private:
   void Init();
-  IFile* Open(const String& filename, bool writable);
+  IFile* Open(const char* filename, bool writable);
   u8* _idx_data;
   vector<ArchiveDesc> _archives;
   vector<const char*> _string_table;

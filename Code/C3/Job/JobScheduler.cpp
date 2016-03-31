@@ -3,7 +3,13 @@
 
 DEFINE_SINGLETON_INSTANCE(JobScheduler);
 
-JobScheduler::JobScheduler(int num_workers): _num_workers(num_workers) {}
+JobScheduler::JobScheduler(int num_workers) {
+  _num_workers = min<int>(C3_MAX_WORKER_THREADS, num_workers);
+  _require_exit = 0;
+  for (int i = 0; i < _num_workers; ++i) {
+    _worker_threads[i].Init(&JobScheduler::WorkerThread, (void*)i);
+  }
+}
 
 JobScheduler::~JobScheduler() {}
 
@@ -26,22 +32,40 @@ void JobScheduler::Wait(atomic_int* label, int value) {
 void JobScheduler::DoJob() {
   JobNode job_node;
   if (g_thread_id == MAIN_THREAD_ID) {
-    for (int prio = JOB_PRIORITY_HIGH; prio < NUM_JOB_AFFINITIES; ++prio) {
-      auto q = _job_queues[JOB_AFFINITY_MAIN][prio];
-      if (q->Read(job_node)) goto found_job;
-    }
-  } else if (g_thread_id == RENDER_THREAD_ID) {
-    for (int prio = JOB_PRIORITY_HIGH; prio < NUM_JOB_AFFINITIES; ++prio) {
-      auto q = _job_queues[JOB_AFFINITY_RENDER][prio];
-      if (q->Read(job_node)) goto found_job;
-    }
+    if (GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_HIGH, job_node)) goto found_job;
+    if (GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_NORMAL, job_node)) goto found_job;
+    if (GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_LOW, job_node)) goto found_job;
   }
-  for (int prio = JOB_PRIORITY_HIGH; prio < NUM_JOB_AFFINITIES; ++prio) {
-    auto q = _job_queues[JOB_AFFINITY_ANY][prio];
-    if (q->Read(job_node)) goto found_job;
+  if (g_thread_id == RENDER_THREAD_ID) {
+    if (GetJob(JOB_AFFINITY_RENDER, JOB_PRIORITY_HIGH, job_node)) goto found_job;
+    if (GetJob(JOB_AFFINITY_RENDER, JOB_PRIORITY_NORMAL, job_node)) goto found_job;
+    if (GetJob(JOB_AFFINITY_RENDER, JOB_PRIORITY_LOW, job_node)) goto found_job;
   }
+  if (GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_HIGH, job_node)) goto found_job;
+  if (GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_NORMAL, job_node)) goto found_job;
+  if (GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_LOW, job_node)) goto found_job;
+  std::this_thread::yield();
   return;
 found_job:
+  DoJob(job_node);
+}
+
+void JobScheduler::DoJob(const JobNode& job_node) {
   (*job_node._job._fn)(job_node._job._user_data);
   if (job_node._label) --(*job_node._label);
+}
+
+i32 JobScheduler::WorkerThread(void* arg) {
+  int index = (int)arg;
+  g_thread_id = WORKER_THREAD_ID(index);
+  auto JS = JobScheduler::Instance();
+  JobNode job_node;
+  while (!JS->_require_exit) {
+    if (JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_HIGH, job_node) ||
+        JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_NORMAL, job_node) ||
+        JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_LOW, job_node)) {
+      JS->DoJob(job_node);
+    } else std::this_thread::yield();
+  }
+  return 0;
 }

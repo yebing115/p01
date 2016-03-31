@@ -1,4 +1,4 @@
 #pragma once
-#include "EncodingName.h"
-#include "EncodingConverter.h"
-#include "EncodingManager.h"
+#include "Text/EncodingName.h"
+#include "Text/EncodingConverter.h"
+#include "Text/EncodingUtil.h"

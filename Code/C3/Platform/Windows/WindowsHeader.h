@@ -32,10 +32,10 @@
 #define NOPROFILER
 #define NODEFERWINDOWPOS
 #define NOMCX
-
 #include <windowsx.h>
+#include <guiddef.h>
 #include <d3d11.h>
-#include <dxgi.h>
+#include <d3d11_1.h>
 #include <d3dcompiler.h>
 
 #undef near

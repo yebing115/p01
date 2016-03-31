@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "Allocator.h"
 
-Allocator* g_allocator = nullptr;
+IAllocator* g_allocator = nullptr;

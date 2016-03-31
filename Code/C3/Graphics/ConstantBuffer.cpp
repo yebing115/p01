@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "ConstantBuffer.h"
 
 u16 CONSTANT_TYPE_SIZE[CONSTANT_COUNT + 1] = {

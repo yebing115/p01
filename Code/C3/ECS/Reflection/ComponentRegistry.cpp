@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "ComponentRegistry.h"
 
 unordered_map<u16, ComponentInfo> s_info_map;

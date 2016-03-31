@@ -228,7 +228,7 @@ void process(const aiScene* scene) {
       }
     }
   }
-  header.num_parts = parts.size();
+  header.num_parts = (u16)parts.size();
   header.num_vertices = num_vertices;
   header.num_indices = num_indices;
 

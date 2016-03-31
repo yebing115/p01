@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "LogManager.h"
 #include "Logger.h"
 #include <stdarg.h>

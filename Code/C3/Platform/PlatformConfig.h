@@ -1,5 +1,19 @@
 #pragma once
 
+#define WINDOWS_PLATFORM 1
+#define IOS_PLATFORM 2
+#define PS4_PLATFORM 3
+
+#if defined(_WIN32) || defined(_WIN64)
+#define PLATFORM WINDOWS_PLATFORM
+#elif defined(__ORBIS__)
+#define PLATFORM PS4_PLATFORM
+#endif
+
+#define ON_WINDOWS (PLATFORM == WINDOWS_PLATFORM)
+#define ON_IOS (PLATFORM == IOS_PLATFORM)
+#define ON_PS4 (PLATFORM == PS4_PLATFORM)
+
 #if ON_WINDOWS
 #define SYSTEM_ENCODING UTF_16
 #else
@@ -36,3 +50,5 @@
 #define C3_TRANSIENT_VERTEX_BUFFER_SIZE (6 << 20)
 
 #define C3_MAX_ASSETS 4096
+#define C3_MAX_JOBS 2048
+#define C3_MAX_FIBERS 128

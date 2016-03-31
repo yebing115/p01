@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "Color.h"
 
 static Color s_red(1.f, 0.f, 0.f);

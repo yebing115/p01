@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "GraphicsRenderer.h"
 #include "ConstantBuffer.h"
 #include "Image/ImageUtils.h"

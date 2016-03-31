@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "EncodingName.h"
 
 const char* ENCODING_NAMES[ENCODING_COUNT] = {

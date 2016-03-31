@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "dx_graphics.h"
 
 const PrimInfo PRIM_INFO[] = {

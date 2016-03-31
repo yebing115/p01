@@ -1,10 +1,4 @@
-//
-//  crc32.cpp
-//  C2Engine
-//
-//  Created by mike luo on 2014-2-11.
-//
-//
+#include "C3PCH.h"
 #include "crc32.h"
 
 static u32 s_crc_table[256] = {

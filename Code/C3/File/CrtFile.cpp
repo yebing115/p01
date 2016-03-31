@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "CrtFile.h"
 #include "Text/EncodingUtil.h"
 #include <sys/stat.h>

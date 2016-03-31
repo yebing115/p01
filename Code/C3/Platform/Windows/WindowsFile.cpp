@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "Platform/PlatformFile.h"
 #include "Data/DataType.h"
 #include "Data/String.h"

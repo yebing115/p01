@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "VertexFormat.h"
 
 const char* VERTEX_ATTR_NAMES[VERTEX_ATTR_COUNT] = {

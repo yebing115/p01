@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "Algorithm/Hasher.h"
 #include "Text/EncodingUtil.h"
 #include "String.h"

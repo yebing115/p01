@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "Logger.h"
 #include "Text/EncodingUtil.h"
 

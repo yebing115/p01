@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "FileSystem.h"
 #include "Platform/C3Platform.h"
 #include "IFile.h"

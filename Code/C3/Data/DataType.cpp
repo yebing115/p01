@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "DataType.h"
 
 bool IS_FIXED_POINT_TYPE[DATA_TYPE_COUNT] = {

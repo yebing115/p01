@@ -5,6 +5,7 @@
 //  Created by hoi wang on 10-30-15
 //
 //
+#include "C3PCH.h"
 #include "GraphicsInterfaceD3D11.h"
 #include "dx_graphics.h"
 #include "Graphics/ConstantBuffer.h"
@@ -464,11 +465,11 @@ void TextureD3D11::Create(const MemoryBlock* mem, u32 flags, u8 skip) {
 
   if (image_parse(image_container, mem->data, mem->size)) {
     u8 num_mips = image_container.num_mips;
-    const u8 start_lod = u8(min(skip, num_mips - 1));
+    const u8 start_lod = min<u8>(skip, num_mips - 1);
     num_mips -= start_lod;
     const ImageBlockInfo& block_info = image_block_info(TextureFormat(image_container.format));
-    const u32 texture_width = max(block_info.block_width, image_container.width >> start_lod);
-    const u32 texture_height = max(block_info.block_height, image_container.height >> start_lod);
+    const u32 texture_width = max<u32>(block_info.block_width, image_container.width >> start_lod);
+    const u32 texture_height = max<u32>(block_info.block_height, image_container.height >> start_lod);
 
     _flags = flags;
     _width = texture_width;
@@ -511,9 +512,9 @@ void TextureD3D11::Create(const MemoryBlock* mem, u32 flags, u8 skip) {
       u32 depth = image_container.depth;
 
       for (u8 lod = 0, num = num_mips; lod < num; ++lod) {
-        width = max(1, width);
-        height = max(1, height);
-        depth = max(1, depth);
+        width = max<u32>(1, width);
+        height = max<u32>(1, height);
+        depth = max<u32>(1, depth);
 
         ImageMip mip;
         if (image_get_raw_data(image_container, side, lod + start_lod, mem->data, mem->size, mip)) {
@@ -527,8 +528,8 @@ void TextureD3D11::Create(const MemoryBlock* mem, u32 flags, u8 skip) {
             srd[kk].pSysMem = temp;
             srd[kk].SysMemPitch = srcpitch;
           } else if (compressed) {
-            srd[kk].SysMemPitch = max(1, (width + 3) >> 2) * 4 * 4 * image_bits_per_pixel((TextureFormat)_texture_format) / 8;
-            srd[kk].SysMemSlicePitch = max(1, (height + 3) >> 2) * srd[kk].SysMemPitch;
+            srd[kk].SysMemPitch = max<u32>(1, (width + 3) >> 2) * 4 * 4 * image_bits_per_pixel((TextureFormat)_texture_format) / 8;
+            srd[kk].SysMemSlicePitch = max<u32>(1, (height + 3) >> 2) * srd[kk].SysMemPitch;
           } else {
             srd[kk].SysMemPitch = mip.width * mip.bpp / 8;
           }
@@ -554,7 +555,7 @@ void TextureD3D11::Create(const MemoryBlock* mem, u32 flags, u8 skip) {
     const bool srgb = 0 != (_flags&C3_TEXTURE_SRGB) || image_container.srgb;
     const bool blit = 0 != (_flags&C3_TEXTURE_BLIT_DST);
     const bool read_back = 0 != (_flags&C3_TEXTURE_READ_BACK);
-    const u32 msaa_quality = max(((_flags&C3_TEXTURE_RT_MSAA_MASK) >> C3_TEXTURE_RT_MSAA_SHIFT), 1) - 1;
+    const u32 msaa_quality = max<u32>(((_flags&C3_TEXTURE_RT_MSAA_MASK) >> C3_TEXTURE_RT_MSAA_SHIFT), 1) - 1;
     const DXGI_SAMPLE_DESC& msaa = s_msaa[msaa_quality];
 
     D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
@@ -1852,7 +1853,7 @@ void GraphicsInterfaceD3D11::Clear(ClearQuad& clear_quad, const Rect& rect, cons
     Handle fbh = _fbh;
     if (fbh) {
       const FrameBufferD3D11& fb = _frame_buffers[fbh.idx];
-      numMrt = max(1, fb._num);
+      numMrt = max<u32>(1, fb._num);
     }
 
     ProgramD3D11& program = _programs[clear_quad.program[numMrt - 1].idx];
@@ -1867,7 +1868,7 @@ void GraphicsInterfaceD3D11::Clear(ClearQuad& clear_quad, const Rect& rect, cons
       if (C3_CLEAR_COLOR_USE_PALETTE & view_clear.flags) {
         float mrtClear[COLOR_ATTACHMENT_COUNT][4];
         for (u32 ii = 0; ii < numMrt; ++ii) {
-          u8 index = (u8)min(C3_MAX_COLOR_PALETTE - 1, view_clear.index[ii]);
+          u8 index = min<u8>(C3_MAX_COLOR_PALETTE - 1, view_clear.index[ii]);
           memcpy(mrtClear[ii], palette[index], 16);
         }
 

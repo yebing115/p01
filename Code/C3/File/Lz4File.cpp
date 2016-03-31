@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "Lz4File.h"
 #include "FileSystem.h"
 #include "Algorithm/C3Algorithm.h"

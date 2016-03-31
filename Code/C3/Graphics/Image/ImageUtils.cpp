@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "ImageUtils.h"
 #include "Data/Blob.h"
 #include "Graphics/GraphicsRenderer.h"

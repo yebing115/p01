@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "Blob.h"
 
 BlobWriter::BlobWriter() {}

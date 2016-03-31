@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "RenderFrame.h"
 #include "ConstantBuffer.h"
 #include "RenderKey.h"

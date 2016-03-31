@@ -38,7 +38,7 @@
 		// Static Library
 		Library( '$ProjectName$-Lib-$Platform$-$Config$' )
 		{
-			.BaseCompilerOptions		= .AssimpIncludePaths
+			.ExtraCompilerOptions		= .AssimpIncludePaths
 										+ .AssimpCompilerOptions
                                         + ' /wd6319' // use of the comma-operator in a tested expression causes the left argument to be ignored when it has no side-effects
                                         + ' /wd6385'
@@ -94,9 +94,9 @@
 			
 			.PCHInputFile				= '$AssimpBasePath$\code\$PCHName$.cpp'
 			.PCHOutputFile				= '$OutputBase$\$ProjectName$\$PCHName$.pch'
-			.PCHOptions					+ .BaseCompilerOptions
+			.PCHOptions					+ .ExtraCompilerOptions
 										+ ' /Yc"$PCHName$.h"'
-			.CompilerOptions			+ .BaseCompilerOptions
+			.CompilerOptions			+ .ExtraCompilerOptions
 										+ ' /Yu"$PCHName$.h"'
 										+ ' /Fp"$PCHOutputFile$"'
             .LibrarianOptions           + ' /ignore:4221'

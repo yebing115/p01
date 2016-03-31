@@ -1,4 +1,5 @@
 #pragma once
+#include "Platform/C3Platform.h"
 #include "Data/DataType.h"
 #include <memory.h>
 
@@ -31,15 +32,15 @@
 #define C3_ALIGNED_DELETE(allocator, ptr, align) c3_delete(allocator, ptr, align)
 #endif
 
-struct Allocator {
-  virtual ~Allocator() = 0;
+struct IAllocator {
+  virtual ~IAllocator() = 0;
   virtual void* Alloc(size_t size, size_t align, const char* file, u32 line) = 0;
   virtual void Free(void* ptr, size_t align, const char* file, u32 line) = 0;
   virtual void* Realloc(void* ptr, size_t size, size_t align, const char* file, u32 line) = 0;
 };
-inline Allocator::~Allocator() {}
+inline IAllocator::~IAllocator() {}
 
-extern Allocator* g_allocator;
+extern IAllocator* g_allocator;
 
 inline void* align_ptr(void* ptr, size_t extra, size_t align = sizeof(ptrdiff_t)) {
 	union { void* ptr; size_t addr; } un;
@@ -51,19 +52,19 @@ inline void* align_ptr(void* ptr, size_t extra, size_t align = sizeof(ptrdiff_t)
 	return un.ptr;
 }
 
-inline void* c3_alloc(Allocator* allocator, size_t size, size_t align = 0, const char* file = nullptr, u32 line = 0) {
+inline void* c3_alloc(IAllocator* allocator, size_t size, size_t align = 0, const char* file = nullptr, u32 line = 0) {
 	return allocator->Alloc(size, align, file, line);
 }
 
-inline void c3_free(Allocator* allocator, void* ptr, size_t align = 0, const char* file = nullptr, u32 line = 0) {
+inline void c3_free(IAllocator* allocator, void* ptr, size_t align = 0, const char* file = nullptr, u32 line = 0) {
 	allocator->Free(ptr, align, file, line);
 }
 
-inline void* c3_realloc(Allocator* allocator, void* ptr, size_t size, size_t align = 0, const char* file = nullptr, u32 line = 0) {
+inline void* c3_realloc(IAllocator* allocator, void* ptr, size_t size, size_t align = 0, const char* file = nullptr, u32 line = 0) {
 	return allocator->Realloc(ptr, size, align, file, line);
 }
 
-static inline void* c3_aligned_alloc(Allocator* allocator, size_t size, size_t align, const char* file = nullptr, u32 line = 0) {
+static inline void* c3_aligned_alloc(IAllocator* allocator, size_t size, size_t align, const char* file = nullptr, u32 line = 0) {
 	size_t total = size + align;
 	u8* ptr = (u8*)c3_alloc(allocator, total, 0, file, line);
 	u8* aligned = (u8*)align_ptr(ptr, sizeof(u32), align);
@@ -72,14 +73,14 @@ static inline void* c3_aligned_alloc(Allocator* allocator, size_t size, size_t a
 	return aligned;
 }
 
-static inline void c3_aligned_free(Allocator* allocator, void* ptr_, size_t /*align*/, const char* file = nullptr, u32 line = 0) {
+static inline void c3_aligned_free(IAllocator* allocator, void* ptr_, size_t /*align*/, const char* file = nullptr, u32 line = 0) {
 	u8* aligned = (u8*)ptr_;
 	u32* header = (u32*)aligned - 1;
 	u8* ptr = aligned - *header;
 	c3_free(allocator, ptr, 0, file, line);
 }
 
-static inline void* c3_aligned_realloc(Allocator* allocator, void* ptr_, size_t size, size_t align, const char* file = nullptr, u32 line = 0) {
+static inline void* c3_aligned_realloc(IAllocator* allocator, void* ptr_, size_t size, size_t align, const char* file = nullptr, u32 line = 0) {
 	if (!ptr_) return c3_aligned_alloc(allocator, size, align, file, line);
 
 	u8* aligned = (u8*)ptr_;
@@ -99,14 +100,14 @@ static inline void* c3_aligned_realloc(Allocator* allocator, void* ptr_, size_t 
 }
 
 template <typename T>
-inline void c3_delete(Allocator* allocator, T* object, size_t align = 0, const char* file = nullptr, u32 line = 0) {
+inline void c3_delete(IAllocator* allocator, T* object, size_t align = 0, const char* file = nullptr, u32 line = 0) {
 	if (object) {
 		object->~T();
 		c3_free(allocator, object, align, file, line);
 	}
 }
 
-struct CrtAllocator: public Allocator {
+struct CrtAllocator: public IAllocator {
   ~CrtAllocator() {}
   void* Alloc(size_t size, size_t align, const char* /*file*/, u32 line) override {
     if (align <= sizeof(ptrdiff_t)) return ::malloc(size);

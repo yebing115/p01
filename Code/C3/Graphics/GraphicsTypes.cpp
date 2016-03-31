@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "GraphicsTypes.h"
 #include "Algorithm/Hasher.h"
 

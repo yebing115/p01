@@ -1,3 +1,4 @@
+#include "C3PCH.h"
 #include "EncodingConverter.h"
 
 const int EncodingConverter::BLOCK_SIZE = 128;

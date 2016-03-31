@@ -47,24 +47,23 @@
 		// Static Library
 		Library( '$ProjectName$-Lib-$Platform$-$Config$' )
 		{
-			.BaseCompilerOptions		= .CompilerOptions
-										+ .C3IncludePaths
+			.ExtraCompilerOptions		= .C3IncludePaths
 										+ .C3CompilerOptions
 										+ .MathGeoLibIncludePaths
 										+ .LibIconvIncludePaths
 										+ .IMGUIIncludePaths
 										+ .Lz4IncludePaths
 
-			.PCHInputFile				= '$AssimpBasePath$\code\$PCHName$.cpp'
+			.PCHInputFile				= '$C3BasePath$\$PCHName$.cpp'
 			.PCHOutputFile				= '$OutputBase$\$ProjectName$\$PCHName$.pch'
-			.PCHOptions					+ .BaseCompilerOptions
+			.PCHOptions					+ .ExtraCompilerOptions
 										+ ' /Yc"$PCHName$.h"'
 
 			// Output
 			.CompilerOutputPath			= '$OutputBase$\$ProjectName$\'
  			.LibrarianOutput 			= '$OutputBase$\$ProjectName$\$ProjectName$.lib'
 
-			.CompilerOptions			+ .BaseCompilerOptions
+			.CompilerOptions			+ .ExtraCompilerOptions
 										+ ' /Yu"$PCHName$.h"'
 										+ ' /Fp"$PCHOutputFile$"'
 		}

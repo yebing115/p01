@@ -6,6 +6,7 @@
 #include <list>
 #include <unordered_map>
 #include <unordered_set>
+#include <bitset>
 #include <algorithm>
 #include <functional>
 #include <MathGeoLib.h>
@@ -32,6 +33,7 @@ using std::swap;
 using std::make_pair;
 using std::make_shared;
 using std::function;
+using std::bitset;
 
 #define ALIGN_OF(type) __alignof(type)
 #define STRUCT_OFFSET(StructName, field_name) ((int) (&(((StructName*) 0)->field_name)))

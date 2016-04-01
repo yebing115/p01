@@ -7,24 +7,24 @@ template <bool THREAD_SAFE>
 class BasePoolAllocator: public IAllocator {
 public:
   BasePoolAllocator()
-  : _data(nullptr), _size(0), _obj_size(0), _free_list(nullptr), _used_size(0) {}
-  void Init(void* data, size_t size, size_t obj_size) {
-    _data = data;
-    _size = size;
-    _obj_size = obj_size;
-    _used_size = 0;
+  :  _obj_size(0), _num(0), _align(0), _allocator(nullptr), _free_list(nullptr), _used_nums(0) {}
+  void Init(size_t obj_size, size_t align, size_t num, IAllocator* allocator = g_allocator) {
+    _obj_size = ALIGN_MASK(obj_size, align - 1);
+    _align = align;
+    _num = num;
+    _data = C3_ALIGNED_ALLOC(allocator, _obj_size * num, align);
+    _used_nums = 0;
     _free_list = (void**)_data;
     void** p = _free_list;
-    size_t n = size / obj_size;
-    for (int i = 0; i < n - 1; ++i) {
+    for (size_t i = 0; i < _num - 1; ++i) {
       *p = (void*)((u8*)p + obj_size);
-      p = (void**)p;
+      p = (void**)(*p);
     }
     *p = nullptr;
-    if (THREAD_SAFE) _lock.Reset();
   }
   ~BasePoolAllocator() {
     _free_list = nullptr;
+    C3_ALIGNED_FREE(_allocator, _data, _align);
   }
   void* Alloc(size_t size, size_t align, const char* file, u32 line) override {
     c3_assert(size <= _obj_size);
@@ -32,7 +32,7 @@ public:
     if (!_free_list) return nullptr;
     void* p = _free_list;
     _free_list = (void**)*_free_list;
-    _used_size += _obj_size;
+    ++_used_nums;
     if (THREAD_SAFE) _lock.Unlock();
     return p;
   }
@@ -42,7 +42,7 @@ public:
     if (THREAD_SAFE) _lock.Lock();
     *(void**)ptr = _free_list;
     _free_list = (void**)ptr;
-    _used_size -= _obj_size;
+    --_used_nums;
     if (THREAD_SAFE) _lock.Unlock();
   }
 
@@ -51,13 +51,15 @@ public:
     if (size > 0) return Alloc(size, align, file, line);
     else return nullptr;
   }
-  void* GetPool() const { return _data; }
+  void* GetData() const { return _data; }
 private:
-  void* _data;
-  size_t _size;
   size_t _obj_size;
+  size_t _num;
+  size_t _align;
+  IAllocator* _allocator;
+  void* _data;
   void** _free_list;
-  size_t _used_size;
+  size_t _used_nums;
   SpinLock _lock;
 };
 

@@ -294,9 +294,7 @@ private:
   GraphicsInterface* _gi;
   Resolution _resolution;
   u32 _frame_counter;
-  RenderFrame _frames[2];
-  RenderFrame* _submit;
-  RenderFrame* _render;
+  RenderFrame* _frame;
   ClearQuad _clear_quad;
   VertexBuffer _vertex_buffers[C3_MAX_VERTEX_BUFFERS];
   IndexBuffer _index_buffers[C3_MAX_INDEX_BUFFERS];

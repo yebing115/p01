@@ -29,6 +29,7 @@ using std::memory_order_acquire;
 using std::memory_order_release;
 using std::memory_order_acq_rel;
 using std::memory_order_seq_cst;
+using std::atomic_thread_fence;
 
 class Semaphore {
 public:
@@ -192,10 +193,6 @@ private:
   i32 _exit_code;
   bool _running;
 };
-extern thread_local u32 g_thread_id;
-extern u32 MAIN_THREAD_ID;
-extern u32 RENDER_THREAD_ID;
-#define WORKER_THREAD_ID(i) MAKE_FOURCC('W', 'O', 'K', '0' + (i))
 
 class TlsData {
 public:
@@ -230,10 +227,21 @@ private:
 };
 
 struct SpinLock {
-  atomic_flag _flag;
+  atomic_flag _flag = ATOMIC_FLAG_INIT;
 
-  void Reset() { _flag.clear(); }
-  void Lock() { while (_flag.test_and_set(memory_order_acquire)); }
-  void Unlock() { _flag.clear(memory_order_release); }
-  bool TryLock() { return !_flag.test_and_set(memory_order_acquire); }
+  void Lock() { while (_flag.test_and_set(memory_order_seq_cst)); }
+  void Unlock() { _flag.clear(memory_order_seq_cst); }
+  bool TryLock() { return !_flag.test_and_set(memory_order_seq_cst); }
+};
+
+class SpinLockGuard {
+public:
+  SpinLockGuard(SpinLock* lock): _lock(lock) {
+    _lock->Lock();
+  }
+  ~SpinLockGuard() {
+    _lock->Unlock();
+  }
+private:
+  SpinLock* _lock;
 };

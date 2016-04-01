@@ -1,7 +1,4 @@
-#include "Debug/C3Debug.h"
-#include "Platform/Windows/WindowsHeader.h"
-#include "Platform/PlatformData.h"
-#include "Text/EncodingUtil.h"
+#include "C3PCH.h"
 #include "AppConfig.h"
 #include "Reflection/Reflector.h"
 #include "Reflection/Object.h"
@@ -63,6 +60,45 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
   AppConfig::LoadConfig();
 
   mem_init();
+  FileSystem::CreateInstance();
+  auto JS = JobScheduler::CreateInstance();
+  JS->Init(thread::hardware_concurrency());
+
+#define NJOB 2000
+  static Job work[NJOB];
+  static int m[NJOB * 2048];
+  for (int i = 0; i < NJOB; ++i) {
+    DEFINE_JOB_LAMBDA(work_item) {
+      int start = (int)arg;
+      //c3_log("%d\n", start);
+      for (int j = 0; j < 2048; ++j)
+        m[start + j] = start + j;
+    };
+    work[i]._fn = work_item;
+    work[i]._user_data = (void*)(i * 2048);
+  }
+  atomic_int* label = nullptr;
+  tick_t t1, t2;
+  t1 = Clock::Tick();
+
+  for (int i = 0; i < NJOB; ++i) {
+    int start = i * 2048;
+    for (int j = 0; j < 2048; ++j)
+      m[start + j] = start + j;
+  }
+
+  t2 = Clock::Tick();
+
+  c3_log("time: %.3f ms, %d\n", float(t2 - t1) / Clock::TicksPerMillisecond(), m[400000]);
+
+  t1 = Clock::Tick();
+
+  JS->Submit(work, NJOB, &label);
+  JS->WaitAndFree(label);
+
+  t2 = Clock::Tick();
+  c3_log("atime: %.3f ms, %d\n", float(t2 - t1) / Clock::TicksPerMillisecond(), m[400000]);
+#undef NJOB
 
   GraphicsRenderer::CreateInstance();
   if (!InitWindow(hInstance, nCmdShow) ||

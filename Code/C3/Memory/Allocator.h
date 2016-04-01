@@ -8,26 +8,30 @@
 #define ALIGN_256(value) ALIGN_MASK(value, 0xff)
 #define ALIGN_4096(value) ALIGN_MASK(value, 0xfff)
 
+#define POINTER_SIZE          sizeof(void*)
+#define POINTER_ALIGN_MASK    (POINTER_SIZE - 1)
+#define CACHELINE_SIZE  64
+
 #ifdef C3_MEMORY_DEBUG
-#define C3_ALLOC(allocator, size)  c3_alloc(allocator, size, 0, __FILE__, __LINE__)
-#define C3_FREE(allocator, ptr)  c3_free(allocator, ptr, 0, __FILE__, __LINE__)
-#define C3_REALLOC(allocator, ptr, size)  c3_realloc(allocator, ptr, size, 0, __FILE__, __LINE__)
+#define C3_ALLOC(allocator, size)  c3_alloc(allocator, size, POINTER_SIZE, __FILE__, __LINE__)
+#define C3_FREE(allocator, ptr)  c3_free(allocator, ptr, POINTER_SIZE, __FILE__, __LINE__)
+#define C3_REALLOC(allocator, ptr, size)  c3_realloc(allocator, ptr, size, POINTER_SIZE, __FILE__, __LINE__)
 #define C3_ALIGNED_ALLOC(allocator, size, align)  c3_alloc(allocator, size, align, __FILE__, __LINE__)
 #define C3_ALIGNED_REALLOC(allocator, ptr, size, align) c3_realloc(allocator, ptr, size, align, __FILE__, __LINE__)
 #define C3_ALIGNED_FREE(allocator, ptr, align)  c3_free(allocator, ptr, align, __FILE__, __LINE__)
 #define C3_NEW(allocator, type) ::new(C3_ALLOC(allocator, sizeof(type))) type
-#define C3_DELETE(allocator, ptr) c3_delete_object(allocator, ptr, 0, __FILE__, __LINE__)
+#define C3_DELETE(allocator, ptr) c3_delete(allocator, ptr, POINTER_SIZE, __FILE__, __LINE__)
 #define C3_ALIGNED_NEW(allocator, type, align) ::new(C3_ALIGNED_ALLOC(allocator, sizeof(type), align)) type
-#define C3_ALIGNED_DELETE(allocator, ptr, align) c3_delete_object(allocator, ptr, align, __FILE__, __LINE__)
+#define C3_ALIGNED_DELETE(allocator, ptr, align) c3_delete(allocator, ptr, align, __FILE__, __LINE__)
 #else
-#define C3_ALLOC(allocator, size)  c3_alloc(allocator, size, 0)
-#define C3_FREE(allocator, ptr)  c3_free(allocator, ptr, 0)
-#define C3_REALLOC(allocator, ptr, size)  c3_realloc(allocator, ptr, size, 0)
+#define C3_ALLOC(allocator, size)  c3_alloc(allocator, size, POINTER_SIZE)
+#define C3_FREE(allocator, ptr)  c3_free(allocator, ptr, POINTER_SIZE)
+#define C3_REALLOC(allocator, ptr, size)  c3_realloc(allocator, ptr, size, POINTER_SIZE)
 #define C3_ALIGNED_ALLOC(allocator, size, align)  c3_alloc(allocator, size, align)
 #define C3_ALIGNED_REALLOC(allocator, ptr, size, align) c3_realloc(allocator, ptr, size, align)
 #define C3_ALIGNED_FREE(allocator, ptr, align)  c3_free(allocator, ptr, align)
 #define C3_NEW(allocator, type) ::new(C3_ALLOC(allocator, sizeof(type))) type
-#define C3_DELETE(allocator, ptr) c3_delete(allocator, ptr, 0)
+#define C3_DELETE(allocator, ptr) c3_delete(allocator, ptr, POINTER_SIZE)
 #define C3_ALIGNED_NEW(allocator, type, align) ::new(C3_ALIGNED_ALLOC(allocator, sizeof(type), align)) type
 #define C3_ALIGNED_DELETE(allocator, ptr, align) c3_delete(allocator, ptr, align)
 #endif
@@ -100,7 +104,7 @@ static inline void* c3_aligned_realloc(IAllocator* allocator, void* ptr_, size_t
 }
 
 template <typename T>
-inline void c3_delete(IAllocator* allocator, T* object, size_t align = 0, const char* file = nullptr, u32 line = 0) {
+inline void c3_delete(IAllocator* allocator, T* object, size_t align, const char* file = nullptr, u32 line = 0) {
 	if (object) {
 		object->~T();
 		c3_free(allocator, object, align, file, line);

@@ -13,8 +13,7 @@ static void calc_texture_size(TextureInfo& info_out, u16 width_, u16 height_, u1
 static void get_texture_size_from_ratio(BackbufferRatio ratio, u16& width_out, u16& height_out);
 
 GraphicsRenderer::GraphicsRenderer(): _ok(false), _gi(nullptr), _frame_counter(0) {
-  _submit = &_frames[0];
-  _render = &_frames[1];
+  _frame = new RenderFrame;
   _color_palette_dirty = 0;
   _num_views = 0;
   memset(_view_flags, C3_VIEW_NONE, sizeof(_view_flags));
@@ -36,10 +35,10 @@ bool GraphicsRenderer::Init(GraphicsAPI api) {
   c3_log("renderer size: %u, frame size: %u\n", sizeof(GraphicsRenderer), sizeof(RenderFrame));
   init_builtin_vertex_decls(api);
 
-  _submit->Create();
-  _render->Create();
+  _frame->Create();
+  _frame->Create();
 
-  auto& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::RENDERER_INIT);
+  auto& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::RENDERER_INIT);
   cmdbuf.Write(api);
 
   // submit
@@ -49,22 +48,22 @@ bool GraphicsRenderer::Init(GraphicsAPI api) {
   Frame();
 
   if (!_ok) {
-    _submit->GetCommandBuffer(CommandBuffer::RENDERER_SHUTDOWN_END);
+    _frame->GetCommandBuffer(CommandBuffer::RENDERER_SHUTDOWN_END);
     Frame();
     Frame();
-    _submit->Destroy();
-    _render->Destroy();
+    _frame->Destroy();
+    _frame->Destroy();
     return false;
   }
 
   _clear_quad.Init();
 
-  _submit->transient_vb = CreateTransientVertexBuffer(C3_TRANSIENT_VERTEX_BUFFER_SIZE);
-  _submit->transient_ib = CreateTransientIndexBuffer(C3_TRANSIENT_INDEX_BUFFER_SIZE);
+  _frame->transient_vb = CreateTransientVertexBuffer(C3_TRANSIENT_VERTEX_BUFFER_SIZE);
+  _frame->transient_ib = CreateTransientIndexBuffer(C3_TRANSIENT_INDEX_BUFFER_SIZE);
   Frame();
 
-  _submit->transient_vb = CreateTransientVertexBuffer(C3_TRANSIENT_VERTEX_BUFFER_SIZE);
-  _submit->transient_ib = CreateTransientIndexBuffer(C3_TRANSIENT_INDEX_BUFFER_SIZE);
+  _frame->transient_vb = CreateTransientVertexBuffer(C3_TRANSIENT_VERTEX_BUFFER_SIZE);
+  _frame->transient_ib = CreateTransientIndexBuffer(C3_TRANSIENT_INDEX_BUFFER_SIZE);
   Frame();
 
   Reset(C3_RESOLUTION_DEFAULT_WIDTH, C3_RESOLUTION_DEFAULT_HEIGHT, C3_RESOLUTION_DEFAULT_FLAGS);
@@ -86,13 +85,13 @@ void GraphicsRenderer::Reset(u16 width, u16 height, u32 flags) {
 }
 
 void GraphicsRenderer::Shutdown() {
-  _submit->GetCommandBuffer(CommandBuffer::RENDERER_SHUTDOWN_BEGIN);
+  _frame->GetCommandBuffer(CommandBuffer::RENDERER_SHUTDOWN_BEGIN);
   _clear_quad.Shutdown();
   Frame();
-  _submit->GetCommandBuffer(CommandBuffer::RENDERER_SHUTDOWN_END);
+  _frame->GetCommandBuffer(CommandBuffer::RENDERER_SHUTDOWN_END);
   Frame();
-  _render->Destroy();
-  _submit->Destroy();
+  _frame->Destroy();
+  _frame->Destroy();
 }
 
 u8 GraphicsRenderer::PushView(const char* name) {
@@ -114,7 +113,7 @@ Handle GraphicsRenderer::CreateVertexBuffer(const MemoryBlock* mem, const Vertex
   vb.stride = decl.stride;
   vb.size = mem->size;
   vb.flags = flags;
-  auto& cmd = _submit->GetCommandBuffer(CommandBuffer::CREATE_VERTEX_BUFFER);
+  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::CREATE_VERTEX_BUFFER);
   cmd.Write(handle);
   cmd.Write(mem);
   cmd.Write(decl_handle);
@@ -124,9 +123,9 @@ Handle GraphicsRenderer::CreateVertexBuffer(const MemoryBlock* mem, const Vertex
 
 void GraphicsRenderer::DestroyVertexBuffer(Handle handle) {
   if (!handle) return;
-  auto& cmd = _submit->GetCommandBuffer(CommandBuffer::DESTROY_VERTEX_BUFFER);
+  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::DESTROY_VERTEX_BUFFER);
   cmd.Write(handle);
-  _submit->Free(handle);
+  _frame->Free(handle);
 }
 
 Handle GraphicsRenderer::CreateIndexBuffer(const MemoryBlock* mem, u16 flags) {
@@ -134,7 +133,7 @@ Handle GraphicsRenderer::CreateIndexBuffer(const MemoryBlock* mem, u16 flags) {
   auto& ib = _index_buffers[handle.idx];
   ib.size = mem->size;
   ib.flags = flags;
-  auto& cmd = _submit->GetCommandBuffer(CommandBuffer::CREATE_INDEX_BUFFER);
+  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::CREATE_INDEX_BUFFER);
   cmd.Write(handle);
   cmd.Write(mem);
   cmd.Write(flags);
@@ -143,9 +142,9 @@ Handle GraphicsRenderer::CreateIndexBuffer(const MemoryBlock* mem, u16 flags) {
 
 void GraphicsRenderer::DestroyIndexBuffer(Handle handle) {
   if (!handle) return;
-  auto& cmd = _submit->GetCommandBuffer(CommandBuffer::DESTROY_INDEX_BUFFER);
+  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::DESTROY_INDEX_BUFFER);
   cmd.Write(handle);
-  _submit->Free(handle);
+  _frame->Free(handle);
 }
 
 Handle GraphicsRenderer::CreateDynamicVertexBuffer(u32 num, const VertexDecl& decl, u16 flags) {
@@ -157,7 +156,7 @@ Handle GraphicsRenderer::CreateDynamicVertexBuffer(u32 num, const VertexDecl& de
   vb.size = num * decl.stride;
   vb.flags = flags;
 
-  CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_VERTEX_BUFFER);
+  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_VERTEX_BUFFER);
   cmdbuf.Write(handle);
   cmdbuf.Write(decl.stride * num);
   cmdbuf.Write(decl_handle);
@@ -184,7 +183,7 @@ void GraphicsRenderer::UpdateDynamicVertexBuffer(Handle handle, u32 start_vertex
   if (size < mem->size) {
     c3_log("[C3] Truncating dynamic vertex buffer update (size %d, mem size %d).\n", vb.size, mem->size);
   }
-  CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::UPDATE_DYNAMIC_VERTEX_BUFFER);
+  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::UPDATE_DYNAMIC_VERTEX_BUFFER);
   cmdbuf.Write(handle);
   cmdbuf.Write(offset);
   cmdbuf.Write(size);
@@ -192,7 +191,7 @@ void GraphicsRenderer::UpdateDynamicVertexBuffer(Handle handle, u32 start_vertex
 }
 
 Handle GraphicsRenderer::CreateDynamicIndexBuffer(u32 num, u16 flags) {
-  CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_INDEX_BUFFER);
+  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_INDEX_BUFFER);
   Handle handle = _index_buffer_handles.Alloc();
   const u32 index_size = 0 == (flags & C3_BUFFER_INDEX32) ? 2 : 4;
   u32 size = num * index_size;
@@ -226,7 +225,7 @@ void GraphicsRenderer::UpdateDynamicIndexBuffer(Handle handle, u32 start_index, 
   }
   u32 size = min(offset + mem->size, ib.size) - offset;
   if (size < mem->size) c3_log("Truncating dynamic index buffer update (size %d, mem size %d).\n", size, mem->size);
-  CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::UPDATE_DYNAMIC_INDEX_BUFFER);
+  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::UPDATE_DYNAMIC_INDEX_BUFFER);
   cmdbuf.Write(handle);
   cmdbuf.Write(offset);
   cmdbuf.Write(size);
@@ -237,32 +236,32 @@ void GraphicsRenderer::DestroyDynamicIndexBuffer(Handle handle) {
 }
 
 bool GraphicsRenderer::CheckAvailTransientIndexBuffer(u32 num) {
-  return _submit->CheckAvailTransientIndexBuffer(num);
+  return _frame->CheckAvailTransientIndexBuffer(num);
 }
 
 bool GraphicsRenderer::CheckAvailTransientVertexBuffer(u32 num, const VertexDecl& decl) {
-  return _submit->CheckAvailTransientVertexBuffer(num, decl.stride);
+  return _frame->CheckAvailTransientVertexBuffer(num, decl.stride);
 }
 
 bool GraphicsRenderer::CheckAvailTransientBuffers(u32 num_vertices, const VertexDecl& decl, u32 num_indices) {
-  return _submit->CheckAvailTransientIndexBuffer(num_indices) &&
-    _submit->CheckAvailTransientVertexBuffer(num_vertices, decl.stride);
+  return _frame->CheckAvailTransientIndexBuffer(num_indices) &&
+    _frame->CheckAvailTransientVertexBuffer(num_vertices, decl.stride);
 }
 
 void GraphicsRenderer::AllocTransientVertexBuffer(TransientVertexBuffer* tvb_out, u32 num, const VertexDecl& decl) {
-  TransientVertexBuffer& dvb = *_submit->transient_vb;
+  TransientVertexBuffer& dvb = *_frame->transient_vb;
   
   Handle decl_handle = _decl_ref.Find(decl.hash);
   if (!decl_handle) {
     Handle temp{_vertex_decl_handles.Alloc()};
     decl_handle = temp;
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_VERTEX_DECL);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_VERTEX_DECL);
     cmdbuf.Write(decl_handle);
     cmdbuf.Write(decl);
     _decl_ref.Add(decl_handle, decl.hash);
   }
 
-  u32 offset = _submit->AllocTransientVertexBuffer(num, decl.stride);
+  u32 offset = _frame->AllocTransientVertexBuffer(num, decl.stride);
 
   tvb_out->data = &dvb.data[offset];
   tvb_out->size = num * decl.stride;
@@ -273,8 +272,8 @@ void GraphicsRenderer::AllocTransientVertexBuffer(TransientVertexBuffer* tvb_out
 }
 
 void GraphicsRenderer::AllocTransientIndexBuffer(TransientIndexBuffer* tib_out, u32 num) {
-  u32 offset = _submit->AllocTransientIndexBuffer(num);
-  TransientIndexBuffer& tib = *_submit->transient_ib;
+  u32 offset = _frame->AllocTransientIndexBuffer(num);
+  TransientIndexBuffer& tib = *_frame->transient_ib;
 
   tib_out->data = &tib.data[offset];
   tib_out->size = num * 2;
@@ -315,7 +314,7 @@ Handle GraphicsRenderer::CreateShader(const MemoryBlock* mem) {
       ++shader.num_constants;
     }
   }
-  auto& cmd = _submit->GetCommandBuffer(CommandBuffer::CREATE_SHADER);
+  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::CREATE_SHADER);
   cmd.Write(handle);
   cmd.Write(mem);
   return handle;
@@ -323,7 +322,7 @@ Handle GraphicsRenderer::CreateShader(const MemoryBlock* mem) {
 
 void GraphicsRenderer::DestroyShader(Handle handle) {
   if (!handle) return;
-  auto& cmd = _submit->GetCommandBuffer(CommandBuffer::DESTROY_SHADER);
+  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::DESTROY_SHADER);
   cmd.Write(handle);
   ShaderDecRef(handle);
 }
@@ -362,7 +361,7 @@ Handle GraphicsRenderer::CreateProgram(Handle vsh, Handle fsh, bool destroy_shad
 
     _program_map.insert(make_pair(u32(fsh.idx << 16) | vsh.idx, handle));
 
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_PROGRAM);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_PROGRAM);
     cmdbuf.Write(handle);
     cmdbuf.Write(vsh);
     cmdbuf.Write(fsh);
@@ -380,9 +379,9 @@ void GraphicsRenderer::DestroyProgram(Handle handle) {
   ProgramRef& pr = _program_ref[handle.idx];
   i16 refs = --pr.ref_count;
   if (refs == 0) {
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::DESTROY_PROGRAM);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_PROGRAM);
     cmdbuf.Write(handle);
-    _submit->Free(handle);
+    _frame->Free(handle);
 
     ShaderDecRef(pr.vsh);
     u32 hash = pr.vsh.idx;
@@ -427,7 +426,7 @@ Handle GraphicsRenderer::CreateTexture(const MemoryBlock* mem, u32 flags, u8 ski
     ref.format = u8(info_out->format);
     ref.owned = false;
 
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_TEXTURE);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_TEXTURE);
     cmdbuf.Write(handle);
     cmdbuf.Write(mem);
     cmdbuf.Write(flags);
@@ -508,7 +507,7 @@ Handle GraphicsRenderer::CreateConstant(stringid name, ConstantType type, u16 nu
       constant.type = old_size < new_size ? type : constant.type;
       constant.num = max(constant.num, num);
 
-      CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_CONSTANT);
+      CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_CONSTANT);
       cmdbuf.Write(handle);
       cmdbuf.Write(name);
       cmdbuf.Write(constant.type);
@@ -532,7 +531,7 @@ Handle GraphicsRenderer::CreateConstant(stringid name, ConstantType type, u16 nu
 
     _constant_map.insert(make_pair(name, handle));
 
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_CONSTANT);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_CONSTANT);
     cmdbuf.Write(handle);
     cmdbuf.Write(name);
     cmdbuf.Write(type);
@@ -554,9 +553,9 @@ void GraphicsRenderer::DestroyConstant(Handle handle) {
       }
     }
 
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::DESTROY_CONSTANT);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_CONSTANT);
     cmdbuf.Write(handle);
-    _submit->Free(handle);
+    _frame->Free(handle);
   }
 }
 
@@ -564,7 +563,7 @@ Handle GraphicsRenderer::CreateFrameBuffer(u8 num, Handle* handles, bool destroy
   Handle handle = _frame_buffer_handles.Alloc();
   if (!handle) c3_log("Failed to allocate frame buffer handle.\n");
   else {
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_FRAME_BUFFER);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_FRAME_BUFFER);
     cmdbuf.Write(handle);
     cmdbuf.Write(false);
     cmdbuf.Write(num);
@@ -592,9 +591,9 @@ Handle GraphicsRenderer::CreateFrameBuffer(u8 num, Handle* handles, bool destroy
 
 void GraphicsRenderer::DestroyFrameBuffer(Handle handle) {
   if (!handle) return;
-  auto& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::DESTROY_FRAME_BUFFER);
+  auto& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_FRAME_BUFFER);
   cmdbuf.Write(handle);
-  _submit->Free(handle);
+  _frame->Free(handle);
   FrameBufferRef& ref = _frame_buffer_ref[handle.idx];
   if (!ref.window) {
     for (u32 ii = 0; ii < ARRAY_SIZE(ref.th); ++ii) {
@@ -608,7 +607,7 @@ void GraphicsRenderer::ResizeTexture(Handle handle, u16 width, u16 height) {
   const TextureRef& texture_ref = _texture_ref[handle.idx];
   get_texture_size_from_ratio((BackbufferRatio)texture_ref.bb_ratio, width, height);
 
-  CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::RESIZE_TEXTURE);
+  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::RESIZE_TEXTURE);
   cmdbuf.Write(handle);
   cmdbuf.Write(width);
   cmdbuf.Write(height);
@@ -618,7 +617,7 @@ void GraphicsRenderer::UpdateTexture2D(Handle handle, u8 mip, u16 x, u16 y, u16 
   c3_assert_return(mem && "mem can't be NULL");
   if (width == 0 || height == 0) mem_free(mem);
   else {
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::UPDATE_TEXTURE);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::UPDATE_TEXTURE);
     cmdbuf.Write(handle);
     cmdbuf.Write(u8(0)); // side
     cmdbuf.Write(mip);
@@ -636,18 +635,18 @@ void GraphicsRenderer::UpdateTexture2D(Handle handle, u8 mip, u16 x, u16 y, u16 
 }
 
 u16 GraphicsRenderer::SetTransform(const float4x4* mtx, u16 num) {
-  return _submit->SetTransform(mtx, num);
+  return _frame->SetTransform(mtx, num);
 }
 
 void GraphicsRenderer::SetTransform(u16 cache, u16 num) {
-  _submit->SetTransform(cache, num);
+  _frame->SetTransform(cache, num);
 }
 
 const InstanceDataBuffer* GraphicsRenderer::AllocInstanceDataBuffer(u32 num, u16 stride) {
-  TransientVertexBuffer& dvb = *_submit->transient_vb;
+  TransientVertexBuffer& dvb = *_frame->transient_vb;
 
   u32 out_num = num;
-  u32 offset = _submit->AllocTransientVertexBuffer(out_num, stride);
+  u32 offset = _frame->AllocTransientVertexBuffer(out_num, stride);
   if (out_num != num) c3_log("[C3] Failed to allocate instance data buffer: num=%d stride=%hd.\n", num, stride);
   InstanceDataBuffer* idb = (InstanceDataBuffer*)C3_ALLOC(g_allocator, sizeof(InstanceDataBuffer));
   idb->data = &dvb.data[offset];
@@ -660,37 +659,37 @@ const InstanceDataBuffer* GraphicsRenderer::AllocInstanceDataBuffer(u32 num, u16
 }
 
 bool GraphicsRenderer::CheckAvailInstanceDataBuffer(u32 num, u16 stride) {
-  return _submit->CheckAvailTransientVertexBuffer(num, stride);
+  return _frame->CheckAvailTransientVertexBuffer(num, stride);
 }
 
 u16 GraphicsRenderer::AllocTransform(float4x4*& mtx_out, u16& num_in_out) {
-  return _submit->AllocTransform(mtx_out, num_in_out);
+  return _frame->AllocTransform(mtx_out, num_in_out);
 }
 
 void GraphicsRenderer::SetVertexBuffer(Handle handle, u32 start, u32 num) {
-  _submit->SetVertexBuffer(handle, start, num);
+  _frame->SetVertexBuffer(handle, start, num);
 }
 
 void GraphicsRenderer::SetVertexBuffer(const TransientVertexBuffer* tvb, u32 start_vertex, u32 num_vertices) {
-  _submit->SetVertexBuffer(tvb, start_vertex, num_vertices);
+  _frame->SetVertexBuffer(tvb, start_vertex, num_vertices);
 }
 
 void GraphicsRenderer::SetIndexBuffer(Handle handle, u32 start, u32 num) {
-  _submit->SetIndexBuffer(handle, start, num);
+  _frame->SetIndexBuffer(handle, start, num);
 }
 
 void GraphicsRenderer::SetIndexBuffer(const TransientIndexBuffer* tib, u32 first_index, u32 num_indices) {
-  _submit->SetIndexBuffer(tib, first_index, num_indices);
+  _frame->SetIndexBuffer(tib, first_index, num_indices);
 }
 
 void GraphicsRenderer::SetScissor(i16 x, i16 y, i16 width, i16 height) {
-  _submit->SetScissor(x, y, width, height);
+  _frame->SetScissor(x, y, width, height);
 }
 
 void GraphicsRenderer::SetConstant(Handle handle, const void* value, u16 num) {
   if (!handle) return;
   ConstantRef& constant = _constant_ref[handle.idx];
-  _submit->SetConstant(constant.type, handle, value, min(num, constant.num));
+  _frame->SetConstant(constant.type, handle, value, min(num, constant.num));
 }
 
 void GraphicsRenderer::SetTexture(u8 unit, Handle handle, AttachmentPoint attachment, u32 flags) {
@@ -701,11 +700,11 @@ void GraphicsRenderer::SetTexture(u8 unit, Handle handle, AttachmentPoint attach
     texture_handle = ref.th[attachment];
     c3_assert_return(texture_handle && "Frame buffer texture is invalid.");
   }
-  _submit->SetTexture(unit, texture_handle, flags);
+  _frame->SetTexture(unit, texture_handle, flags);
 }
 
 void GraphicsRenderer::SetTexture(u8 unit, Handle handle, u32 flags) {
-  _submit->SetTexture(unit, handle, flags);
+  _frame->SetTexture(unit, handle, flags);
 }
 
 void GraphicsRenderer::SetViewRect(u8 view, u16 x, u16 y, u16 width, u16 height) {
@@ -779,7 +778,7 @@ void GraphicsRenderer::SetViewRemap(u8 start_view, u8 num, u8* remap) {
 }
 
 void GraphicsRenderer::SetViewName(u8 view, const char* name) {
-  _submit->SetViewName(view, name);
+  _frame->SetViewName(view, name);
 }
 
 void GraphicsRenderer::SetPaletteColor(u8 index, u32 rgba) {
@@ -812,19 +811,19 @@ void GraphicsRenderer::SetPaletteColor(u8 index, const Color& color) {
 }
 
 void GraphicsRenderer::SetState(u64 state, u32 rgba) {
-  _submit->SetState(state, rgba);
+  _frame->SetState(state, rgba);
 }
 
 void GraphicsRenderer::SetMarker(const char* marker) {
-  _submit->SetMarker(marker);
+  _frame->SetMarker(marker);
 }
 
 void GraphicsRenderer::Submit(u8 view, Handle program, i32 tag) {
-  _submit->Submit(view, program, tag);
+  _frame->Submit(view, program, tag);
 }
 
 void GraphicsRenderer::Discard() {
-  _submit->Discard();
+  _frame->Discard();
 }
 
 void GraphicsRenderer::Frame() {
@@ -834,9 +833,9 @@ void GraphicsRenderer::Frame() {
 i32 GraphicsRenderer::RenderOneFrame() {
   if (_gi) _gi->Flip();
   //auto start_time = get_timestamp();
-  ExecuteCommands(_render->pre_cmd_buffer);
-  _gi->Submit(_render, _clear_quad);
-  ExecuteCommands(_render->post_cmd_buffer);
+  ExecuteCommands(_frame->pre_cmd_buffer);
+  _gi->Submit(_frame, _clear_quad);
+  ExecuteCommands(_frame->post_cmd_buffer);
   /*
   auto elapsed_msecs = (get_timestamp() - start_time) * 1000.0;
   if (elapsed_msecs >= 17.0) {
@@ -847,27 +846,25 @@ i32 GraphicsRenderer::RenderOneFrame() {
 }
 
 void GraphicsRenderer::Swap() {
-  _submit->resolution = _resolution;
-  memcpy(_submit->view_remap, _view_remap, sizeof(_view_remap));
-  memcpy(_submit->fb, _fb, sizeof(_fb));
-  memcpy(_submit->view_clear, _view_clear, sizeof(_view_clear));
-  memcpy(_submit->rect, _rect, sizeof(_rect));
-  memcpy(_submit->scissor, _scissor, sizeof(_scissor));
-  memcpy(_submit->_view, _view, sizeof(_view));
-  memcpy(_submit->proj, _proj, sizeof(_proj));
-  memcpy(_submit->view_flags, _view_flags, sizeof(_view_flags));
+  _frame->resolution = _resolution;
+  memcpy(_frame->view_remap, _view_remap, sizeof(_view_remap));
+  memcpy(_frame->fb, _fb, sizeof(_fb));
+  memcpy(_frame->view_clear, _view_clear, sizeof(_view_clear));
+  memcpy(_frame->rect, _rect, sizeof(_rect));
+  memcpy(_frame->scissor, _scissor, sizeof(_scissor));
+  memcpy(_frame->_view, _view, sizeof(_view));
+  memcpy(_frame->proj, _proj, sizeof(_proj));
+  memcpy(_frame->view_flags, _view_flags, sizeof(_view_flags));
   if (_color_palette_dirty > 0) {
     --_color_palette_dirty;
-    memcpy(_submit->color_palette, _color_palette, sizeof(_color_palette));
+    memcpy(_frame->color_palette, _color_palette, sizeof(_color_palette));
   }
-  _submit->Finish();
-  
-  swap(_submit, _render);
+  _frame->Finish();
   
   ++_frame_counter;
   RenderOneFrame();
 
-  _submit->Start();
+  _frame->Start();
   memset(_fb, 0xff, sizeof(_fb));
   memset(_seq, 0, sizeof(_seq));
   memset(_seq_enabled, 0, sizeof(_seq_enabled));
@@ -875,8 +872,8 @@ void GraphicsRenderer::Swap() {
   _current_view = 0;
   memset(_view_clear, 0, sizeof(_view_clear));
   for (u8 i = 0; i < C3_MAX_VIEWS; ++i) _view_remap[i] = i;
-  FreeAllHandles(_submit);
-  _submit->ResetFreeHandles();
+  FreeAllHandles(_frame);
+  _frame->ResetFreeHandles();
 }
 
 void GraphicsRenderer::ExecuteCommands(CommandBuffer& cmdbuf) {
@@ -1169,9 +1166,9 @@ void GraphicsRenderer::TextureDecRef(Handle handle) {
   TextureRef& ref = _texture_ref[handle.idx];
   i16 refs = --ref.ref_count;
   if (refs == 0) {
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::DESTROY_TEXTURE);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_TEXTURE);
     cmdbuf.Write(handle);
-    _submit->Free(handle);
+    _frame->Free(handle);
   }
 }
 
@@ -1191,9 +1188,9 @@ void GraphicsRenderer::ShaderDecRef(Handle handle) {
   ShaderRef& ref = _shader_ref[handle.idx];
   i16 refs = --ref.ref_count;
   if (refs == 0) {
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::DESTROY_SHADER);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_SHADER);
     cmdbuf.Write(handle);
-    _submit->Free(handle);
+    _frame->Free(handle);
   }
 }
 
@@ -1211,7 +1208,7 @@ Handle GraphicsRenderer::FindVertexDecl(const VertexDecl& decl) {
   if (!decl_handle) {
     Handle temp{_vertex_decl_handles.Alloc()};
     decl_handle = temp;
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_VERTEX_DECL);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_VERTEX_DECL);
     cmdbuf.Write(decl_handle);
     cmdbuf.Write(decl);
   }
@@ -1228,7 +1225,7 @@ TransientIndexBuffer* GraphicsRenderer::CreateTransientIndexBuffer(u32 size) {
   Handle handle{_index_buffer_handles.Alloc()};
   if (!handle) c3_log("Failed to allocate transient index buffer handle.\n");
   else {
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_INDEX_BUFFER);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_INDEX_BUFFER);
     u16 flags = C3_BUFFER_NONE;
     cmdbuf.Write(handle);
     cmdbuf.Write(size);
@@ -1244,9 +1241,9 @@ TransientIndexBuffer* GraphicsRenderer::CreateTransientIndexBuffer(u32 size) {
 }
 
 void GraphicsRenderer::DestroyTransientIndexBuffer(TransientIndexBuffer* tib) {
-  CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::DESTROY_DYNAMIC_INDEX_BUFFER);
+  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_DYNAMIC_INDEX_BUFFER);
   cmdbuf.Write(tib->handle);
-  _submit->Free(tib->handle);
+  _frame->Free(tib->handle);
   C3_FREE(g_allocator, tib);
 }
 
@@ -1267,7 +1264,7 @@ TransientVertexBuffer* GraphicsRenderer::CreateTransientVertexBuffer(u32 size, c
       stride = decl->stride;
     }
 
-    CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_VERTEX_BUFFER);
+    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_VERTEX_BUFFER);
     cmdbuf.Write(handle);
     cmdbuf.Write(size);
     u16 flags = C3_BUFFER_NONE;
@@ -1286,9 +1283,9 @@ TransientVertexBuffer* GraphicsRenderer::CreateTransientVertexBuffer(u32 size, c
 }
 
 void GraphicsRenderer::DestroyTransientVertexBuffer(TransientVertexBuffer* tvb) {
-  CommandBuffer& cmdbuf = _submit->GetCommandBuffer(CommandBuffer::DESTROY_DYNAMIC_VERTEX_BUFFER);
+  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_DYNAMIC_VERTEX_BUFFER);
   cmdbuf.Write(tvb->handle);
-  _submit->Free(tvb->handle);
+  _frame->Free(tvb->handle);
   C3_FREE(g_allocator, tvb);
 }
 

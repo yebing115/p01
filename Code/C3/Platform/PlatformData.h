@@ -2,10 +2,6 @@
 #include "Data/DataType.h"
 #include "Data/String.h"
 
-#define POINTER_SIZE          sizeof(void*)
-#define POINTER_ALIGN_MASK    (POINTER_SIZE - 1)
-#define CACHELINE_SIZE  64
-
 struct PlatformData {
   void* ndt;            //!< Native display type
   void* nwh;            //!< Native window handle

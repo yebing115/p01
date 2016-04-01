@@ -10,10 +10,9 @@ Fiber::Fiber(): _fn(nullptr), _user_data(nullptr), _state(FIBER_STATE_INITIALIZE
   _handle = CreateFiber(FIBER_STACK_SIZE, &Fiber::FiberProc, this);
 }
 
-void Fiber::Prepare(FiberFn fn, void* user_data, FiberFinishFn finish_fn) {
+void Fiber::Prepare(FiberFn fn, void* user_data) {
   c3_assert(_state == FIBER_STATE_INITIALIZED || _state == FIBER_STATE_FINISHED);
   _fn = fn;
-  _finish_fn = finish_fn;
   _user_data = user_data;
   _state = FIBER_STATE_SUSPENDED;
 }
@@ -21,12 +20,15 @@ void Fiber::Prepare(FiberFn fn, void* user_data, FiberFinishFn finish_fn) {
 void Fiber::Suspend() {
   c3_assert(_state == FIBER_STATE_RUNNING);
   _state = FIBER_STATE_SUSPENDED;
+  auto sched_fiber = GetThreadMajorFiber();
+  if (sched_fiber && sched_fiber != this) sched_fiber->Resume();
 }
 
 void Fiber::Finish() {
   c3_assert(_state == FIBER_STATE_RUNNING);
   _state = FIBER_STATE_FINISHED;
-  if (_finish_fn) _finish_fn();
+  auto sched_fiber = GetThreadMajorFiber();
+  if (sched_fiber && sched_fiber != this) sched_fiber->Resume();
 }
 
 void Fiber::Resume() {
@@ -38,7 +40,7 @@ void Fiber::Resume() {
 VOID CALLBACK Fiber::FiberProc(_In_ PVOID lpParameter) {
   auto fiber = (Fiber*)lpParameter;
   fiber->_fn(fiber->_user_data);
-  fiber->_state = FIBER_STATE_FINISHED;
+  fiber->Finish();
 }
 
 Fiber* Fiber::ConvertFromThread(void* user_data) {

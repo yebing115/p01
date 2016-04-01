@@ -12,16 +12,16 @@ static void dds_load(Asset* asset) {
   auto mem = mem_alloc(f->GetSize());
   f->ReadBytes(mem->data, mem->size);
   FileSystem::Instance()->Close(f);
-  Job::JobFn create_texture = [](void* user_data) {
-    auto mem = (const MemoryBlock*)user_data;
+  DEFINE_JOB_LAMBDA(create_texture) {
+    auto mem = (const MemoryBlock*)arg;
   };
   Job job{
-    &create_texture,
+    create_texture,
     (void*)mem,
     JOB_PRIORITY_LOW,
-    JOB_AFFINITY_RENDER,
+    JOB_AFFINITY_MAIN,
   };
-  atomic_int label;
+  atomic_int* label;
   JobScheduler::Instance()->Submit(&job, 1, &label);
 }
 

@@ -11,7 +11,6 @@ int AppConfig::MAX_FPS = 12000;
 float2 AppConfig::RESOLUTION{1600, 900};
 bool AppConfig::USE_FULL_SCREEN = false;
 bool AppConfig::USE_VSYNC = false;
-bool AppConfig::USE_RENDER_THREAD = true;
 int AppConfig::MSAA_SAMPLES = 1;
 //GraphicsAPI AppConfig::GRAPHICS_API = OPENGL_WIN_API;
 String AppConfig::LOG_FILE = "debug.log";

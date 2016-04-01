@@ -5,29 +5,53 @@
 #include "Job.h"
 
 struct JobNode {
-  Job _job;
+  JobFn _fn;
+  void* _user_data;
+  JobPriority _priority;
+  JobAffinity _affinity;
+  Fiber* _fiber;
   atomic_int* _label;
+  list_head _link;
+  int _wait_value;
 };
 typedef MPMCQueue<JobNode> JobQueue;
 
+struct JobWaitListNode {
+  SpinLock _lock;
+  atomic_int _label;
+  list_head _job_list;
+  list_head _link;
+};
+
 class JobScheduler {
 public:
-  JobScheduler(int num_workers = thread::hardware_concurrency());
+  JobScheduler();
   ~JobScheduler();
 
-  void Submit(Job* start_job, int num_jobs = 1, atomic_int* label = nullptr);
-  void Wait(atomic_int* label, int value = 0);
+  void Init(int num_workers);
+  void Submit(Job* start_job, int num_jobs, atomic_int** label);
+  void WaitAndFree(atomic_int* label) { Wait(label, 0, true); }
+  void Wait(atomic_int* label, int value) { Wait(label, value, false); }
+  void DoJob();
 
 private:
-  void DoJob();
-  void DoJob(const JobNode& job_node);
-  inline bool GetJob(JobAffinity affinity, JobPriority priority, JobNode& out_job_node) {
-    return _job_queues[affinity][priority]->Read(out_job_node);
-  }
+  void AddJob(JobNode* job_node);
+  void DoJob(JobNode* job_node);
+  void Wait(atomic_int* label, int value, bool free_wait_list);
+  JobNode* GetJob(JobAffinity affinity, JobPriority priority);
+  void ScheduleMain(atomic_int* label, int value);
   static i32 WorkerThread(void* arg);
-  JobQueue* _job_queues[NUM_JOB_AFFINITIES][NUM_JOB_PRIORITIES];
+  SpinLock _job_queues_lock;
+  list_head _job_queues[NUM_JOB_AFFINITIES][NUM_JOB_PRIORITIES];
   Thread _worker_threads[C3_MAX_WORKER_THREADS];
   int _num_workers;
   int _require_exit;
+  typedef ThreadSafePool<Fiber, C3_MAX_FIBERS> FiberPool;
+  FiberPool* _fiber_pool;
+  SpinLock _wait_lock;
+  list_head _wait_list;
+  PoolAllocator _wait_allocator;
+  ThreadSafePoolAllocator _job_allocator;
+  JobNode* _main_sched_job;
   SUPPORT_SINGLETON(JobScheduler);
 };

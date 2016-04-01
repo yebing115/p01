@@ -14,7 +14,6 @@ public:
   static float2 RESOLUTION;
   static bool USE_FULL_SCREEN;
   static bool USE_VSYNC;
-  static bool USE_RENDER_THREAD;
   //static GraphicsAPI GRAPHICS_API;
   static int MSAA_SAMPLES;
   static String LOG_FILE;

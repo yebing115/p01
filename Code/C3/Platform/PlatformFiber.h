@@ -16,16 +16,16 @@ class Fiber {
 public:
   Fiber();
   typedef i32(*FiberFn)(void* user_data);
-  typedef void(*FiberFinishFn)();
   // INITIALIZED -> SUSPENDED
-  void Prepare(FiberFn fn, void* data, FiberFinishFn finish_fn = nullptr);
-  // RUNNING -> SUSPENDED
+  void Prepare(FiberFn fn, void* data);
+  // RUNNING -> SUSPENDED, run thread major fiber
   void Suspend();
-  // RUNNING -> FINISHED
+  // RUNNING -> FINISHED, run thread major fiber
   void Finish();
-  // SUSPENDED -> RUNNING
+  // SUSPENDED -> RUNNING, start self fiber code.
   void Resume();
   void* GetData() const { return _user_data; }
+  FiberState GetState() const { return _state; }
 
   static Fiber* ConvertFromThread(void* user_data);
   static Fiber* GetThreadMajorFiber();
@@ -40,7 +40,6 @@ private:
 #endif;
 
   FiberFn _fn;
-  FiberFinishFn _finish_fn;
   void* _handle;
   void* _user_data;
   FiberState _state;

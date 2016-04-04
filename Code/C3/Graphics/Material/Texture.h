@@ -5,4 +5,5 @@
 struct Texture {
   Handle _handle;
   TextureInfo _info;
+  const MemoryBlock* _mem;
 };

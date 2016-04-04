@@ -20,6 +20,19 @@ struct Job {
   void* _user_data;
   JobPriority _priority;
   JobAffinity _affinity;
+
+  void InitWorkerJob(JobFn fn, void* user_data, JobPriority prio = JOB_PRIORITY_NORMAL) {
+    _fn = fn;
+    _user_data = user_data;
+    _priority = prio;
+    _affinity = JOB_AFFINITY_ANY;
+  }
+  void InitMainJob(JobFn fn, void* user_data, JobPriority prio = JOB_PRIORITY_NORMAL) {
+    _fn = fn;
+    _user_data = user_data;
+    _priority = prio;
+    _affinity = JOB_AFFINITY_MAIN;
+  }
 };
 
 #define DEFINE_JOB_ENTRY(name) void name(void* arg)

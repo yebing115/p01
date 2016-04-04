@@ -41,3 +41,4 @@
 #undef near
 #undef far
 #undef GetWindowFont
+#undef Yield

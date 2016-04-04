@@ -99,8 +99,8 @@ Compiler( 'Compiler-x64' )
     .LinkerOptions          = '/NODEFAULTLIB /NOLOGO /INCREMENTAL:NO /OUT:"%2" "%1" /DEBUG'
 
     // Optimizations
-    .CompilerDebugOptimizations     = ' /MDd /Od /RTC1 /GS /Oy- /GR '
-    .CompilerReleaseOptimizations   = ' /MD /Ox /Oy /Oi /GS- /GF /GL /Gy /Gw /GR '
+    .CompilerDebugOptimizations     = ' /MDd /Od /RTC1 /GS /Oy- /GR /GT '
+    .CompilerReleaseOptimizations   = ' /MD /Ox /Oy /Oi /GS- /GF /GL /Gy /Gw /GR /GT '
     .LibrarianDebugOptimizations    = ''
     .LibrarianReleaseOptimizations  = ' /LTCG'
     .LinkerDebugOptimizations       = ' msvcrtd.lib vcruntimed.lib ucrtd.lib msvcprtd.lib'

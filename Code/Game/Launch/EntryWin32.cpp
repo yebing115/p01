@@ -6,6 +6,7 @@
 #include "Game/GameApplication.h"
 #include "Graphics/GraphicsRenderer.h"
 #include "Graphics/imgui_helpers.h"
+#include "Asset/AssetManager.h"
 #include <shellapi.h>
 #include <thread>
 
@@ -63,42 +64,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
   FileSystem::CreateInstance();
   auto JS = JobScheduler::CreateInstance();
   JS->Init(thread::hardware_concurrency());
-
-#define NJOB 2000
-  static Job work[NJOB];
-  static int m[NJOB * 2048];
-  for (int i = 0; i < NJOB; ++i) {
-    DEFINE_JOB_LAMBDA(work_item) {
-      int start = (int)arg;
-      //c3_log("%d\n", start);
-      for (int j = 0; j < 2048; ++j)
-        m[start + j] = start + j;
-    };
-    work[i]._fn = work_item;
-    work[i]._user_data = (void*)(i * 2048);
-  }
-  atomic_int* label = nullptr;
-  tick_t t1, t2;
-  t1 = Clock::Tick();
-
-  for (int i = 0; i < NJOB; ++i) {
-    int start = i * 2048;
-    for (int j = 0; j < 2048; ++j)
-      m[start + j] = start + j;
-  }
-
-  t2 = Clock::Tick();
-
-  c3_log("time: %.3f ms, %d\n", float(t2 - t1) / Clock::TicksPerMillisecond(), m[400000]);
-
-  t1 = Clock::Tick();
-
-  JS->Submit(work, NJOB, &label);
-  JS->WaitAndFree(label);
-
-  t2 = Clock::Tick();
-  c3_log("atime: %.3f ms, %d\n", float(t2 - t1) / Clock::TicksPerMillisecond(), m[400000]);
-#undef NJOB
+  AssetManager::CreateInstance();
 
   GraphicsRenderer::CreateInstance();
   if (!InitWindow(hInstance, nCmdShow) ||
@@ -140,7 +106,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     //ProcessXInput();
 
     GraphicsRenderer::Instance()->Reset((u16)s_window_size.x, (u16)s_window_size.y,
-                                        C3_RESET_FULLSCREEN);
+                                        C3_RESET_VSYNC);
 
     IO.KeyCtrl = (GetKeyState(VK_LCONTROL) & 0x8000) || (GetKeyState(VK_RCONTROL) & 0x8000);
     IO.KeyShift = (GetKeyState(VK_LSHIFT) & 0x8000) || (GetKeyState(VK_RSHIFT) & 0x8000);

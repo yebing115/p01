@@ -26,9 +26,11 @@ public:
   void Resume();
   void* GetData() const { return _user_data; }
   FiberState GetState() const { return _state; }
+  void SetState(FiberState state) { _state = state; }
 
   static Fiber* ConvertFromThread(void* user_data);
-  static Fiber* GetThreadMajorFiber();
+  static Fiber* GetScheduleFiber();
+  static void SetScheduleFiber(Fiber* fiber);
   static Fiber* GetCurrentFiber();
 
 private:

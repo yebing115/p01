@@ -9,11 +9,11 @@
 
 CrtFile::CrtFile(const String& fname, bool writable): _file(nullptr) {
   auto platform_filename = EncodingUtil::UTF8ToSystem(fname);
-  _file = fopen(platform_filename.GetCString(), writable ? "wb" : "rb");
+  _file = _wfopen((wchar_t*)platform_filename.GetCString(), writable ? L"wb" : L"rb");
   _file_size = 0;
   if (_file) {
-    struct stat st;
-    if (stat(platform_filename.GetCString(), &st) == 0) _file_size = st.st_size;
+    struct _stat64i32 st;
+    if (_wstat((wchar_t*)platform_filename.GetCString(), &st) == 0) _file_size = st.st_size;
   }
 }
 

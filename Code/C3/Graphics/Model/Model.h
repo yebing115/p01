@@ -14,5 +14,8 @@ struct Model {
   Handle _ib;
   u16 _num_parts;
   ModelPart _parts[];
+  static size_t ComputeSize(u16 num_parts) {
+    return sizeof(Model) + num_parts * sizeof(ModelPart);
+  }
 };
 

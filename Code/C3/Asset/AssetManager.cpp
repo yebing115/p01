@@ -6,7 +6,7 @@
 DEFINE_SINGLETON_INSTANCE(AssetManager);
 
 static AssetOperations NULL_ASSET_OPS = {
-  [](Asset*) {},
+  [](Asset*) -> atomic_int* { return nullptr; },
   [](Asset*) {},
 };
 
@@ -32,32 +32,14 @@ Asset* AssetManager::Get(const AssetDesc& desc) {
   return (it == _asset_map.end() ? nullptr : _assets + it->second);
 }
 
-Asset* AssetManager::Load(const AssetDesc& desc) {
-  auto asset_id = String::GetID(desc._filename);
-  auto it = _asset_map.find(asset_id);
-  if (it != _asset_map.end()) {
-    auto asset = _assets + it->second;
-    ++asset->_ref;
-    return asset;
-  }
-  if (_num_assets >= C3_MAX_ASSETS) {
-    c3_log("Asset usage reach limit C3_MAX_ASSETS = %s.\n", C3_MAX_ASSETS);
-    return nullptr;
-  }
-  Asset* asset = _assets + _num_assets;
-  _asset_map[asset_id] = _num_assets;
-  ++_num_assets;
-  asset->_state = ASSET_STATE_EMPTY;
-  asset->_desc = desc;
-  asset->_header = nullptr;
-  Load(asset);
-  return asset;
+void AssetManager::Load(Asset* asset) {
+  JobScheduler::Instance()->WaitJobs(LoadAsync(asset));
 }
 
-void AssetManager::Load(Asset* asset) {
-  c3_assert_return(asset);
+atomic_int* AssetManager::LoadAsync(Asset* asset) {
+  c3_assert_return_x(asset, nullptr);
   asset->_state = ASSET_STATE_LOADING;
-  asset->_desc._ops->_load_fn(asset);
+  return asset->_desc._ops->_load_async_fn(asset);
 }
 
 void AssetManager::Unload(Asset* asset) {
@@ -87,4 +69,25 @@ AssetDesc AssetManager::Resolve(AssetType type, const char* filename) {
   }
 
   return desc;
+}
+
+Asset* AssetManager::GetOrCreateAsset(const AssetDesc& desc) {
+  auto asset_id = String::GetID(desc._filename);
+  auto it = _asset_map.find(asset_id);
+  if (it != _asset_map.end()) {
+    auto asset = _assets + it->second;
+    ++asset->_ref;
+    return asset;
+  }
+  if (_num_assets >= C3_MAX_ASSETS) {
+    c3_log("Asset usage reach limit C3_MAX_ASSETS = %s.\n", C3_MAX_ASSETS);
+    return nullptr;
+  }
+  Asset* asset = _assets + _num_assets;
+  _asset_map[asset_id] = _num_assets;
+  ++_num_assets;
+  asset->_state = ASSET_STATE_EMPTY;
+  asset->_desc = desc;
+  asset->_header = nullptr;
+  return asset;
 }

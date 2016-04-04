@@ -21,9 +21,14 @@ JobScheduler::JobScheduler() {
   memset(_main_sched_job, 0, sizeof(JobNode));
   _main_sched_job->_affinity = JOB_AFFINITY_MAIN;
   _main_sched_job->_priority = JOB_PRIORITY_NORMAL;
+  _main_sched_job->_reschedule = false;
   INIT_LIST_HEAD(&_main_sched_job->_link);
-  _main_sched_job->_fiber = Fiber::ConvertFromThread(&_main_sched_job);
+  auto root_fiber = Fiber::ConvertFromThread(_main_sched_job);
   _fiber_pool = C3_NEW(g_allocator, FiberPool);
+  _main_sched_job->_fiber = _fiber_pool->GetWait();
+  _main_sched_job->_fiber->Prepare(&JobScheduler::MainScheduleFiber, (void*)0);
+  Fiber::SetScheduleFiber(_main_sched_job->_fiber);
+  c3_log("0: self job %p\n", _main_sched_job->_fiber);
 }
 
 JobScheduler::~JobScheduler() {}
@@ -38,12 +43,12 @@ void JobScheduler::Init(int num_workers) {
   }
 }
 
-void JobScheduler::Submit(Job* start_job, int num_jobs, atomic_int** label) {
-  if (num_jobs <= 0) return;
+atomic_int* JobScheduler::SubmitJobs(Job* start_job, int num_jobs) {
+  if (num_jobs <= 0) return nullptr;
   _wait_lock.Lock();
   JobWaitListNode* wait_list = C3_NEW(&_wait_allocator, JobWaitListNode);
   wait_list->_label = num_jobs;
-  *label = &wait_list->_label;
+  wait_list->_wait_value = 0;
   INIT_LIST_HEAD(&wait_list->_job_list);
   list_add_tail(&wait_list->_link, &_wait_list);
   _wait_lock.Unlock();
@@ -56,29 +61,43 @@ void JobScheduler::Submit(Job* start_job, int num_jobs, atomic_int** label) {
     job_node->_priority = job->_priority;
     job_node->_fiber = nullptr;
     job_node->_label = &wait_list->_label;
+    job_node->_reschedule = false;
     INIT_LIST_HEAD(&job_node->_link);
     AddJob(job_node);
   }
+  return &wait_list->_label;
 }
 
-void JobScheduler::Wait(atomic_int* label, int value, bool free_wait_list) {
+void JobScheduler::WaitJobs(atomic_int* label, bool free_wait_list) {
+  if (!label) return;
   JobWaitListNode* wait_list = container_of(label, JobWaitListNode, _label);
-  if (*label > value) {
+  wait_list->_lock.Lock();
+  if (*label != wait_list->_wait_value) {
     auto self = Fiber::GetCurrentFiber();
     auto job_node = (JobNode*)self->GetData();
-    job_node->_wait_value = value;
-    wait_list->_lock.Lock();
     list_add_tail(&job_node->_link, &wait_list->_job_list);
     wait_list->_lock.Unlock();
-    if (IsMainThread()) ScheduleMain(label, value);
-    else self->Suspend();
-  }
+    c3_log("%d: %p waiting \n", GetWorkerThreadIndex(), job_node);
+    self->Suspend();
+  } else wait_list->_lock.Unlock();
   if (free_wait_list) {
     _wait_lock.Lock();
     list_del(&wait_list->_link);
-    C3_DELETE(&_wait_allocator, wait_list);
     _wait_lock.Unlock();
+    C3_DELETE(&_wait_allocator, wait_list);
   }
+}
+
+void JobScheduler::WaitCounter(atomic_int* label, int value) {
+  while (*label != value) Yield();
+}
+
+void JobScheduler::Yield() {
+  auto self = Fiber::GetCurrentFiber();
+  self->SetState(FIBER_STATE_SUSPENDED);
+  auto job_node = (JobNode*)self->GetData();
+  job_node->_reschedule = true;
+  self->Suspend();
 }
 
 JobNode* JobScheduler::GetJob(JobAffinity affinity, JobPriority priority) {
@@ -86,99 +105,107 @@ JobNode* JobScheduler::GetJob(JobAffinity affinity, JobPriority priority) {
   auto& l = _job_queues[affinity][priority];
   if (list_empty(&l)) return nullptr;
   JobNode* job_node = list_first_entry(&l, JobNode, _link);
-  //c3_log("GetJob %p\n", job_node);
-  list_del(&job_node->_link);
+  c3_log("%d: GetJob %p\n", GetWorkerThreadIndex(), job_node);
+  list_del_init(&job_node->_link);
   return job_node;
 }
 
-void JobScheduler::ScheduleMain(atomic_int* label, int value) {
-  JobNode* job_node;
-retry:
-  if (job_node = GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_HIGH)) goto found_job;
-  if (job_node = GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_NORMAL)) goto found_job;
-  if (job_node = GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_LOW)) goto found_job;
+i32 JobScheduler::MainScheduleFiber(void* arg) {
+  auto JS = JobScheduler::Instance();
+  JobNode* self_job = C3_NEW(&JS->_job_allocator, JobNode);
+  self_job->_fiber = Fiber::ConvertFromThread(self_job);
+  c3_log("%d: self job %p\n", (int)arg, self_job);
+  JobNode* job_node = nullptr;
+  while (!JS->_require_exit) {
+    if ((job_node = JS->GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_HIGH)) || 
+        (job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_HIGH)) ||
+        (job_node = JS->GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_NORMAL)) ||
+        (job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_NORMAL)) ||
+        (job_node = JS->GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_LOW)) ||
+        (job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_LOW))) {
+      JS->DoJob(job_node);
+      job_node = nullptr;
+    } else {
+      //c3_log("%d: no job\n", (int)arg);
+      std::this_thread::yield();
+    }
+  }
+  return 0;
 
-  if (job_node = GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_HIGH)) goto found_job;
-  if (job_node = GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_NORMAL)) goto found_job;
-  if (job_node = GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_LOW)) goto found_job;
-  std::this_thread::yield();
-  goto retry;
-found_job:
-  DoJob(job_node);
-  if (*label > value) goto retry;
 }
 
 void JobScheduler::AddJob(JobNode* job_node) {
   SpinLockGuard lock_guard(&_job_queues_lock);
   auto& job_list = _job_queues[job_node->_affinity][job_node->_priority];
-  //c3_log("AddJob %p\n", job_node);
+  c3_log("%d: AddJob %p\n", GetWorkerThreadIndex(), job_node);
   list_add_tail(&job_node->_link, &job_list);
 }
 
-void JobScheduler::DoJob() {
-  JobNode* job_node;
-  if (IsMainThread()) {
-    if (job_node = GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_HIGH)) goto found_job;
-    if (job_node = GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_NORMAL)) goto found_job;
-    if (job_node = GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_LOW)) goto found_job;
-  }
-  if (job_node = GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_HIGH)) goto found_job;
-  if (job_node = GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_NORMAL)) goto found_job;
-  if (job_node = GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_LOW)) goto found_job;
-  std::this_thread::yield();
-  return;
-found_job:
-  DoJob(job_node);
-}
-
 void JobScheduler::DoJob(JobNode* job_node) {
-  job_node->_fn(job_node->_user_data);
-  job_node->_label->fetch_sub(1);
+  i32(*fiber_fn)(void*) = [](void* user_data) -> i32 {
+    auto job_node = (JobNode*)user_data;
+    job_node->_fn(job_node->_user_data);
+    return 0;
+  };
+
+  auto sched_fiber = Fiber::GetCurrentFiber();
+  sched_fiber->Suspend();
+  if (!job_node->_fiber) {
+    job_node->_fiber = _fiber_pool->GetWait();
+    c3_log("%d: run job %p, @%p\n", GetWorkerThreadIndex(), job_node, job_node->_fiber);
+    job_node->_fiber->Prepare(fiber_fn, job_node);
+  }
+  job_node->_fiber->Resume();
+
+  auto fiber_state = job_node->_fiber->GetState();
+  if (fiber_state == FIBER_STATE_FINISHED) {
+    c3_log("%d: finish job %p, @%p\n", GetWorkerThreadIndex(), job_node, job_node->_fiber);
+    auto cur_value = --(*job_node->_label);
+    JobWaitListNode* wait_list = container_of(job_node->_label, JobWaitListNode, _label);
+    if (cur_value == wait_list->_wait_value) {
+      JobNode* job_wake, *tmp;
+      SpinLockGuard wait_guard(&wait_list->_lock);
+      list_for_each_entry_safe(job_wake, tmp, &wait_list->_job_list, _link) {
+        c3_log("%d: wakeup job %p\n", GetWorkerThreadIndex(), job_wake);
+        list_del_init(&job_wake->_link);
+        AddJob(job_wake);
+      }
+    }
+    _fiber_pool->Put(job_node->_fiber);
+    job_node->_fiber = nullptr;
+    C3_DELETE(&_job_allocator, job_node);
+  } else if (fiber_state == FIBER_STATE_SUSPENDED) {
+    if (job_node->_reschedule) {
+      job_node->_reschedule = false;
+      _fiber_pool->Put(job_node->_fiber);
+      job_node->_fiber = nullptr;
+      AddJob(job_node);
+    }
+    c3_log("%d: yield job %p, state = %d\n", GetWorkerThreadIndex(), job_node, fiber_state);
+  } else {
+    c3_log("%d: yield job %p, state = %d\n", GetWorkerThreadIndex(), job_node, fiber_state);
+  }
 }
 
 i32 JobScheduler::WorkerThread(void* arg) {
   RegisterWorkerThread((int)arg);
 
-  i32(*fiber_fn)(void*) = [](void* user_data) -> i32 {
-    auto JS = JobScheduler::Instance();
-    JS->DoJob((JobNode*)user_data);
-    return 0;
-  };
-
   auto JS = JobScheduler::Instance();
-  JobNode self_job;
-  auto sched_fiber = Fiber::ConvertFromThread(&self_job);
+  JobNode* self_job = C3_NEW(&JS->_job_allocator, JobNode);
+  self_job->_fiber = Fiber::ConvertFromThread(self_job);
+  self_job->_reschedule = false;
+  c3_log("%d: self job %p\n", (int)arg, self_job);
   JobNode* job_node = nullptr;
   while (!JS->_require_exit) {
     if ((job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_HIGH)) ||
         (job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_NORMAL)) ||
         (job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_LOW))) {
-      //c3_log("run job %p\n", job_node);
-      Fiber* fiber = JS->_fiber_pool->GetWait();
-      sched_fiber->Suspend();
-      fiber->Prepare(fiber_fn, job_node);
-      fiber->Resume();
-      
-      auto fiber_state = fiber->GetState();
-      if (fiber_state == FIBER_STATE_FINISHED) {
-        //c3_log("finish job %p\n", job_node);
-        auto cur_value = job_node->_label->fetch_sub(1) - 1;
-        JobWaitListNode* wait_list = container_of(job_node->_label, JobWaitListNode, _label);
-        JobNode* job_wake, *tmp;
-        wait_list->_lock.Lock();
-        list_for_each_entry_safe(job_wake, tmp, &wait_list->_job_list, _link) {
-          if (cur_value <= job_wake->_wait_value) {
-            list_del(&job_wake->_link);
-            JS->AddJob(job_wake);
-          }
-        }
-        wait_list->_lock.Unlock();
-        C3_DELETE(&JS->_job_allocator, job_node);
-      } else if (fiber_state == FIBER_STATE_SUSPENDED) {
-        // do nothing...
-      }
+      JS->DoJob(job_node);
       job_node = nullptr;
-    } else std::this_thread::yield();
+    } else {
+      //c3_log("%d: no job\n", (int)arg);
+      std::this_thread::yield();
+    }
   }
   return 0;
 }

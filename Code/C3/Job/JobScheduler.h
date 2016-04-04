@@ -12,13 +12,14 @@ struct JobNode {
   Fiber* _fiber;
   atomic_int* _label;
   list_head _link;
-  int _wait_value;
+  int _reschedule;
 };
 typedef MPMCQueue<JobNode> JobQueue;
 
 struct JobWaitListNode {
   SpinLock _lock;
   atomic_int _label;
+  int _wait_value;
   list_head _job_list;
   list_head _link;
 };
@@ -29,17 +30,18 @@ public:
   ~JobScheduler();
 
   void Init(int num_workers);
-  void Submit(Job* start_job, int num_jobs, atomic_int** label);
-  void WaitAndFree(atomic_int* label) { Wait(label, 0, true); }
-  void Wait(atomic_int* label, int value) { Wait(label, value, false); }
-  void DoJob();
+  atomic_int* SubmitJobs(Job* start_job, int num_jobs);
+  void WaitAndFreeJobs(atomic_int* label) { WaitJobs(label, true); }
+  void WaitJobs(atomic_int* label) { WaitJobs(label, false); }
+  void WaitCounter(atomic_int* external_label, int value);
+  void Yield();
 
 private:
   void AddJob(JobNode* job_node);
   void DoJob(JobNode* job_node);
-  void Wait(atomic_int* label, int value, bool free_wait_list);
+  void WaitJobs(atomic_int* label, bool free_wait_list);
   JobNode* GetJob(JobAffinity affinity, JobPriority priority);
-  void ScheduleMain(atomic_int* label, int value);
+  static i32 MainScheduleFiber(void* arg);
   static i32 WorkerThread(void* arg);
   SpinLock _job_queues_lock;
   list_head _job_queues[NUM_JOB_AFFINITIES][NUM_JOB_PRIORITIES];

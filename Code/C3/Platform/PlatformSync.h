@@ -229,9 +229,9 @@ private:
 struct SpinLock {
   atomic_flag _flag = ATOMIC_FLAG_INIT;
 
-  void Lock() { while (_flag.test_and_set(memory_order_seq_cst)); }
-  void Unlock() { _flag.clear(memory_order_seq_cst); }
-  bool TryLock() { return !_flag.test_and_set(memory_order_seq_cst); }
+  void Lock() { while (_flag.test_and_set(memory_order_acquire)); }
+  void Unlock() { _flag.clear(memory_order_release); }
+  bool TryLock() { return !_flag.test_and_set(memory_order_acquire); }
 };
 
 class SpinLockGuard {

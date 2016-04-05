@@ -10,22 +10,19 @@ JobScheduler::JobScheduler() {
   _require_exit = 0;
   _wait_allocator.Init(sizeof(JobWaitListNode), ALIGN_OF(JobWaitListNode), C3_MAX_JOBS, g_allocator);
   _job_allocator.Init(sizeof(JobNode), ALIGN_OF(JobNode), C3_MAX_JOBS, g_allocator);
-  for (int aff = 0; aff < NUM_JOB_AFFINITIES; ++aff) {
-    for (int prio = 0; prio < NUM_JOB_PRIORITIES; ++prio) {
-      INIT_LIST_HEAD(&_job_queues[aff][prio]);
-    }
+  for (int t = 0; t < NUM_JOB_TYPES; ++t) {
+    INIT_LIST_HEAD(&_job_queues[t]);
   }
   INIT_LIST_HEAD(&_wait_list);
 
   _fiber_pool = C3_NEW(g_allocator, FiberPool);
   _root_job = C3_NEW(&_job_allocator, JobNode);
   memset(_root_job, 0, sizeof(JobNode));
-  _root_job->_affinity = JOB_AFFINITY_MAIN;
-  _root_job->_priority = JOB_PRIORITY_NORMAL;
+  _root_job->_type = JOB_TYPE_MAIN;
   _root_job->_reschedule = false;
   INIT_LIST_HEAD(&_root_job->_link);
   _root_job->_fiber = Fiber::ConvertFromThread(_root_job);
-  c3_log("root job %p\n", _root_job);
+  //c3_log("root job %p\n", _root_job);
 }
 
 JobScheduler::~JobScheduler() {}
@@ -59,8 +56,7 @@ atomic_int* JobScheduler::SubmitJobs(Job* start_job, int num_jobs) {
     job_node = C3_NEW(&_job_allocator, JobNode);
     job_node->_fn = job->_fn;
     job_node->_user_data = job->_user_data;
-    job_node->_affinity = job->_affinity;
-    job_node->_priority = job->_priority;
+    job_node->_type = job->_type;
     job_node->_fiber = nullptr;
     job_node->_label = &wait_list->_label;
     job_node->_reschedule = false;
@@ -102,9 +98,39 @@ void JobScheduler::Yield() {
   self->Suspend();
 }
 
-JobNode* JobScheduler::GetJob(JobAffinity affinity, JobPriority priority) {
+void JobScheduler::FlushMainJobs() {
+  _job_queues_lock.Lock();
+  if (list_empty(&_job_queues[JOB_TYPE_MAIN])) {
+    _job_queues_lock.Unlock();
+    return;
+  }
+  _job_queues_lock.Unlock();
+  auto self = Fiber::GetCurrentFiber();
+  self->SetState(FIBER_STATE_SUSPENDED);
+  auto job_node = (JobNode*)self->GetData();
+  job_node->_type = JOB_TYPE_MAIN;
+  job_node->_reschedule = true;
+  self->Suspend();
+}
+
+void JobScheduler::FlushRenderJobs() {
+  _job_queues_lock.Lock();
+  if (list_empty(&_job_queues[JOB_TYPE_RENDER])) {
+    _job_queues_lock.Unlock();
+    return;
+  }
+  _job_queues_lock.Unlock();
+  auto self = Fiber::GetCurrentFiber();
+  self->SetState(FIBER_STATE_SUSPENDED);
+  auto job_node = (JobNode*)self->GetData();
+  job_node->_type = JOB_TYPE_RENDER;
+  job_node->_reschedule = true;
+  self->Suspend();
+}
+
+JobNode* JobScheduler::GetJob(JobType type) {
   SpinLockGuard lock_guard(&_job_queues_lock);
-  auto& l = _job_queues[affinity][priority];
+  auto& l = _job_queues[type];
   if (list_empty(&l)) return nullptr;
   JobNode* job_node = list_first_entry(&l, JobNode, _link);
   //c3_log("%d: GetJob %p\n", GetWorkerThreadIndex(), job_node);
@@ -125,12 +151,8 @@ void JobScheduler::MainScheduleFiber(void* arg) {
 
   JobNode* job_node = nullptr;
   while (!JS->_require_exit) {
-    if ((job_node = JS->GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_HIGH)) || 
-        (job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_HIGH)) ||
-        (job_node = JS->GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_NORMAL)) ||
-        (job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_NORMAL)) ||
-        (job_node = JS->GetJob(JOB_AFFINITY_MAIN, JOB_PRIORITY_LOW)) ||
-        (job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_LOW))) {
+    if ((job_node = JS->GetJob(JOB_TYPE_MAIN)) || 
+        (job_node = JS->GetJob(JOB_TYPE_WORKER))) {
       JS->DoJob(job_node);
       job_node = nullptr;
     } else {
@@ -147,7 +169,7 @@ void JobScheduler::DoJobFiber(void* arg) {
 
 void JobScheduler::AddJob(JobNode* job_node) {
   SpinLockGuard lock_guard(&_job_queues_lock);
-  auto& job_list = _job_queues[job_node->_affinity][job_node->_priority];
+  auto& job_list = _job_queues[job_node->_type];
   //c3_log("%d: AddJob %p\n", GetWorkerThreadIndex(), job_node);
   list_add_tail(&job_node->_link, &job_list);
 }
@@ -202,9 +224,7 @@ i32 JobScheduler::WorkerThread(void* arg) {
   //c3_log("%d: self job %p\n", (int)arg, self_job);
   JobNode* job_node = nullptr;
   while (!JS->_require_exit) {
-    if ((job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_HIGH)) ||
-        (job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_NORMAL)) ||
-        (job_node = JS->GetJob(JOB_AFFINITY_ANY, JOB_PRIORITY_LOW))) {
+    if (job_node = JS->GetJob(JOB_TYPE_WORKER)) {
       JS->DoJob(job_node);
       job_node = nullptr;
     } else {

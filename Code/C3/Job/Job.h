@@ -1,39 +1,28 @@
 #pragma once
 #include "Platform/C3Platform.h"
 
-enum JobPriority {
-  JOB_PRIORITY_HIGH,
-  JOB_PRIORITY_NORMAL,
-  JOB_PRIORITY_LOW,
-  NUM_JOB_PRIORITIES,
-};
-
-enum JobAffinity {
-  JOB_AFFINITY_ANY,        // run on any threads.
-  JOB_AFFINITY_RENDER,     // run on main thread(render related).
-  JOB_AFFINITY_MAIN,       // run on main thread.
-  NUM_JOB_AFFINITIES,
+enum JobType {
+  JOB_TYPE_WORKER,      // run on any threads.
+  JOB_TYPE_RENDER,      // run on main thread(render related).
+  JOB_TYPE_MAIN,        // run on main thread.
+  NUM_JOB_TYPES,
 };
 
 typedef FiberFn JobFn;
 struct Job {
   JobFn _fn;
   void* _user_data;
-  JobPriority _priority;
-  JobAffinity _affinity;
+  JobType _type;
 
-  void InitWorkerJob(JobFn fn, void* user_data, JobPriority prio = JOB_PRIORITY_NORMAL) {
+  void Init(JobFn fn, void* user_data, JobType type) {
     _fn = fn;
     _user_data = user_data;
-    _priority = prio;
-    _affinity = JOB_AFFINITY_ANY;
+    _type = type;
+    _type = JOB_TYPE_WORKER;
   }
-  void InitMainJob(JobFn fn, void* user_data, JobPriority prio = JOB_PRIORITY_NORMAL) {
-    _fn = fn;
-    _user_data = user_data;
-    _priority = prio;
-    _affinity = JOB_AFFINITY_MAIN;
-  }
+  void InitWorkerJob(JobFn fn, void* user_data) { Init(fn, user_data, JOB_TYPE_WORKER); }
+  void InitRenderJob(JobFn fn, void* user_data) { Init(fn, user_data, JOB_TYPE_RENDER); }
+  void InitMainJob(JobFn fn, void* user_data) { Init(fn, user_data, JOB_TYPE_MAIN); }
 };
 
 #define DEFINE_JOB_ENTRY(name) void name(void* arg)

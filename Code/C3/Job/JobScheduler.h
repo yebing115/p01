@@ -7,8 +7,7 @@
 struct JobNode {
   JobFn _fn;
   void* _user_data;
-  JobPriority _priority;
-  JobAffinity _affinity;
+  JobType _type;
   Fiber* _fiber;
   atomic_int* _label;
   list_head _link;
@@ -35,17 +34,19 @@ public:
   void WaitJobs(atomic_int* label) { WaitJobs(label, false); }
   void WaitCounter(atomic_int* external_label, int value);
   void Yield();
+  void FlushMainJobs();
+  void FlushRenderJobs();
 
 private:
   void AddJob(JobNode* job_node);
   void DoJob(JobNode* job_node);
   void WaitJobs(atomic_int* label, bool free_wait_list);
-  JobNode* GetJob(JobAffinity affinity, JobPriority priority);
+  JobNode* GetJob(JobType type);
   static void MainScheduleFiber(void* arg);
   static void DoJobFiber(void* arg);
   static i32 WorkerThread(void* arg);
   SpinLock _job_queues_lock;
-  list_head _job_queues[NUM_JOB_AFFINITIES][NUM_JOB_PRIORITIES];
+  list_head _job_queues[NUM_JOB_TYPES];
   Thread _worker_threads[C3_MAX_WORKER_THREADS];
   int _num_workers;
   int _require_exit;

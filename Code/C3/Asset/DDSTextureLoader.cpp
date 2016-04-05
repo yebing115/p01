@@ -11,6 +11,7 @@ DEFINE_JOB_ENTRY(create_texture) {
   auto GR = GraphicsRenderer::Instance();
   param->_texture->_handle = GR->CreateTexture(param->_mem, C3_TEXTURE_NONE, 0,
                                                &param->_texture->_info);
+  c3_log("Created texture handle: %d\n", param->_texture->_handle.idx);
 }
 
 DEFINE_JOB_ENTRY(load_dds_texture) {

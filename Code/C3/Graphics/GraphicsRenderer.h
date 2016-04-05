@@ -260,8 +260,11 @@ public:
   void SetMarker(const char* marker);
   void Submit(u8 view, Handle program, i32 tag = 0);
   void Discard();
-
   void Frame();
+
+  bool HasResourceUploading(int* num_uploading = nullptr);
+  void FinishResourceUpload();
+  void Idle();
 
   float2 GetWindowSize() const { return float2(_resolution.width, _resolution.height); }
   float GetWindowAspect() const { return float(_resolution.width) / float(_resolution.height); }

@@ -103,7 +103,8 @@ void on_render_draw_lists(ImDrawData* data) {
         GR->SetScissor(u16(batch.ClipRect.x), u16(g_imgui._win_size.y - batch.ClipRect.w),
                        u16(batch.ClipRect.z - batch.ClipRect.x),
                        u16(batch.ClipRect.w - batch.ClipRect.y));
-        GR->SetTexture(0, Handle((u32)ptrdiff_t(batch.TextureId)));
+        //c3_log("imgui texture handle: %d, %p\n", Handle((u32)uintptr_t(batch.TextureId)).idx, batch.TextureId);
+        GR->SetTexture(0, Handle((u32)uintptr_t(batch.TextureId)));
         GR->SetVertexBuffer(&tvb);
         GR->SetIndexBuffer(&tib, idx_offset, batch.ElemCount);
         GR->SetState(render_state);
@@ -126,7 +127,8 @@ void imgui_state_init() {
   IO.Fonts->GetTexDataAsAlpha8(&pixel, &width, &height);
   g_imgui._font_texture = GR->CreateTexture2D((u16)width, (u16)height, 1, RED_8_TEXTURE_FORMAT,
                                               C3_TEXTURE_MIN_POINT | C3_TEXTURE_MAG_POINT, mem_ref(pixel, width * height));
-  IO.Fonts->TexID = (void*)(ptrdiff_t)g_imgui._font_texture;
+  IO.Fonts->TexID = (void*)g_imgui._font_texture.ToRaw();
+  //c3_log("create imgui texture handle: %hd, %p\n", g_imgui._font_texture.idx, IO.Fonts->TexID);
   auto vsh = GR->CreateShader(mem_ref(quad_vsh_data, sizeof(quad_vsh_data)));
   auto fsh = GR->CreateShader(mem_ref(quad_fsh_data, sizeof(quad_fsh_data)));
   g_imgui._program = GR->CreateProgram(vsh, fsh, true);

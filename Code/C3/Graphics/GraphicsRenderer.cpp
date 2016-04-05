@@ -830,6 +830,10 @@ void GraphicsRenderer::Frame() {
   FrameNoRenderWait();
 }
 
+void GraphicsRenderer::Idle() {
+
+}
+
 i32 GraphicsRenderer::RenderOneFrame() {
   if (_gi) _gi->Flip();
   //auto start_time = get_timestamp();

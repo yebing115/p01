@@ -12,10 +12,10 @@ enum FiberState {
   FIBER_STATE_FINISHED,
 };
 
+typedef void(*FiberFn)(void* user_data);
 class Fiber {
 public:
   Fiber();
-  typedef i32(*FiberFn)(void* user_data);
   // INITIALIZED -> SUSPENDED
   void Prepare(FiberFn fn, void* data);
   // RUNNING -> SUSPENDED, run thread major fiber

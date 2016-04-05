@@ -10,11 +10,12 @@ enum JobPriority {
 
 enum JobAffinity {
   JOB_AFFINITY_ANY,        // run on any threads.
+  JOB_AFFINITY_RENDER,     // run on main thread(render related).
   JOB_AFFINITY_MAIN,       // run on main thread.
   NUM_JOB_AFFINITIES,
 };
 
-typedef void(*JobFn)(void* arg);
+typedef FiberFn JobFn;
 struct Job {
   JobFn _fn;
   void* _user_data;

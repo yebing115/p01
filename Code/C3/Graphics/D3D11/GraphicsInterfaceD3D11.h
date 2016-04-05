@@ -56,6 +56,8 @@
 			| C3_STATE_DEPTH_TEST_MASK \
 			)
 
+#define C3_D3D11_MAX_STAGING_TEXTURES 12
+
 struct BufferD3D11 {
   BufferD3D11()
     : _ptr(NULL)
@@ -298,6 +300,12 @@ public:
 private:
   typedef unordered_map<u64, Ty*> HashMap;
   HashMap _hash_map;
+};
+
+struct StagingTextureD3D11 {
+  ID3D11Texture2D* _staging_textures;
+  D3D11_TEXTURE2D_DESC _desc;
+  void* _mapped_ptr;
 };
 
 class GraphicsInterfaceD3D11 : public GraphicsInterface {

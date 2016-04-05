@@ -41,7 +41,8 @@ private:
   void DoJob(JobNode* job_node);
   void WaitJobs(atomic_int* label, bool free_wait_list);
   JobNode* GetJob(JobAffinity affinity, JobPriority priority);
-  static i32 MainScheduleFiber(void* arg);
+  static void MainScheduleFiber(void* arg);
+  static void DoJobFiber(void* arg);
   static i32 WorkerThread(void* arg);
   SpinLock _job_queues_lock;
   list_head _job_queues[NUM_JOB_AFFINITIES][NUM_JOB_PRIORITIES];
@@ -54,6 +55,6 @@ private:
   list_head _wait_list;
   PoolAllocator _wait_allocator;
   ThreadSafePoolAllocator _job_allocator;
-  JobNode* _main_sched_job;
+  JobNode* _root_job;
   SUPPORT_SINGLETON(JobScheduler);
 };

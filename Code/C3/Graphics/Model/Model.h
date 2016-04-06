@@ -18,4 +18,3 @@ struct Model {
     return sizeof(Model) + num_parts * sizeof(ModelPart);
   }
 };
-

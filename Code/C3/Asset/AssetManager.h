@@ -8,6 +8,8 @@
 #include "Graphics/Material/Program.h"
 #include "Graphics/Material/Texture.h"
 
+#define MAX_ASSET_NAME  120
+
 enum AssetType {
   ASSET_TYPE_INVALID = -1,
   ASSET_TYPE_TEXTURE,
@@ -29,7 +31,7 @@ struct AssetOperations;
 struct AssetDesc {
   u32 _type;
   u32 _flags;
-  char _filename[120];
+  char _filename[MAX_ASSET_NAME];
 };
 static_assert(sizeof(AssetDesc) == 128, "Bad sizeof(AssetDesc)");
 

@@ -374,7 +374,7 @@ void VertexBufferD3D11::Create(u32 size, void* data, VertexDeclHandle decl_handl
   BufferD3D11::Create(size, data, flags, stride, true);
 }
 
-void ShaderD3D11::Create(const MemoryBlock* mem) {
+void ShaderD3D11::Create(const MemoryRegion* mem) {
   BlobReader blob(mem->data, mem->size);
   ShaderInfo::Header header;
 
@@ -460,7 +460,7 @@ void ShaderD3D11::Create(const MemoryBlock* mem) {
   }
 }
 
-void TextureD3D11::Create(const MemoryBlock* mem, u32 flags, u8 skip) {
+void TextureD3D11::Create(const MemoryRegion* mem, u32 flags, u8 skip) {
   ImageContainer image_container;
 
   if (image_parse(image_container, mem->data, mem->size)) {
@@ -679,7 +679,7 @@ void TextureD3D11::Destroy() {
   DX_RELEASE(_resolved_texture2d);
 }
 
-void TextureD3D11::Update(u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryBlock* mem) {
+void TextureD3D11::Update(u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryRegion* mem) {
   ID3D11DeviceContext* context = g_interface->_context;
 
   D3D11_BOX box;
@@ -1151,7 +1151,7 @@ void GraphicsInterfaceD3D11::Shutdown() {
   DX_RELEASE(_device);
 }
 
-void GraphicsInterfaceD3D11::CreateIndexBuffer(IndexBufferHandle handle, const MemoryBlock* mem, u16 flags) {
+void GraphicsInterfaceD3D11::CreateIndexBuffer(IndexBufferHandle handle, const MemoryRegion* mem, u16 flags) {
   _index_buffers[handle.idx].Create(mem->size, mem->data, flags);
 }
 
@@ -1165,7 +1165,7 @@ void GraphicsInterfaceD3D11::CreateVertexDecl(VertexDeclHandle handle, const Ver
 
 void GraphicsInterfaceD3D11::DestroyVertexDecl(VertexDeclHandle handle) {}
 
-void GraphicsInterfaceD3D11::CreateVertexBuffer(VertexBufferHandle handle, const MemoryBlock* mem, VertexDeclHandle decl_handle, u16 flags) {
+void GraphicsInterfaceD3D11::CreateVertexBuffer(VertexBufferHandle handle, const MemoryRegion* mem, VertexDeclHandle decl_handle, u16 flags) {
   _vertex_buffers[handle.idx].Create(mem->size, mem->data, decl_handle, flags);
 }
 
@@ -1177,7 +1177,7 @@ void GraphicsInterfaceD3D11::CreateDynamicIndexBuffer(IndexBufferHandle handle, 
   _index_buffers[handle.idx].Create(size, nullptr, flags);
 }
 
-void GraphicsInterfaceD3D11::UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 offset, u32 size, const MemoryBlock* mem) {
+void GraphicsInterfaceD3D11::UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 offset, u32 size, const MemoryRegion* mem) {
   _index_buffers[handle.idx].Update(offset, min(size, mem->size), mem->data);
 }
 
@@ -1185,11 +1185,11 @@ void GraphicsInterfaceD3D11::CreateDynamicVertexBuffer(VertexBufferHandle handle
   _vertex_buffers[handle.idx].Create(size, nullptr, VertexDeclHandle(), flags);
 }
 
-void GraphicsInterfaceD3D11::UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 offset, u32 size, const MemoryBlock* mem) {
+void GraphicsInterfaceD3D11::UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 offset, u32 size, const MemoryRegion* mem) {
   _vertex_buffers[handle.idx].Update(offset, min(size, mem->size), mem->data);
 }
 
-void GraphicsInterfaceD3D11::CreateShader(ShaderHandle handle, const MemoryBlock* mem) {
+void GraphicsInterfaceD3D11::CreateShader(ShaderHandle handle, const MemoryRegion* mem) {
   _shaders[handle.idx].Create(mem);
 }
 
@@ -1205,13 +1205,13 @@ void GraphicsInterfaceD3D11::DestroyProgram(ProgramHandle handle) {
   _programs[handle.idx].Destroy();
 }
 
-void GraphicsInterfaceD3D11::CreateTexture(TextureHandle handle, const MemoryBlock* mem, u32 flags, u8 skip) {
+void GraphicsInterfaceD3D11::CreateTexture(TextureHandle handle, const MemoryRegion* mem, u32 flags, u8 skip) {
   _textures[handle.idx].Create(mem, flags, skip);
 }
 
 void GraphicsInterfaceD3D11::UpdateTextureBegin(TextureHandle handle, u8 side, u8 mip) {}
 
-void GraphicsInterfaceD3D11::UpdateTexture(TextureHandle handle, u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryBlock* mem) {
+void GraphicsInterfaceD3D11::UpdateTexture(TextureHandle handle, u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryRegion* mem) {
   _textures[handle.idx].Update(side, mip, rect, z, depth, pitch, mem);
 }
 

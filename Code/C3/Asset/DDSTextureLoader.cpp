@@ -3,7 +3,7 @@
 
 struct CreateTextureParam {
   Texture* _texture;
-  const MemoryBlock* _mem;
+  const MemoryRegion* _mem;
 };
 
 DEFINE_JOB_ENTRY(load_dds_texture) {

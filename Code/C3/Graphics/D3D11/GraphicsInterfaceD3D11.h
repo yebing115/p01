@@ -109,8 +109,8 @@ struct ShaderD3D11 {
   , _num_predefined(0)
   , _has_depth_op(false) {}
 
-  void Create(const MemoryBlock* mem);
-  DWORD* GetShaderCode(u8 fragment_bit, const MemoryBlock* mem);
+  void Create(const MemoryRegion* mem);
+  DWORD* GetShaderCode(u8 fragment_bit, const MemoryRegion* mem);
 
   void Destroy() {
     if (NULL != _constant_buffer) {
@@ -139,7 +139,7 @@ struct ShaderD3D11 {
     ID3D11VertexShader*  _vertex_shader;
     IUnknown*            _ptr;
   };
-  const MemoryBlock* _code;
+  const MemoryRegion* _code;
   ID3D11Buffer* _buffer;
   ConstantBuffer* _constant_buffer;
   UINT _byte_width;
@@ -193,9 +193,9 @@ struct TextureD3D11 {
 
   TextureD3D11(): _ptr(NULL), _resolved_texture2d(NULL), _srv(NULL), _uav(NULL), _num_mips(0) {}
 
-  void Create(const MemoryBlock* mem, u32 flags, u8 skip);
+  void Create(const MemoryRegion* mem, u32 flags, u8 skip);
   void Destroy();
-  void Update(u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryBlock* mem);
+  void Update(u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryRegion* mem);
   void Commit(u8 stage, u32 flags, const float palette[][4]);
   void Resolve();
 
@@ -318,24 +318,24 @@ public:
 
   void Init() override;
   void Shutdown() override;
-  void CreateIndexBuffer(IndexBufferHandle handle, const MemoryBlock* mem, u16 flags) override;
+  void CreateIndexBuffer(IndexBufferHandle handle, const MemoryRegion* mem, u16 flags) override;
   void DestroyIndexBuffer(IndexBufferHandle handle) override;
   void CreateVertexDecl(VertexDeclHandle handle, const VertexDecl& decl) override;
   void DestroyVertexDecl(VertexDeclHandle handle) override;
-  void CreateVertexBuffer(VertexBufferHandle handle, const MemoryBlock* mem,
+  void CreateVertexBuffer(VertexBufferHandle handle, const MemoryRegion* mem,
                           VertexDeclHandle decl_handle, u16 flags) override;
   void DestroyVertexBuffer(VertexBufferHandle handle) override;
   void CreateDynamicIndexBuffer(IndexBufferHandle handle, u32 size, u16 flags) override;
-  void UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 offset, u32 size, const MemoryBlock* mem) override;
+  void UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 offset, u32 size, const MemoryRegion* mem) override;
   void CreateDynamicVertexBuffer(VertexBufferHandle handle, u32 size, u16 flags) override;
-  void UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 offset, u32 size, const MemoryBlock* mem) override;
-  void CreateShader(ShaderHandle handle, const MemoryBlock* mem) override;
+  void UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 offset, u32 size, const MemoryRegion* mem) override;
+  void CreateShader(ShaderHandle handle, const MemoryRegion* mem) override;
   void DestroyShader(ShaderHandle handle) override;
   void CreateProgram(ProgramHandle handle, ShaderHandle vsh, ShaderHandle fsh) override;
   void DestroyProgram(ProgramHandle handle) override;
-  void CreateTexture(TextureHandle handle, const MemoryBlock* mem, u32 flags, u8 skip) override;
+  void CreateTexture(TextureHandle handle, const MemoryRegion* mem, u32 flags, u8 skip) override;
   void UpdateTextureBegin(TextureHandle handle, u8 side, u8 mip) override;
-  void UpdateTexture(TextureHandle handle, u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryBlock* mem) override;
+  void UpdateTexture(TextureHandle handle, u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryRegion* mem) override;
   void UpdateTextureEnd() override;
   void ResizeTexture(TextureHandle handle, u16 width, u16 height) override;
   void DestroyTexture(TextureHandle handle) override;

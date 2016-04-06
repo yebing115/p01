@@ -2,7 +2,7 @@
 #include "imgui_helpers.h"
 #include "GraphicsRenderer.h"
 #include "VertexFormat.h"
-#include "memory/MemoryBlock.h"
+#include "memory/MemoryRegion.h"
 #include "Platform/PlatformConfig.h"
 #if ON_WINDOWS
 #include "Platform/Windows/WindowsHeader.h"

@@ -5,8 +5,8 @@ struct CreateModelParam {
   Model* _model;
   MeshHeader* _header;
   VertexDecl _decl;
-  const MemoryBlock* _vb_mem;
-  const MemoryBlock* _ib_mem;
+  const MemoryRegion* _vb_mem;
+  const MemoryRegion* _ib_mem;
 };
 
 DEFINE_JOB_ENTRY(load_mex_model) {

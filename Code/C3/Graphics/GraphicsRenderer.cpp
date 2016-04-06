@@ -82,7 +82,7 @@ void GraphicsRenderer::SetCurrentView(u8 view) { _current_view = view; }
 
 void GraphicsRenderer::PopView() { --_current_view; }
 
-VertexBufferHandle GraphicsRenderer::CreateVertexBuffer(const MemoryBlock* mem, const VertexDecl& decl, u16 flags) {
+VertexBufferHandle GraphicsRenderer::CreateVertexBuffer(const MemoryRegion* mem, const VertexDecl& decl, u16 flags) {
   VertexBufferHandle handle = _vertex_buffer_handles.Alloc();
   c3_assert(handle && "Failed to allocate vertex buffer handle.");
   VertexDeclHandle decl_handle = FindVertexDecl(decl);
@@ -100,7 +100,7 @@ void GraphicsRenderer::DestroyVertexBuffer(VertexBufferHandle handle) {
   _vertex_buffer_handles.Free(handle);
 }
 
-IndexBufferHandle GraphicsRenderer::CreateIndexBuffer(const MemoryBlock* mem, u16 flags) {
+IndexBufferHandle GraphicsRenderer::CreateIndexBuffer(const MemoryRegion* mem, u16 flags) {
   IndexBufferHandle handle = _index_buffer_handles.Alloc();
   auto& ib = _index_buffers[handle.idx];
   ib.size = mem->size;
@@ -128,7 +128,7 @@ VertexBufferHandle GraphicsRenderer::CreateDynamicVertexBuffer(u32 num, const Ve
   return handle;
 }
 
-VertexBufferHandle GraphicsRenderer::CreateDynamicVertexBuffer(const MemoryBlock* mem, const VertexDecl& decl, u16 flags) {
+VertexBufferHandle GraphicsRenderer::CreateDynamicVertexBuffer(const MemoryRegion* mem, const VertexDecl& decl, u16 flags) {
   u32 num_vertices = mem->size / decl.stride;
   if (num_vertices > UINT16_MAX) c3_log("Num vertices exceeds maximum (num %d, max %d).\n", num_vertices, UINT16_MAX);
   VertexBufferHandle handle = CreateDynamicVertexBuffer(u16(num_vertices), decl, flags);
@@ -136,7 +136,7 @@ VertexBufferHandle GraphicsRenderer::CreateDynamicVertexBuffer(const MemoryBlock
   return handle;
 }
 
-void GraphicsRenderer::UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 start_vertex, const MemoryBlock* mem) {
+void GraphicsRenderer::UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 start_vertex, const MemoryRegion* mem) {
   auto& vb = _vertex_buffers[handle.idx];
   u32 offset = start_vertex * vb.stride;
   if (offset >= vb.size || offset + mem->size > vb.size) {
@@ -165,14 +165,14 @@ IndexBufferHandle GraphicsRenderer::CreateDynamicIndexBuffer(u32 num, u16 flags)
   return handle;
 }
 
-IndexBufferHandle GraphicsRenderer::CreateDynamicIndexBuffer(const MemoryBlock* mem, u16 flags) {
+IndexBufferHandle GraphicsRenderer::CreateDynamicIndexBuffer(const MemoryRegion* mem, u16 flags) {
   const u32 index_size = (flags & C3_BUFFER_INDEX32) ? 4 : 2;
   IndexBufferHandle handle = CreateDynamicIndexBuffer(mem->size / index_size, flags);
   if (handle) UpdateDynamicIndexBuffer(handle, 0, mem);
   return handle;
 }
 
-void GraphicsRenderer::UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 start_index, const MemoryBlock* mem) {
+void GraphicsRenderer::UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 start_index, const MemoryRegion* mem) {
   IndexBuffer& ib = _index_buffers[handle.idx];
   const u32 index_size = (ib.flags & C3_BUFFER_INDEX32) ? 4 : 2;
   u32 offset = start_index * index_size;
@@ -238,7 +238,7 @@ bool GraphicsRenderer::AllocTransientBuffers(TransientVertexBuffer* tvb, const V
   return false;
 }
 
-ShaderHandle GraphicsRenderer::CreateShader(const MemoryBlock* mem) {
+ShaderHandle GraphicsRenderer::CreateShader(const MemoryRegion* mem) {
   ShaderHandle handle = _shader_handles.Alloc();
   if (!handle) {
     c3_log("Failed to alloc shader handle.\n");
@@ -336,7 +336,7 @@ void GraphicsRenderer::DestroyProgram(ProgramHandle handle) {
   }
 }
 
-TextureHandle GraphicsRenderer::CreateTexture(const MemoryBlock* mem, u32 flags, u8 skip,
+TextureHandle GraphicsRenderer::CreateTexture(const MemoryRegion* mem, u32 flags, u8 skip,
                                               TextureInfo* info_out, BackbufferRatio ratio) {
   TextureInfo ti;
   if (!info_out) info_out = &ti;
@@ -375,7 +375,7 @@ TextureHandle GraphicsRenderer::CreateTexture(const MemoryBlock* mem, u32 flags,
 
 TextureHandle GraphicsRenderer::CreateTexture2D(u16 width, u16 height, u8 mipmap_count,
                                                 TextureFormat format, u32 flags,
-                                                const MemoryBlock* mem, TextureInfo* info_out) {
+                                                const MemoryRegion* mem, TextureInfo* info_out) {
   return CreateTexture2D(BACKBUFFER_RATIO_COUNT, width, height, mipmap_count, format, flags, mem, info_out);
 }
 
@@ -387,7 +387,7 @@ TextureHandle GraphicsRenderer::CreateTexture2D(BackbufferRatio ratio, u8 mipmap
 
 TextureHandle GraphicsRenderer::CreateTexture2D(BackbufferRatio ratio, u16 width, u16 height,
                                                 u8 num_mips, TextureFormat format, u32 flags,
-                                                const MemoryBlock* data_mem,
+                                                const MemoryRegion* data_mem,
                                                 TextureInfo* info_out) {
 #if C3_DEBUG_CONTEXT
   if (data_mem) {
@@ -539,7 +539,7 @@ void GraphicsRenderer::ResizeTexture(TextureHandle handle, u16 width, u16 height
   _gi->ResizeTexture(handle, width, height);
 }
 
-void GraphicsRenderer::UpdateTexture2D(TextureHandle handle, u8 mip, u16 x, u16 y, u16 width, u16 height, const MemoryBlock* mem, u16 pitch) {
+void GraphicsRenderer::UpdateTexture2D(TextureHandle handle, u8 mip, u16 x, u16 y, u16 width, u16 height, const MemoryRegion* mem, u16 pitch) {
   c3_assert_return(mem && "mem can't be NULL");
   if (width == 0 || height == 0) mem_free(mem);
   else {

@@ -1,5 +1,5 @@
 #pragma once
-#include "Memory/MemoryBlock.h"
+#include "Memory/MemoryRegion.h"
 #include "Memory/Allocator.h"
 #include "Memory/NonLocalAllocator.h"
 #include "Memory/HandleAlloc.h"

@@ -4,7 +4,7 @@
 #include "HLSLWriter.h"
 #include "PSSLWriter.h"
 #include "ProgramOption.h"
-#include "Memory/MemoryBlock.h"
+#include "Memory/MemoryRegion.h"
 #include "write_helpers.h"
 
 #pragma comment(lib, "fcpp.lib")

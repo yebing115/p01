@@ -1,7 +1,7 @@
 #include "HLSLWriter.h"
 #include "ProgramOption.h"
 #include "write_helpers.h"
-#include "Memory/MemoryBlock.h"
+#include "Memory/MemoryRegion.h"
 #include "Platform/Windows/WindowsHeader.h"
 #include "Algorithm/Hasher.h"
 #include <assert.h>

@@ -72,7 +72,7 @@ struct Header {
 #pragma pack(pop)
 }
 
-struct MemoryBlock;
+struct MemoryRegion;
 struct CommandBuffer;
 struct RenderItem;
 struct TextureCreate {
@@ -84,7 +84,7 @@ struct TextureCreate {
   u8 num_mips;
   u8 format;
   bool cube_map;
-  const MemoryBlock* mem;
+  const MemoryRegion* mem;
 };
 
 struct ShaderRef {
@@ -166,20 +166,20 @@ public:
   void SetCurrentView(u8 view);
   void PopView();
 
-  VertexBufferHandle CreateVertexBuffer(const MemoryBlock* mem, const VertexDecl& decl,
+  VertexBufferHandle CreateVertexBuffer(const MemoryRegion* mem, const VertexDecl& decl,
                                         u16 flags = C3_BUFFER_NONE);
   void DestroyVertexBuffer(VertexBufferHandle handle);
-  IndexBufferHandle CreateIndexBuffer(const MemoryBlock* mem, u16 flags = C3_BUFFER_NONE);
+  IndexBufferHandle CreateIndexBuffer(const MemoryRegion* mem, u16 flags = C3_BUFFER_NONE);
   void DestroyIndexBuffer(IndexBufferHandle handle);
 
   VertexBufferHandle CreateDynamicVertexBuffer(u32 num, const VertexDecl& decl,
                                                u16 flags = C3_BUFFER_NONE);
-  VertexBufferHandle CreateDynamicVertexBuffer(const MemoryBlock* mem, const VertexDecl& decl,
+  VertexBufferHandle CreateDynamicVertexBuffer(const MemoryRegion* mem, const VertexDecl& decl,
                                                u16 flags = C3_BUFFER_NONE);
-  void UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 start_vertex, const MemoryBlock* mem);
+  void UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 start_vertex, const MemoryRegion* mem);
   IndexBufferHandle CreateDynamicIndexBuffer(u32 num, u16 flags = C3_BUFFER_NONE);
-  IndexBufferHandle CreateDynamicIndexBuffer(const MemoryBlock* mem, u16 flags = C3_BUFFER_NONE);
-  void UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 start_index, const MemoryBlock* mem);
+  IndexBufferHandle CreateDynamicIndexBuffer(const MemoryRegion* mem, u16 flags = C3_BUFFER_NONE);
+  void UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 start_index, const MemoryRegion* mem);
 
   bool CheckAvailTransientIndexBuffer(u32 num);
   bool CheckAvailTransientVertexBuffer(u32 num, const VertexDecl& decl);
@@ -190,20 +190,20 @@ public:
                              const VertexDecl& decl, u32 num_vertices,
                              TransientIndexBuffer* tib, u32 num_indices);
 
-  ShaderHandle CreateShader(const MemoryBlock* mem);
+  ShaderHandle CreateShader(const MemoryRegion* mem);
   void DestroyShader(ShaderHandle handle);
   ProgramHandle CreateProgram(ShaderHandle vsh, ShaderHandle fsh, bool destroy_shaders = true);
   void DestroyProgram(ProgramHandle handle);
-  TextureHandle CreateTexture(const MemoryBlock* mem, u32 flags = C3_TEXTURE_NONE, u8 skip = 0,
+  TextureHandle CreateTexture(const MemoryRegion* mem, u32 flags = C3_TEXTURE_NONE, u8 skip = 0,
                               TextureInfo* info_out = nullptr,
                               BackbufferRatio ratio = BACKBUFFER_RATIO_COUNT);
   TextureHandle CreateTexture2D(BackbufferRatio ratio, u8 mipmap_count, TextureFormat format,
                                 u32 flags = C3_TEXTURE_NONE, TextureInfo* info_out = nullptr);
   TextureHandle CreateTexture2D(u16 width, u16 height, u8 mipmap_count, TextureFormat format,
-                                u32 flags = C3_TEXTURE_NONE, const MemoryBlock* mem = nullptr,
+                                u32 flags = C3_TEXTURE_NONE, const MemoryRegion* mem = nullptr,
                                 TextureInfo* info_out = nullptr);
   void UpdateTexture2D(TextureHandle handle, u8 mip, u16 x, u16 y, u16 width, u16 height,
-                       const MemoryBlock* mem, u16 pitch = UINT16_MAX);
+                       const MemoryRegion* mem, u16 pitch = UINT16_MAX);
   void ResizeTexture(TextureHandle handle, u16 width, u16 height);
   void DestroyTexture(TextureHandle handle);
   ConstantHandle CreateConstant(stringid name, ConstantType type, u16 num = 1);
@@ -266,7 +266,7 @@ public:
 
 private:
   TextureHandle CreateTexture2D(BackbufferRatio ratio, u16 width, u16 height, u8 mipmap_count,
-                                TextureFormat format, u32 flags, const MemoryBlock* mem, TextureInfo* info_out);
+                                TextureFormat format, u32 flags, const MemoryRegion* mem, TextureInfo* info_out);
   i32 RenderOneFrame();
   void Swap();
   void FrameNoRenderWait();

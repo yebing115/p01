@@ -98,36 +98,6 @@ void JobScheduler::Yield() {
   self->Suspend();
 }
 
-void JobScheduler::FlushMainJobs() {
-  _job_queues_lock.Lock();
-  if (list_empty(&_job_queues[JOB_TYPE_MAIN])) {
-    _job_queues_lock.Unlock();
-    return;
-  }
-  _job_queues_lock.Unlock();
-  auto self = Fiber::GetCurrentFiber();
-  self->SetState(FIBER_STATE_SUSPENDED);
-  auto job_node = (JobNode*)self->GetData();
-  job_node->_type = JOB_TYPE_MAIN;
-  job_node->_reschedule = true;
-  self->Suspend();
-}
-
-void JobScheduler::FlushRenderJobs() {
-  _job_queues_lock.Lock();
-  if (list_empty(&_job_queues[JOB_TYPE_RENDER])) {
-    _job_queues_lock.Unlock();
-    return;
-  }
-  _job_queues_lock.Unlock();
-  auto self = Fiber::GetCurrentFiber();
-  self->SetState(FIBER_STATE_SUSPENDED);
-  auto job_node = (JobNode*)self->GetData();
-  job_node->_type = JOB_TYPE_RENDER;
-  job_node->_reschedule = true;
-  self->Suspend();
-}
-
 JobNode* JobScheduler::GetJob(JobType type) {
   SpinLockGuard lock_guard(&_job_queues_lock);
   auto& l = _job_queues[type];
@@ -228,8 +198,8 @@ i32 JobScheduler::WorkerThread(void* arg) {
       JS->DoJob(job_node);
       job_node = nullptr;
     } else {
-      //c3_log("%d: no job\n", (int)arg);
       std::this_thread::yield();
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
   }
   return 0;

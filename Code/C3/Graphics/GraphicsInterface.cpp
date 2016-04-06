@@ -59,7 +59,8 @@ void GraphicsInterface::ReleaseInstances() {
   safe_delete(__instance);
 }
 
-void GraphicsInterface::UpdateViewName(u8 view, const char* name, int name_len) {
+void GraphicsInterface::UpdateViewName(u8 view, const char* name) {
+  auto name_len = strlen(name);
   c3_assert_return(name_len < C3_MAX_VIEW_NAME - C3_VIEW_NAME_RESERVED);
   memcpy(&_view_names[view][C3_VIEW_NAME_RESERVED], name, name_len + 1);
 }

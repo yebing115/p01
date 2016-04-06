@@ -34,8 +34,6 @@ public:
   void WaitJobs(atomic_int* label) { WaitJobs(label, false); }
   void WaitCounter(atomic_int* external_label, int value);
   void Yield();
-  void FlushMainJobs();
-  void FlushRenderJobs();
 
 private:
   void AddJob(JobNode* job_node);

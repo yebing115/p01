@@ -367,7 +367,7 @@ void BufferD3D11::Update(u32 offset, u32 size, void* data, bool discard) {
 #endif
 }
 
-void VertexBufferD3D11::Create(u32 size, void* data, Handle decl_handle, u16 flags) {
+void VertexBufferD3D11::Create(u32 size, void* data, VertexDeclHandle decl_handle, u16 flags) {
   _decl = decl_handle;
   u16 stride = decl_handle ? g_interface->_vertex_decls[decl_handle.idx].stride : 0;
 
@@ -733,14 +733,14 @@ void TextureD3D11::Resolve() {
   }
 }
 
-void FrameBufferD3D11::Create(u8 num, const Handle* handles) {
+void FrameBufferD3D11::Create(u8 num, const TextureHandle* handles) {
   memset(_rtv, 0, sizeof(_rtv));
   memset(_srv, 0, sizeof(_srv));
   _dsv = NULL;
   _swap_chain = NULL;
 
   _num_th = num;
-  memcpy(_th, handles, num*sizeof(Handle));
+  memcpy(_th, handles, num * sizeof(TextureHandle));
 
   PostReset();
 }
@@ -824,7 +824,7 @@ void FrameBufferD3D11::PostReset() {
   if (0 < _num_th) {
     _num = 0;
     for (u32 ii = 0; ii < _num_th; ++ii) {
-      Handle handle = _th[ii];
+      TextureHandle handle = _th[ii];
       if (handle) {
         const TextureD3D11& texture = g_interface->_textures[handle.idx];
 
@@ -1066,7 +1066,7 @@ void GraphicsInterfaceD3D11::Init() {
   _scd.Windowed = true;                                    // windowed/full-screen mode
 
   // create a device, device context and swap chain using the information in the scd struct
-  UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
+  UINT flags = 0;
 #ifdef _DEBUG
   flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
@@ -1102,6 +1102,12 @@ void GraphicsInterfaceD3D11::Init() {
     return;
   }
 
+  D3D11_FEATURE_DATA_THREADING feature_threading;
+  hr = _device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &feature_threading, sizeof(feature_threading));
+  if (SUCCEEDED(hr)) {
+    c3_log("DriverConcurrentCreates support: %s.\n", feature_threading.DriverConcurrentCreates ? "YES" : "NO");
+  }
+
   _user_defined_annotation = nullptr;
   hr = _context->QueryInterface(IID_PPV_ARGS(&_user_defined_annotation));
   if (FAILED(hr)) {
@@ -1110,7 +1116,7 @@ void GraphicsInterfaceD3D11::Init() {
   }
 
   _num_windows = 1;
-  Handle handle;
+  ConstantHandle handle;
   for (u32 ii = 0; ii < PREDEFINED_CONSTANT_COUNT; ++ii) {
     _uniform_reg.Add(handle, PredefinedConstant::TypeToName((PredefinedConstantType)ii), &_predefined_uniforms[ii]);
   }
@@ -1145,81 +1151,73 @@ void GraphicsInterfaceD3D11::Shutdown() {
   DX_RELEASE(_device);
 }
 
-void GraphicsInterfaceD3D11::CreateIndexBuffer(Handle handle, MemoryBlock* mem, u16 flags) {
+void GraphicsInterfaceD3D11::CreateIndexBuffer(IndexBufferHandle handle, const MemoryBlock* mem, u16 flags) {
   _index_buffers[handle.idx].Create(mem->size, mem->data, flags);
 }
 
-void GraphicsInterfaceD3D11::DestroyIndexBuffer(Handle handle) {
+void GraphicsInterfaceD3D11::DestroyIndexBuffer(IndexBufferHandle handle) {
   _index_buffers[handle.idx].Destroy();
 }
 
-void GraphicsInterfaceD3D11::CreateVertexDecl(Handle handle, const VertexDecl& decl) {
+void GraphicsInterfaceD3D11::CreateVertexDecl(VertexDeclHandle handle, const VertexDecl& decl) {
   memcpy(&_vertex_decls[handle.idx], &decl, sizeof(VertexDecl));
 }
 
-void GraphicsInterfaceD3D11::DestroyVertexDecl(Handle handle) {}
+void GraphicsInterfaceD3D11::DestroyVertexDecl(VertexDeclHandle handle) {}
 
-void GraphicsInterfaceD3D11::CreateVertexBuffer(Handle handle, MemoryBlock* mem, Handle decl_handle, u16 flags) {
+void GraphicsInterfaceD3D11::CreateVertexBuffer(VertexBufferHandle handle, const MemoryBlock* mem, VertexDeclHandle decl_handle, u16 flags) {
   _vertex_buffers[handle.idx].Create(mem->size, mem->data, decl_handle, flags);
 }
 
-void GraphicsInterfaceD3D11::DestroyVertexBuffer(Handle handle) {
+void GraphicsInterfaceD3D11::DestroyVertexBuffer(VertexBufferHandle handle) {
   _vertex_buffers[handle.idx].Destroy();
 }
 
-void GraphicsInterfaceD3D11::CreateDynamicIndexBuffer(Handle handle, u32 size, u16 flags) {
+void GraphicsInterfaceD3D11::CreateDynamicIndexBuffer(IndexBufferHandle handle, u32 size, u16 flags) {
   _index_buffers[handle.idx].Create(size, nullptr, flags);
 }
 
-void GraphicsInterfaceD3D11::UpdateDynamicIndexBuffer(Handle handle, u32 offset, u32 size, MemoryBlock* mem) {
+void GraphicsInterfaceD3D11::UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 offset, u32 size, const MemoryBlock* mem) {
   _index_buffers[handle.idx].Update(offset, min(size, mem->size), mem->data);
 }
 
-void GraphicsInterfaceD3D11::DestroyDynamicIndexBuffer(Handle handle) {
-  _index_buffers[handle.idx].Destroy();
+void GraphicsInterfaceD3D11::CreateDynamicVertexBuffer(VertexBufferHandle handle, u32 size, u16 flags) {
+  _vertex_buffers[handle.idx].Create(size, nullptr, VertexDeclHandle(), flags);
 }
 
-void GraphicsInterfaceD3D11::CreateDynamicVertexBuffer(Handle handle, u32 size, u16 flags) {
-  _vertex_buffers[handle.idx].Create(size, nullptr, Handle(), flags);
-}
-
-void GraphicsInterfaceD3D11::UpdateDynamicVertexBuffer(Handle handle, u32 offset, u32 size, MemoryBlock* mem) {
+void GraphicsInterfaceD3D11::UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 offset, u32 size, const MemoryBlock* mem) {
   _vertex_buffers[handle.idx].Update(offset, min(size, mem->size), mem->data);
 }
 
-void GraphicsInterfaceD3D11::DestroyDynamicVertexBuffer(Handle handle) {
-  _vertex_buffers[handle.idx].Destroy();
-}
-
-void GraphicsInterfaceD3D11::CreateShader(Handle handle, MemoryBlock* mem) {
+void GraphicsInterfaceD3D11::CreateShader(ShaderHandle handle, const MemoryBlock* mem) {
   _shaders[handle.idx].Create(mem);
 }
 
-void GraphicsInterfaceD3D11::DestroyShader(Handle handle) {
+void GraphicsInterfaceD3D11::DestroyShader(ShaderHandle handle) {
   _shaders[handle.idx].Destroy();
 }
 
-void GraphicsInterfaceD3D11::CreateProgram(Handle handle, Handle vsh, Handle fsh) {
+void GraphicsInterfaceD3D11::CreateProgram(ProgramHandle handle, ShaderHandle vsh, ShaderHandle fsh) {
   _programs[handle.idx].Create(&_shaders[vsh.idx], fsh ? &_shaders[fsh.idx] : nullptr);
 }
 
-void GraphicsInterfaceD3D11::DestroyProgram(Handle handle) {
+void GraphicsInterfaceD3D11::DestroyProgram(ProgramHandle handle) {
   _programs[handle.idx].Destroy();
 }
 
-void GraphicsInterfaceD3D11::CreateTexture(Handle handle, MemoryBlock* mem, u32 flags, u8 skip) {
+void GraphicsInterfaceD3D11::CreateTexture(TextureHandle handle, const MemoryBlock* mem, u32 flags, u8 skip) {
   _textures[handle.idx].Create(mem, flags, skip);
 }
 
-void GraphicsInterfaceD3D11::UpdateTextureBegin(Handle handle, u8 side, u8 mip) {}
+void GraphicsInterfaceD3D11::UpdateTextureBegin(TextureHandle handle, u8 side, u8 mip) {}
 
-void GraphicsInterfaceD3D11::UpdateTexture(Handle handle, u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryBlock* mem) {
+void GraphicsInterfaceD3D11::UpdateTexture(TextureHandle handle, u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryBlock* mem) {
   _textures[handle.idx].Update(side, mip, rect, z, depth, pitch, mem);
 }
 
 void GraphicsInterfaceD3D11::UpdateTextureEnd() {}
 
-void GraphicsInterfaceD3D11::ResizeTexture(Handle handle, u16 width, u16 height) {
+void GraphicsInterfaceD3D11::ResizeTexture(TextureHandle handle, u16 width, u16 height) {
   TextureD3D11& texture = _textures[handle.idx];
 
   BlobWriter stream;
@@ -1243,25 +1241,25 @@ void GraphicsInterfaceD3D11::ResizeTexture(Handle handle, u16 width, u16 height)
   texture.Create(mem_copy(stream.GetData(), stream.GetSize()), tc.flags, 0);
 }
 
-void GraphicsInterfaceD3D11::DestroyTexture(Handle handle) {
+void GraphicsInterfaceD3D11::DestroyTexture(TextureHandle handle) {
   _textures[handle.idx].Destroy();
 }
 
-void GraphicsInterfaceD3D11::CreateFrameBuffer(Handle handle, u8 num, const Handle* texture_handles) {
+void GraphicsInterfaceD3D11::CreateFrameBuffer(FrameBufferHandle handle, u8 num, const TextureHandle* texture_handles) {
   _frame_buffers[handle.idx].Create(num, texture_handles);
 }
 
-void GraphicsInterfaceD3D11::CreateFrameBuffer(Handle handle, void* nwh, u32 width, u32 height, TextureFormat depth_format) {
+void GraphicsInterfaceD3D11::CreateFrameBuffer(FrameBufferHandle handle, void* nwh, u32 width, u32 height, TextureFormat depth_format) {
   u16 denseIdx = _num_windows++;
   _windows[denseIdx] = handle;
   _frame_buffers[handle.idx].Create(denseIdx, nwh, width, height, depth_format);
 }
 
-void GraphicsInterfaceD3D11::DestroyFrameBuffer(Handle handle) {
+void GraphicsInterfaceD3D11::DestroyFrameBuffer(FrameBufferHandle handle) {
   _frame_buffers[handle.idx].Destroy();
 }
 
-void GraphicsInterfaceD3D11::CreateConstant(Handle handle, ConstantType type, u16 num, stringid name) {
+void GraphicsInterfaceD3D11::CreateConstant(ConstantHandle handle, ConstantType type, u16 num, stringid name) {
   if (_uniforms[handle.idx]) C3_FREE(g_allocator, _uniforms[handle.idx]);
 
   u32 size = ALIGN_16(CONSTANT_TYPE_SIZE[type] * num);
@@ -1271,13 +1269,9 @@ void GraphicsInterfaceD3D11::CreateConstant(Handle handle, ConstantType type, u1
   _uniform_reg.Add(handle, name, data);
 }
 
-void GraphicsInterfaceD3D11::DestroyConstant(Handle handle) {
+void GraphicsInterfaceD3D11::DestroyConstant(ConstantHandle handle) {
   C3_FREE(g_allocator, _uniforms[handle.idx]);
   _uniforms[handle.idx] = NULL;
-}
-
-void GraphicsInterfaceD3D11::UpdateViewName(u8 id, const char* name) {
-
 }
 
 void GraphicsInterfaceD3D11::UpdateConstant(u16 loc, const void* data, u32 size) {
@@ -1329,7 +1323,7 @@ void GraphicsInterfaceD3D11::Submit(RenderFrame* render, ClearQuad& clear_quad) 
   u16 programIdx = UINT16_MAX;
   SortKey key;
   u16 view = UINT16_MAX;
-  Handle fbh;
+  FrameBufferHandle fbh;
 
   const u64 primType = 0;
   u8 primIndex = u8(primType >> C3_STATE_PT_SHIFT);
@@ -1550,12 +1544,12 @@ void GraphicsInterfaceD3D11::Submit(RenderFrame* render, ClearQuad& clear_quad) 
 
       if (programChanged || currentState.vertex_decl.idx != draw.vertex_decl.idx ||
           currentState.vertex_buffer.idx != draw.vertex_buffer.idx ||
-          currentState.instance_data_buffer.idx != draw.instance_data_buffer.idx ||
+          //currentState.instance_data_buffer.idx != draw.instance_data_buffer.idx ||
           currentState.instance_data_offset != draw.instance_data_offset ||
           currentState.instance_data_stride != draw.instance_data_stride) {
         currentState.vertex_decl = draw.vertex_decl;
         currentState.vertex_buffer = draw.vertex_buffer;
-        currentState.instance_data_buffer.idx = draw.instance_data_buffer.idx;
+        //currentState.instance_data_buffer.idx = draw.instance_data_buffer.idx;
         currentState.instance_data_offset = draw.instance_data_offset;
         currentState.instance_data_stride = draw.instance_data_stride;
 
@@ -1569,15 +1563,19 @@ void GraphicsInterfaceD3D11::Submit(RenderFrame* render, ClearQuad& clear_quad) 
           u32 offset = 0;
           context->IASetVertexBuffers(0, 1, &vb._ptr, &stride, &offset);
 
+#if 0
           if (draw.instance_data_buffer) {
             const VertexBufferD3D11& inst = _vertex_buffers[draw.instance_data_buffer.idx];
             u32 instance_stride = draw.instance_data_stride;
             context->IASetVertexBuffers(1, 1, &inst._ptr, &instance_stride, &draw.instance_data_offset);
             SetInputLayout(vertexDecl, program, draw.instance_data_stride / 16);
           } else {
+#endif
             context->IASetVertexBuffers(1, 1, s_zero.m_buffer, s_zero.m_zero, s_zero.m_zero);
             SetInputLayout(vertexDecl, program, 0);
+#if 0
           }
+#endif
         } else {
           context->IASetVertexBuffers(0, 1, s_zero.m_buffer, s_zero.m_zero, s_zero.m_zero);
         }
@@ -1644,7 +1642,13 @@ void GraphicsInterfaceD3D11::Flip() {
     hr = _frame_buffers[_windows[ii].idx]._swap_chain->Present(syncInterval, 0);
   }
 
-  if (SUCCEEDED(hr)) hr = _swap_chain->Present(syncInterval, 0);
+  if (SUCCEEDED(hr)) {
+    hr = _swap_chain->Present(syncInterval, DXGI_PRESENT_DO_NOT_WAIT);
+    while (hr == DXGI_ERROR_WAS_STILL_DRAWING) {
+      JobScheduler::Instance()->Yield();
+      hr = _swap_chain->Present(syncInterval, DXGI_PRESENT_DO_NOT_WAIT);
+    }
+  }
 
   if (FAILED(hr) && is_lost(hr)) {
     ++_lost;
@@ -1669,7 +1673,7 @@ void GraphicsInterfaceD3D11::_SetConstant(u8 flags, u32 loc, const void* val, u3
   }
 }
 
-void GraphicsInterfaceD3D11::SetFrameBuffer(Handle fbh, bool msaa) {
+void GraphicsInterfaceD3D11::SetFrameBuffer(FrameBufferHandle fbh, bool msaa) {
   if (_fbh && _fbh.idx != fbh.idx &&  _rt_msaa) {
     FrameBufferD3D11& frameBuffer = _frame_buffers[_fbh.idx];
     frameBuffer.Resolve();
@@ -1733,8 +1737,8 @@ void GraphicsInterfaceD3D11::Commit(ConstantBuffer& _uniformBuffer) {
     if (copy) {
       data = _uniformBuffer.Read(CONSTANT_TYPE_SIZE[type] * num);
     } else {
-      Handle handle;
-      memcpy(&handle, _uniformBuffer.Read(sizeof(Handle)), sizeof(Handle));
+      ConstantHandle handle;
+      memcpy(&handle, _uniformBuffer.Read(sizeof(ConstantHandle)), sizeof(ConstantHandle));
       data = (const char*)_uniforms[handle.idx];
     }
 
@@ -1850,7 +1854,7 @@ void GraphicsInterfaceD3D11::Clear(ClearQuad& clear_quad, const Rect& rect, cons
     SetRasterizerState(state);
 
     u32 numMrt = 1;
-    Handle fbh = _fbh;
+    FrameBufferHandle fbh = _fbh;
     if (fbh) {
       const FrameBufferD3D11& fb = _frame_buffers[fbh.idx];
       numMrt = max<u32>(1, fb._num);

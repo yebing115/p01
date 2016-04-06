@@ -36,31 +36,14 @@ bool GraphicsRenderer::Init(GraphicsAPI api) {
   init_builtin_vertex_decls(api);
 
   _frame->Create();
-  _frame->Create();
 
-  auto& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::RENDERER_INIT);
-  cmdbuf.Write(api);
+  _ok = GraphicsInterface::CreateInstances(D3D11_WIN_API, 11, 0, false);
 
-  // submit
-  FrameNoRenderWait();
-  
-  // wait to finish
-  Frame();
+  if (!_ok) return false;
 
-  if (!_ok) {
-    _frame->GetCommandBuffer(CommandBuffer::RENDERER_SHUTDOWN_END);
-    Frame();
-    Frame();
-    _frame->Destroy();
-    _frame->Destroy();
-    return false;
-  }
-
+  _gi = GraphicsInterface::Instance();
+  _gi->Init();
   _clear_quad.Init();
-
-  _frame->transient_vb = CreateTransientVertexBuffer(C3_TRANSIENT_VERTEX_BUFFER_SIZE);
-  _frame->transient_ib = CreateTransientIndexBuffer(C3_TRANSIENT_INDEX_BUFFER_SIZE);
-  Frame();
 
   _frame->transient_vb = CreateTransientVertexBuffer(C3_TRANSIENT_VERTEX_BUFFER_SIZE);
   _frame->transient_ib = CreateTransientIndexBuffer(C3_TRANSIENT_INDEX_BUFFER_SIZE);
@@ -76,7 +59,7 @@ void GraphicsRenderer::Reset(u16 width, u16 height, u32 flags) {
   _resolution.flags = flags;
 
   for (u32 i = 0, num = _texture_handles.GetUsed(); i < num; ++i) {
-    Handle texture_handle = _texture_handles.GetHandleAt(i);
+    TextureHandle texture_handle = _texture_handles.GetHandleAt(i);
     const TextureRef& texture = _texture_ref[texture_handle.idx];
     if (texture.bb_ratio != BACKBUFFER_RATIO_COUNT) {
       ResizeTexture(texture_handle, width, height);
@@ -85,12 +68,6 @@ void GraphicsRenderer::Reset(u16 width, u16 height, u32 flags) {
 }
 
 void GraphicsRenderer::Shutdown() {
-  _frame->GetCommandBuffer(CommandBuffer::RENDERER_SHUTDOWN_BEGIN);
-  _clear_quad.Shutdown();
-  Frame();
-  _frame->GetCommandBuffer(CommandBuffer::RENDERER_SHUTDOWN_END);
-  Frame();
-  _frame->Destroy();
   _frame->Destroy();
 }
 
@@ -105,74 +82,61 @@ void GraphicsRenderer::SetCurrentView(u8 view) { _current_view = view; }
 
 void GraphicsRenderer::PopView() { --_current_view; }
 
-Handle GraphicsRenderer::CreateVertexBuffer(const MemoryBlock* mem, const VertexDecl& decl, u16 flags) {
-  Handle handle = _vertex_buffer_handles.Alloc();
+VertexBufferHandle GraphicsRenderer::CreateVertexBuffer(const MemoryBlock* mem, const VertexDecl& decl, u16 flags) {
+  VertexBufferHandle handle = _vertex_buffer_handles.Alloc();
   c3_assert(handle && "Failed to allocate vertex buffer handle.");
-  Handle decl_handle = FindVertexDecl(decl);
+  VertexDeclHandle decl_handle = FindVertexDecl(decl);
   auto& vb = _vertex_buffers[handle.idx];
   vb.stride = decl.stride;
   vb.size = mem->size;
   vb.flags = flags;
-  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::CREATE_VERTEX_BUFFER);
-  cmd.Write(handle);
-  cmd.Write(mem);
-  cmd.Write(decl_handle);
-  cmd.Write(flags);
+  _gi->CreateVertexBuffer(handle, mem, decl_handle, flags);
   return handle;
 }
 
-void GraphicsRenderer::DestroyVertexBuffer(Handle handle) {
+void GraphicsRenderer::DestroyVertexBuffer(VertexBufferHandle handle) {
   if (!handle) return;
-  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::DESTROY_VERTEX_BUFFER);
-  cmd.Write(handle);
-  _frame->Free(handle);
+  _gi->DestroyVertexBuffer(handle);
+  _vertex_buffer_handles.Free(handle);
 }
 
-Handle GraphicsRenderer::CreateIndexBuffer(const MemoryBlock* mem, u16 flags) {
-  Handle handle = _index_buffer_handles.Alloc();
+IndexBufferHandle GraphicsRenderer::CreateIndexBuffer(const MemoryBlock* mem, u16 flags) {
+  IndexBufferHandle handle = _index_buffer_handles.Alloc();
   auto& ib = _index_buffers[handle.idx];
   ib.size = mem->size;
   ib.flags = flags;
-  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::CREATE_INDEX_BUFFER);
-  cmd.Write(handle);
-  cmd.Write(mem);
-  cmd.Write(flags);
+  _gi->CreateIndexBuffer(handle, mem, flags);
   return handle;
 }
 
-void GraphicsRenderer::DestroyIndexBuffer(Handle handle) {
+void GraphicsRenderer::DestroyIndexBuffer(IndexBufferHandle handle) {
   if (!handle) return;
-  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::DESTROY_INDEX_BUFFER);
-  cmd.Write(handle);
-  _frame->Free(handle);
+  _gi->DestroyIndexBuffer(handle);
+  _index_buffer_handles.Free(handle);
 }
 
-Handle GraphicsRenderer::CreateDynamicVertexBuffer(u32 num, const VertexDecl& decl, u16 flags) {
-  Handle handle = _vertex_buffer_handles.Alloc();
+VertexBufferHandle GraphicsRenderer::CreateDynamicVertexBuffer(u32 num, const VertexDecl& decl, u16 flags) {
+  VertexBufferHandle handle = _vertex_buffer_handles.Alloc();
   c3_assert(handle && "Failed to allocate dynamic vertex buffer handle.");
-  Handle decl_handle = FindVertexDecl(decl);
+  VertexDeclHandle decl_handle = FindVertexDecl(decl);
   auto& vb = _vertex_buffers[handle.idx];
   vb.stride = decl.stride;
   vb.size = num * decl.stride;
   vb.flags = flags;
 
-  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_VERTEX_BUFFER);
-  cmdbuf.Write(handle);
-  cmdbuf.Write(decl.stride * num);
-  cmdbuf.Write(decl_handle);
-  cmdbuf.Write(flags);
+  _gi->CreateDynamicVertexBuffer(handle, decl.stride * num, flags);
   return handle;
 }
 
-Handle GraphicsRenderer::CreateDynamicVertexBuffer(const MemoryBlock* mem, const VertexDecl& decl, u16 flags) {
+VertexBufferHandle GraphicsRenderer::CreateDynamicVertexBuffer(const MemoryBlock* mem, const VertexDecl& decl, u16 flags) {
   u32 num_vertices = mem->size / decl.stride;
   if (num_vertices > UINT16_MAX) c3_log("Num vertices exceeds maximum (num %d, max %d).\n", num_vertices, UINT16_MAX);
-  Handle handle = CreateDynamicVertexBuffer(u16(num_vertices), decl, flags);
+  VertexBufferHandle handle = CreateDynamicVertexBuffer(u16(num_vertices), decl, flags);
   if (handle) UpdateDynamicVertexBuffer(handle, 0, mem);
   return handle;
 }
 
-void GraphicsRenderer::UpdateDynamicVertexBuffer(Handle handle, u32 start_vertex, const MemoryBlock* mem) {
+void GraphicsRenderer::UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 start_vertex, const MemoryBlock* mem) {
   auto& vb = _vertex_buffers[handle.idx];
   u32 offset = start_vertex * vb.stride;
   if (offset >= vb.size || offset + mem->size > vb.size) {
@@ -183,16 +147,11 @@ void GraphicsRenderer::UpdateDynamicVertexBuffer(Handle handle, u32 start_vertex
   if (size < mem->size) {
     c3_log("[C3] Truncating dynamic vertex buffer update (size %d, mem size %d).\n", vb.size, mem->size);
   }
-  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::UPDATE_DYNAMIC_VERTEX_BUFFER);
-  cmdbuf.Write(handle);
-  cmdbuf.Write(offset);
-  cmdbuf.Write(size);
-  cmdbuf.Write(mem);
+  _gi->UpdateDynamicVertexBuffer(handle, offset, size, mem);
 }
 
-Handle GraphicsRenderer::CreateDynamicIndexBuffer(u32 num, u16 flags) {
-  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_INDEX_BUFFER);
-  Handle handle = _index_buffer_handles.Alloc();
+IndexBufferHandle GraphicsRenderer::CreateDynamicIndexBuffer(u32 num, u16 flags) {
+  IndexBufferHandle handle = _index_buffer_handles.Alloc();
   const u32 index_size = 0 == (flags & C3_BUFFER_INDEX32) ? 2 : 4;
   u32 size = num * index_size;
   if (!handle) {
@@ -202,20 +161,18 @@ Handle GraphicsRenderer::CreateDynamicIndexBuffer(u32 num, u16 flags) {
   auto& ib = _index_buffers[handle.idx];
   ib.size = size;
   ib.flags = flags;
-  cmdbuf.Write(handle);
-  cmdbuf.Write(size);
-  cmdbuf.Write(flags);
+  _gi->CreateDynamicIndexBuffer(handle, size, flags);
   return handle;
 }
 
-Handle GraphicsRenderer::CreateDynamicIndexBuffer(const MemoryBlock* mem, u16 flags) {
+IndexBufferHandle GraphicsRenderer::CreateDynamicIndexBuffer(const MemoryBlock* mem, u16 flags) {
   const u32 index_size = (flags & C3_BUFFER_INDEX32) ? 4 : 2;
-  Handle handle = CreateDynamicIndexBuffer(mem->size / index_size, flags);
+  IndexBufferHandle handle = CreateDynamicIndexBuffer(mem->size / index_size, flags);
   if (handle) UpdateDynamicIndexBuffer(handle, 0, mem);
   return handle;
 }
 
-void GraphicsRenderer::UpdateDynamicIndexBuffer(Handle handle, u32 start_index, const MemoryBlock* mem) {
+void GraphicsRenderer::UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 start_index, const MemoryBlock* mem) {
   IndexBuffer& ib = _index_buffers[handle.idx];
   const u32 index_size = (ib.flags & C3_BUFFER_INDEX32) ? 4 : 2;
   u32 offset = start_index * index_size;
@@ -225,14 +182,7 @@ void GraphicsRenderer::UpdateDynamicIndexBuffer(Handle handle, u32 start_index, 
   }
   u32 size = min(offset + mem->size, ib.size) - offset;
   if (size < mem->size) c3_log("Truncating dynamic index buffer update (size %d, mem size %d).\n", size, mem->size);
-  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::UPDATE_DYNAMIC_INDEX_BUFFER);
-  cmdbuf.Write(handle);
-  cmdbuf.Write(offset);
-  cmdbuf.Write(size);
-  cmdbuf.Write(mem);
-}
-
-void GraphicsRenderer::DestroyDynamicIndexBuffer(Handle handle) {
+  _gi->UpdateDynamicIndexBuffer(handle, offset, size, mem);
 }
 
 bool GraphicsRenderer::CheckAvailTransientIndexBuffer(u32 num) {
@@ -251,13 +201,11 @@ bool GraphicsRenderer::CheckAvailTransientBuffers(u32 num_vertices, const Vertex
 void GraphicsRenderer::AllocTransientVertexBuffer(TransientVertexBuffer* tvb_out, u32 num, const VertexDecl& decl) {
   TransientVertexBuffer& dvb = *_frame->transient_vb;
   
-  Handle decl_handle = _decl_ref.Find(decl.hash);
+  VertexDeclHandle decl_handle = _decl_ref.Find(decl.hash);
   if (!decl_handle) {
-    Handle temp{_vertex_decl_handles.Alloc()};
+    VertexDeclHandle temp = _vertex_decl_handles.Alloc();
     decl_handle = temp;
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_VERTEX_DECL);
-    cmdbuf.Write(decl_handle);
-    cmdbuf.Write(decl);
+    _gi->CreateVertexDecl(decl_handle, decl);
     _decl_ref.Add(decl_handle, decl.hash);
   }
 
@@ -290,8 +238,8 @@ bool GraphicsRenderer::AllocTransientBuffers(TransientVertexBuffer* tvb, const V
   return false;
 }
 
-Handle GraphicsRenderer::CreateShader(const MemoryBlock* mem) {
-  Handle handle = _shader_handles.Alloc();
+ShaderHandle GraphicsRenderer::CreateShader(const MemoryBlock* mem) {
+  ShaderHandle handle = _shader_handles.Alloc();
   if (!handle) {
     c3_log("Failed to alloc shader handle.\n");
     return handle;
@@ -305,8 +253,8 @@ Handle GraphicsRenderer::CreateShader(const MemoryBlock* mem) {
   BlobReader blob(mem->data, mem->size);
   ShaderInfo::Header header;
   blob.Read(header);
-  c3_assert_return_x(header.magic == C3_CHUNK_MAGIC_VSH || header.magic == C3_CHUNK_MAGIC_FSH, Handle());
-  shader.constants = (Handle*)C3_ALLOC(g_allocator, header.num_constants * sizeof(Handle));
+  c3_assert_return_x(header.magic == C3_CHUNK_MAGIC_VSH || header.magic == C3_CHUNK_MAGIC_FSH, ShaderHandle());
+  shader.constants = (ConstantHandle*)C3_ALLOC(g_allocator, header.num_constants * sizeof(ConstantHandle));
   for (u8 i = 0; i < header.num_constants; ++i) {
     auto& c = header.constants[i];
     if (PredefinedConstant::NameToType(c.name) == PREDEFINED_CONSTANT_COUNT) {
@@ -314,28 +262,25 @@ Handle GraphicsRenderer::CreateShader(const MemoryBlock* mem) {
       ++shader.num_constants;
     }
   }
-  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::CREATE_SHADER);
-  cmd.Write(handle);
-  cmd.Write(mem);
+  _gi->CreateShader(handle, mem);
   return handle;
 }
 
-void GraphicsRenderer::DestroyShader(Handle handle) {
+void GraphicsRenderer::DestroyShader(ShaderHandle handle) {
   if (!handle) return;
-  auto& cmd = _frame->GetCommandBuffer(CommandBuffer::DESTROY_SHADER);
-  cmd.Write(handle);
+  _gi->DestroyShader(handle);
   ShaderDecRef(handle);
 }
 
-Handle GraphicsRenderer::CreateProgram(Handle vsh, Handle fsh, bool destroy_shaders) {
+ProgramHandle GraphicsRenderer::CreateProgram(ShaderHandle vsh, ShaderHandle fsh, bool destroy_shaders) {
   if (!vsh || !fsh) {
     c3_log("Vertex/fragment shader is invalid (vsh %d, fsh %d).\n", vsh.idx, fsh);
-    return Handle();
+    return ProgramHandle();
   }
 
   ProgramMap::const_iterator it = _program_map.find(u32(fsh.idx << 16) | vsh.idx);
   if (it != _program_map.end()) {
-    Handle handle = it->second;
+    ProgramHandle handle = it->second;
     ProgramRef& pr = _program_ref[handle.idx];
     ++pr.ref_count;
     return handle;
@@ -345,10 +290,10 @@ Handle GraphicsRenderer::CreateProgram(Handle vsh, Handle fsh, bool destroy_shad
   const ShaderRef& fsr = _shader_ref[fsh.idx];
   if (vsr.hash != fsr.hash) {
     c3_log("Vertex shader output doesn't match fragment shader input.\n");
-    return Handle();
+    return ProgramHandle();
   }
 
-  Handle handle = _program_handles.Alloc();
+  ProgramHandle handle = _program_handles.Alloc();
 
   if (!handle) c3_log("Failed to allocate program handle.\n");
   else {
@@ -361,10 +306,7 @@ Handle GraphicsRenderer::CreateProgram(Handle vsh, Handle fsh, bool destroy_shad
 
     _program_map.insert(make_pair(u32(fsh.idx << 16) | vsh.idx, handle));
 
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_PROGRAM);
-    cmdbuf.Write(handle);
-    cmdbuf.Write(vsh);
-    cmdbuf.Write(fsh);
+    _gi->CreateProgram(handle, vsh, fsh);
   }
 
   if (destroy_shaders) {
@@ -375,13 +317,12 @@ Handle GraphicsRenderer::CreateProgram(Handle vsh, Handle fsh, bool destroy_shad
   return handle;
 }
 
-void GraphicsRenderer::DestroyProgram(Handle handle) {
+void GraphicsRenderer::DestroyProgram(ProgramHandle handle) {
   ProgramRef& pr = _program_ref[handle.idx];
   i16 refs = --pr.ref_count;
   if (refs == 0) {
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_PROGRAM);
-    cmdbuf.Write(handle);
-    _frame->Free(handle);
+    _gi->DestroyProgram(handle);
+    _program_handles.Free(handle);
 
     ShaderDecRef(pr.vsh);
     u32 hash = pr.vsh.idx;
@@ -395,8 +336,8 @@ void GraphicsRenderer::DestroyProgram(Handle handle) {
   }
 }
 
-Handle GraphicsRenderer::CreateTexture(const MemoryBlock* mem, u32 flags, u8 skip,
-                                       TextureInfo* info_out, BackbufferRatio ratio) {
+TextureHandle GraphicsRenderer::CreateTexture(const MemoryBlock* mem, u32 flags, u8 skip,
+                                              TextureInfo* info_out, BackbufferRatio ratio) {
   TextureInfo ti;
   if (!info_out) info_out = &ti;
 
@@ -417,7 +358,7 @@ Handle GraphicsRenderer::CreateTexture(const MemoryBlock* mem, u32 flags, u8 ski
     info_out->cube_map = false;
   }
 
-  Handle handle = _texture_handles.Alloc();
+  TextureHandle handle = _texture_handles.Alloc();
   if (!handle) c3_log("Failed to allocate texture handle.\n");
   else {
     TextureRef& ref = _texture_ref[handle.idx];
@@ -426,27 +367,28 @@ Handle GraphicsRenderer::CreateTexture(const MemoryBlock* mem, u32 flags, u8 ski
     ref.format = u8(info_out->format);
     ref.owned = false;
 
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_TEXTURE);
-    cmdbuf.Write(handle);
-    cmdbuf.Write(mem);
-    cmdbuf.Write(flags);
-    cmdbuf.Write(skip);
+    _gi->CreateTexture(handle, mem, flags, skip);
   }
 
   return handle;
 }
 
-Handle GraphicsRenderer::CreateTexture2D(u16 width, u16 height, u8 mipmap_count,
-                                         TextureFormat format, u32 flags, const MemoryBlock* mem, TextureInfo* info_out) {
+TextureHandle GraphicsRenderer::CreateTexture2D(u16 width, u16 height, u8 mipmap_count,
+                                                TextureFormat format, u32 flags,
+                                                const MemoryBlock* mem, TextureInfo* info_out) {
   return CreateTexture2D(BACKBUFFER_RATIO_COUNT, width, height, mipmap_count, format, flags, mem, info_out);
 }
 
-Handle GraphicsRenderer::CreateTexture2D(BackbufferRatio ratio, u8 mipmap_count,
-                                         TextureFormat format, u32 flags, TextureInfo* info_out) {
+TextureHandle GraphicsRenderer::CreateTexture2D(BackbufferRatio ratio, u8 mipmap_count,
+                                                TextureFormat format, u32 flags,
+                                                TextureInfo* info_out) {
   return CreateTexture2D(ratio, 0, 0, mipmap_count, format, flags, nullptr, info_out);
 }
 
-Handle GraphicsRenderer::CreateTexture2D(BackbufferRatio ratio, u16 width, u16 height, u8 num_mips, TextureFormat format, u32 flags, const MemoryBlock* data_mem, TextureInfo* info_out) {
+TextureHandle GraphicsRenderer::CreateTexture2D(BackbufferRatio ratio, u16 width, u16 height,
+                                                u8 num_mips, TextureFormat format, u32 flags,
+                                                const MemoryBlock* data_mem,
+                                                TextureInfo* info_out) {
 #if C3_DEBUG_CONTEXT
   if (data_mem) {
     TextureInfo ti;
@@ -454,7 +396,7 @@ Handle GraphicsRenderer::CreateTexture2D(BackbufferRatio ratio, u16 width, u16 h
     if (ti.storage_size != data_mem->size) {
       c3_log("CreateTexture2D: Texture storage size doesn't match passed memory size (storage size: %d, memory size: %d)\n",
              ti.storage_size, data_mem->size);
-      return Handle();
+      return TextureHandle();
     }
   }
 #endif
@@ -484,20 +426,20 @@ Handle GraphicsRenderer::CreateTexture2D(BackbufferRatio ratio, u16 width, u16 h
   return CreateTexture(mem_copy(stream.GetData(), stream.GetSize()), flags, 0, info_out, ratio);
 }
 
-void GraphicsRenderer::DestroyTexture(Handle handle) {
+void GraphicsRenderer::DestroyTexture(TextureHandle handle) {
   if (!handle) return;
   TextureDecRef(handle);
 }
 
-Handle GraphicsRenderer::CreateConstant(stringid name, ConstantType type, u16 num) {
+ConstantHandle GraphicsRenderer::CreateConstant(stringid name, ConstantType type, u16 num) {
   if (PredefinedConstant::NameToType(name) != PREDEFINED_CONSTANT_COUNT) {
     c3_log("%s is predefined uniform name.\n", name);
-    return Handle();
+    return ConstantHandle();
   }
 
   ConstantMap::iterator it = _constant_map.find(name);
   if (it != _constant_map.end()) {
-    Handle handle = it->second;
+    ConstantHandle handle = it->second;
     ConstantRef& constant = _constant_ref[handle.idx];
 
     u32 old_size = CONSTANT_TYPE_SIZE[constant.type];
@@ -507,18 +449,14 @@ Handle GraphicsRenderer::CreateConstant(stringid name, ConstantType type, u16 nu
       constant.type = old_size < new_size ? type : constant.type;
       constant.num = max(constant.num, num);
 
-      CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_CONSTANT);
-      cmdbuf.Write(handle);
-      cmdbuf.Write(name);
-      cmdbuf.Write(constant.type);
-      cmdbuf.Write(constant.num);
+      _gi->CreateConstant(handle, constant.type, constant.num, name);
     }
 
     ++constant.ref_count;
     return handle;
   }
 
-  Handle handle = _constant_handles.Alloc();
+  ConstantHandle handle = _constant_handles.Alloc();
 
   if (!handle) c3_log("Failed to allocate constant handle.\n");
   else {
@@ -531,17 +469,13 @@ Handle GraphicsRenderer::CreateConstant(stringid name, ConstantType type, u16 nu
 
     _constant_map.insert(make_pair(name, handle));
 
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_CONSTANT);
-    cmdbuf.Write(handle);
-    cmdbuf.Write(name);
-    cmdbuf.Write(type);
-    cmdbuf.Write(num);
+    _gi->CreateConstant(handle, type, num, name);
   }
 
   return handle;
 }
 
-void GraphicsRenderer::DestroyConstant(Handle handle) {
+void GraphicsRenderer::DestroyConstant(ConstantHandle handle) {
   ConstantRef& constant = _constant_ref[handle.idx];
   i16 refs = --constant.ref_count;
 
@@ -553,33 +487,29 @@ void GraphicsRenderer::DestroyConstant(Handle handle) {
       }
     }
 
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_CONSTANT);
-    cmdbuf.Write(handle);
-    _frame->Free(handle);
+    _gi->DestroyConstant(handle);
+    _constant_handles.Free(handle);
   }
 }
 
-Handle GraphicsRenderer::CreateFrameBuffer(u8 num, Handle* handles, bool destroy_textures) {
-  Handle handle = _frame_buffer_handles.Alloc();
+FrameBufferHandle GraphicsRenderer::CreateFrameBuffer(u8 num, TextureHandle* handles,
+                                                      bool destroy_textures) {
+  FrameBufferHandle handle = _frame_buffer_handles.Alloc();
   if (!handle) c3_log("Failed to allocate frame buffer handle.\n");
   else {
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_FRAME_BUFFER);
-    cmdbuf.Write(handle);
-    cmdbuf.Write(false);
-    cmdbuf.Write(num);
-
     FrameBufferRef& ref = _frame_buffer_ref[handle.idx];
 
     ref.window = false;
     memset(ref.th, 0xff, sizeof(ref.th));
     BackbufferRatio bb_ratio = (BackbufferRatio)_texture_ref[handles[0].idx].bb_ratio;
     for (u32 i = 0; i < num; ++i) {
-      Handle th = handles[i];
+      TextureHandle th = handles[i];
       if (bb_ratio != _texture_ref[th.idx].bb_ratio) c3_log("Mismatch in texture back-buffer ratio.\n");
-      cmdbuf.Write(th);
       ref.th[i] = th;
       TextureIncRef(th);
     }
+
+    _gi->CreateFrameBuffer(handle, num, handles);
   }
 
   if (destroy_textures) {
@@ -589,11 +519,10 @@ Handle GraphicsRenderer::CreateFrameBuffer(u8 num, Handle* handles, bool destroy
   return handle;
 }
 
-void GraphicsRenderer::DestroyFrameBuffer(Handle handle) {
+void GraphicsRenderer::DestroyFrameBuffer(FrameBufferHandle handle) {
   if (!handle) return;
-  auto& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_FRAME_BUFFER);
-  cmdbuf.Write(handle);
-  _frame->Free(handle);
+  _gi->DestroyFrameBuffer(handle);
+  _frame_buffer_handles.Free(handle);
   FrameBufferRef& ref = _frame_buffer_ref[handle.idx];
   if (!ref.window) {
     for (u32 ii = 0; ii < ARRAY_SIZE(ref.th); ++ii) {
@@ -603,34 +532,23 @@ void GraphicsRenderer::DestroyFrameBuffer(Handle handle) {
   }
 }
 
-void GraphicsRenderer::ResizeTexture(Handle handle, u16 width, u16 height) {
+void GraphicsRenderer::ResizeTexture(TextureHandle handle, u16 width, u16 height) {
   const TextureRef& texture_ref = _texture_ref[handle.idx];
   get_texture_size_from_ratio((BackbufferRatio)texture_ref.bb_ratio, width, height);
 
-  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::RESIZE_TEXTURE);
-  cmdbuf.Write(handle);
-  cmdbuf.Write(width);
-  cmdbuf.Write(height);
+  _gi->ResizeTexture(handle, width, height);
 }
 
-void GraphicsRenderer::UpdateTexture2D(Handle handle, u8 mip, u16 x, u16 y, u16 width, u16 height, const MemoryBlock* mem, u16 pitch) {
+void GraphicsRenderer::UpdateTexture2D(TextureHandle handle, u8 mip, u16 x, u16 y, u16 width, u16 height, const MemoryBlock* mem, u16 pitch) {
   c3_assert_return(mem && "mem can't be NULL");
   if (width == 0 || height == 0) mem_free(mem);
   else {
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::UPDATE_TEXTURE);
-    cmdbuf.Write(handle);
-    cmdbuf.Write(u8(0)); // side
-    cmdbuf.Write(mip);
-    Rect rect;
-    rect.left = x;
-    rect.bottom = y;
-    rect.right = x + width;
-    rect.top = y + height;
-    cmdbuf.Write(rect);
-    cmdbuf.Write(u16(0));
-    cmdbuf.Write(u16(1));
-    cmdbuf.Write(pitch);
-    cmdbuf.Write(mem);
+    TextureRect rect;
+    rect.x = x;
+    rect.y = y;
+    rect.width = width;
+    rect.height = height;
+    _gi->UpdateTexture(handle, 8, mip, rect, 0, 1, pitch, mem);
   }
 }
 
@@ -666,7 +584,7 @@ u16 GraphicsRenderer::AllocTransform(float4x4*& mtx_out, u16& num_in_out) {
   return _frame->AllocTransform(mtx_out, num_in_out);
 }
 
-void GraphicsRenderer::SetVertexBuffer(Handle handle, u32 start, u32 num) {
+void GraphicsRenderer::SetVertexBuffer(VertexBufferHandle handle, u32 start, u32 num) {
   _frame->SetVertexBuffer(handle, start, num);
 }
 
@@ -674,7 +592,7 @@ void GraphicsRenderer::SetVertexBuffer(const TransientVertexBuffer* tvb, u32 sta
   _frame->SetVertexBuffer(tvb, start_vertex, num_vertices);
 }
 
-void GraphicsRenderer::SetIndexBuffer(Handle handle, u32 start, u32 num) {
+void GraphicsRenderer::SetIndexBuffer(IndexBufferHandle handle, u32 start, u32 num) {
   _frame->SetIndexBuffer(handle, start, num);
 }
 
@@ -686,14 +604,14 @@ void GraphicsRenderer::SetScissor(i16 x, i16 y, i16 width, i16 height) {
   _frame->SetScissor(x, y, width, height);
 }
 
-void GraphicsRenderer::SetConstant(Handle handle, const void* value, u16 num) {
+void GraphicsRenderer::SetConstant(ConstantHandle handle, const void* value, u16 num) {
   if (!handle) return;
   ConstantRef& constant = _constant_ref[handle.idx];
-  _frame->SetConstant(constant.type, handle, value, min(num, constant.num));
+  _frame->SetConstant(handle, constant.type, value, min(num, constant.num));
 }
 
-void GraphicsRenderer::SetTexture(u8 unit, Handle handle, AttachmentPoint attachment, u32 flags) {
-  Handle texture_handle;
+void GraphicsRenderer::SetTexture(u8 unit, FrameBufferHandle handle, AttachmentPoint attachment, u32 flags) {
+  TextureHandle texture_handle;
   if (handle) {
     const FrameBufferRef& ref = _frame_buffer_ref[handle.idx];
     c3_assert_return(!ref.window && "Can't sample window frame buffer.");
@@ -703,7 +621,7 @@ void GraphicsRenderer::SetTexture(u8 unit, Handle handle, AttachmentPoint attach
   _frame->SetTexture(unit, texture_handle, flags);
 }
 
-void GraphicsRenderer::SetTexture(u8 unit, Handle handle, u32 flags) {
+void GraphicsRenderer::SetTexture(u8 unit, TextureHandle handle, u32 flags) {
   _frame->SetTexture(unit, handle, flags);
 }
 
@@ -754,7 +672,7 @@ void GraphicsRenderer::SetViewClear(u8 view, u16 flags, float depth, u8 stencil,
   c.stencil = stencil;
 }
 
-void GraphicsRenderer::SetViewFrameBuffer(u8 view, Handle fbh) {
+void GraphicsRenderer::SetViewFrameBuffer(u8 view, FrameBufferHandle fbh) {
   _fb[view] = fbh;
 }
 
@@ -778,7 +696,7 @@ void GraphicsRenderer::SetViewRemap(u8 start_view, u8 num, u8* remap) {
 }
 
 void GraphicsRenderer::SetViewName(u8 view, const char* name) {
-  _frame->SetViewName(view, name);
+  _gi->UpdateViewName(view, name);
 }
 
 void GraphicsRenderer::SetPaletteColor(u8 index, u32 rgba) {
@@ -818,7 +736,7 @@ void GraphicsRenderer::SetMarker(const char* marker) {
   _frame->SetMarker(marker);
 }
 
-void GraphicsRenderer::Submit(u8 view, Handle program, i32 tag) {
+void GraphicsRenderer::Submit(u8 view, ProgramHandle program, i32 tag) {
   _frame->Submit(view, program, tag);
 }
 
@@ -830,16 +748,10 @@ void GraphicsRenderer::Frame() {
   FrameNoRenderWait();
 }
 
-void GraphicsRenderer::Idle() {
-
-}
-
 i32 GraphicsRenderer::RenderOneFrame() {
   if (_gi) _gi->Flip();
   //auto start_time = get_timestamp();
-  ExecuteCommands(_frame->pre_cmd_buffer);
   _gi->Submit(_frame, _clear_quad);
-  ExecuteCommands(_frame->post_cmd_buffer);
   /*
   auto elapsed_msecs = (get_timestamp() - start_time) * 1000.0;
   if (elapsed_msecs >= 17.0) {
@@ -880,303 +792,21 @@ void GraphicsRenderer::Swap() {
   _frame->ResetFreeHandles();
 }
 
-void GraphicsRenderer::ExecuteCommands(CommandBuffer& cmdbuf) {
-  bool end = false;
-  char name[256];
-  cmdbuf.Reset();
-  do {
-    u8 cmd;
-    cmdbuf.Read(cmd);
-    switch (cmd) {
-    case CommandBuffer::RENDERER_INIT: {
-      GraphicsAPI api;
-      cmdbuf.Read(api);
-      _ok = GraphicsInterface::CreateInstances(api, 4, 2, false);
-      if (_ok) {
-        _gi = GraphicsInterface::Instance();
-        _gi->Init();
-      }
-    } break;
-    case CommandBuffer::CREATE_VERTEX_BUFFER: {
-      Handle handle;
-      MemoryBlock* mem;
-      Handle decl;
-      u16 flags;
-      cmdbuf.Read(handle);
-      cmdbuf.Read(mem);
-      cmdbuf.Read(decl);
-      cmdbuf.Read(flags);
-      _gi->CreateVertexBuffer(handle, mem, decl, flags);
-      mem_free(mem);
-    } break;
-    case CommandBuffer::CREATE_DYNAMIC_VERTEX_BUFFER: {
-      Handle handle;
-      u32 size;
-      u16 flags;
-
-      cmdbuf.Read(handle);
-      cmdbuf.Read(size);
-      cmdbuf.Read(flags);
-
-      _gi->CreateDynamicVertexBuffer(handle, size, flags);
-    } break;
-    case CommandBuffer::UPDATE_DYNAMIC_VERTEX_BUFFER: {
-      Handle handle;
-      u32 offset;
-      u32 size;
-      MemoryBlock* mem;
-
-      cmdbuf.Read(handle);
-      cmdbuf.Read(offset);
-      cmdbuf.Read(size);
-      cmdbuf.Read(mem);
-
-      _gi->UpdateDynamicVertexBuffer(handle, offset, size, mem);
-
-      mem_free(mem);
-    } break;
-    case CommandBuffer::CREATE_INDEX_BUFFER: {
-      Handle handle;
-      MemoryBlock* mem;
-      u16 flags;
-      cmdbuf.Read(handle);
-      cmdbuf.Read(mem);
-      cmdbuf.Read(flags);
-      _gi->CreateIndexBuffer(handle, mem, flags);
-      mem_free(mem);
-    } break;
-    case CommandBuffer::CREATE_DYNAMIC_INDEX_BUFFER: {
-      Handle handle;
-      u32 size;
-      u16 flags;
-
-      cmdbuf.Read(handle);
-      cmdbuf.Read(size);
-      cmdbuf.Read(flags);
-
-      _gi->CreateDynamicIndexBuffer(handle, size, flags);
-    } break;
-    case CommandBuffer::UPDATE_DYNAMIC_INDEX_BUFFER: {
-      Handle handle;
-      u32 offset;
-      u32 size;
-      MemoryBlock* mem;
-
-      cmdbuf.Read(handle);
-      cmdbuf.Read(offset);
-      cmdbuf.Read(size);
-      cmdbuf.Read(mem);
-
-      _gi->UpdateDynamicIndexBuffer(handle, offset, size, mem);
-
-      mem_free(mem);
-    } break;
-    case CommandBuffer::CREATE_VERTEX_DECL: {
-      Handle handle;
-      VertexDecl decl;
-      cmdbuf.Read(handle);
-      cmdbuf.Read(decl);
-      _gi->CreateVertexDecl(handle, decl);
-    } break;
-    case CommandBuffer::CREATE_SHADER: {
-      Handle handle;
-      MemoryBlock* mem;
-      cmdbuf.Read(handle);
-      cmdbuf.Read(mem);
-      _gi->CreateShader(handle, mem);
-    } break;
-    case CommandBuffer::CREATE_PROGRAM: {
-      Handle handle;
-      Handle vsh;
-      Handle fsh;
-      cmdbuf.Read(handle);
-      cmdbuf.Read(vsh);
-      cmdbuf.Read(fsh);
-      _gi->CreateProgram(handle, vsh, fsh);
-    } break;
-    case CommandBuffer::CREATE_TEXTURE: {
-      Handle handle;
-      MemoryBlock* mem;
-      u32 flags;
-      u8 skip;
-      cmdbuf.Read(handle);
-      cmdbuf.Read(mem);
-      cmdbuf.Read(flags);
-      cmdbuf.Read(skip);
-      _gi->CreateTexture(handle, mem, flags, skip);
-      BlobReader stream(mem->data, mem->size);
-      u32 magic;
-      stream.Read(magic);
-      if (magic == C3_CHUNK_MAGIC_TEX) {
-        TextureCreate tc;
-        stream.Read(tc);
-        if (tc.mem) mem_free(tc.mem);
-      }
-      mem_free(mem);
-    } break;
-    case CommandBuffer::UPDATE_TEXTURE: {
-      Handle handle;
-      u8 side;
-      u8 mip;
-      TextureRect rect;
-      u16 z;
-      u16 depth;
-      u16 pitch;
-      MemoryBlock* mem;
-      cmdbuf.Read(handle);
-      cmdbuf.Read(side);
-      cmdbuf.Read(mip);
-      cmdbuf.Read(rect);
-      cmdbuf.Read(z);
-      cmdbuf.Read(depth);
-      cmdbuf.Read(pitch);
-      cmdbuf.Read(mem);
-      _gi->UpdateTexture(handle, side, mip, rect, z, depth, pitch, mem);
-      BlobReader stream(mem->data, mem->size);
-      u32 magic;
-      stream.Read(magic);
-      if (magic == C3_CHUNK_MAGIC_TEX) {
-        TextureCreate tc;
-        stream.Read(tc);
-        if (tc.mem) mem_free(tc.mem);
-      }
-      mem_free(mem);
-    } break;
-    case CommandBuffer::RESIZE_TEXTURE: {
-      Handle handle;
-      u16 width;
-      u16 height;
-      cmdbuf.Read(handle);
-      cmdbuf.Read(width);
-      cmdbuf.Read(height);
-      _gi->ResizeTexture(handle, width, height);
-    } break;
-    case CommandBuffer::CREATE_FRAME_BUFFER: {
-      Handle handle;
-      bool window;
-      cmdbuf.Read(handle);
-      cmdbuf.Read(window);
-      if (window) {
-        void* nwh;
-        u16 width;
-        u16 height;
-        TextureFormat depth_format;
-        cmdbuf.Read(nwh);
-        cmdbuf.Read(width);
-        cmdbuf.Read(height);
-        cmdbuf.Read(depth_format);
-        _gi->CreateFrameBuffer(handle, nwh, width, height, depth_format);
-      } else {
-        u8 num;
-        Handle texture_handles[ATTACHMENT_POINT_COUNT];
-        cmdbuf.Read(num);
-        for (u32 i = 0; i < num; ++i) cmdbuf.Read(texture_handles[i]);
-        _gi->CreateFrameBuffer(handle, num, texture_handles);
-      }
-    } break;
-    case CommandBuffer::CREATE_CONSTANT: {
-      Handle handle;
-      stringid name_id;
-      ConstantType type;
-      u16 num;
-      cmdbuf.Read(handle);
-      cmdbuf.Read(name_id);
-      cmdbuf.Read(type);
-      cmdbuf.Read(num);
-      _gi->CreateConstant(handle, type, num, name_id);
-    } break;
-    case CommandBuffer::UPDATE_VIEW_NAME: {
-      u8 view;
-      u8 len;
-      cmdbuf.Read(view);
-      cmdbuf.Read(len);
-      cmdbuf.Read(name, len + 1);
-      _gi->UpdateViewName(view, name, len);
-    } break;
-    case CommandBuffer::END:
-      end = true;
-      break;
-    case CommandBuffer::DESTROY_VERTEX_BUFFER: {
-      Handle handle;
-      cmdbuf.Read(handle);
-      _gi->DestroyVertexBuffer(handle);
-    } break;
-    case CommandBuffer::DESTROY_INDEX_BUFFER: {
-      Handle handle;
-      cmdbuf.Read(handle);
-      _gi->DestroyIndexBuffer(handle);
-    } break;
-    case CommandBuffer::DESTROY_DYNAMIC_VERTEX_BUFFER: {
-      Handle handle;
-      cmdbuf.Read(handle);
-      _gi->DestroyDynamicVertexBuffer(handle);
-    } break;
-    case CommandBuffer::DESTROY_DYNAMIC_INDEX_BUFFER: {
-      Handle handle;
-      cmdbuf.Read(handle);
-      _gi->DestroyDynamicIndexBuffer(handle);
-    } break;
-    case CommandBuffer::DESTROY_VERTEX_DECL: {
-      Handle handle;
-      cmdbuf.Read(handle);
-      _gi->DestroyVertexDecl(handle);
-    } break;
-    case CommandBuffer::DESTROY_SHADER: {
-      Handle handle;
-      cmdbuf.Read(handle);
-      _gi->DestroyShader(handle);
-    } break;
-    case CommandBuffer::DESTROY_PROGRAM: {
-      Handle handle;
-      cmdbuf.Read(handle);
-      _gi->DestroyProgram(handle);
-    } break;
-    case CommandBuffer::DESTROY_TEXTURE: {
-      Handle handle;
-      cmdbuf.Read(handle);
-      _gi->DestroyTexture(handle);
-    } break;
-    case CommandBuffer::DESTROY_FRAME_BUFFER: {
-      Handle handle;
-      cmdbuf.Read(handle);
-      _gi->DestroyFrameBuffer(handle);
-    } break;
-    case CommandBuffer::DESTROY_CONSTANT: {
-      Handle handle;
-      cmdbuf.Read(handle);
-      _gi->DestroyConstant(handle);
-    } break;
-    case CommandBuffer::SAVE_SCREENSHOT: {
-      u16 len;
-      cmdbuf.Read(len);
-      const char* path = (const char*)cmdbuf.Skip(len);
-      _gi->SaveScreenshot(path);
-    } break;
-    default:
-      c3_log("Unsupported command: %02x\n", cmd);
-    }
-  } while (!end);
-}
-
 void GraphicsRenderer::FrameNoRenderWait() {
   Swap();
 }
 
-void GraphicsRenderer::TextureIncRef(Handle handle) {
+void GraphicsRenderer::TextureIncRef(TextureHandle handle) {
   ++_texture_ref[handle.idx].ref_count;
 }
 
-void GraphicsRenderer::TextureDecRef(Handle handle) {
+void GraphicsRenderer::TextureDecRef(TextureHandle handle) {
   TextureRef& ref = _texture_ref[handle.idx];
   i16 refs = --ref.ref_count;
-  if (refs == 0) {
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_TEXTURE);
-    cmdbuf.Write(handle);
-    _frame->Free(handle);
-  }
+  if (refs == 0) _texture_handles.Free(handle);
 }
 
-void GraphicsRenderer::TextureOwn(Handle handle) {
+void GraphicsRenderer::TextureOwn(TextureHandle handle) {
   TextureRef& ref = _texture_ref[handle.idx];
   if (!ref.owned) {
     ref.owned = true;
@@ -1184,21 +814,20 @@ void GraphicsRenderer::TextureOwn(Handle handle) {
   }
 }
 
-void GraphicsRenderer::ShaderIncRef(Handle handle) {
+void GraphicsRenderer::ShaderIncRef(ShaderHandle handle) {
   ++_shader_ref[handle.idx].ref_count;
 }
 
-void GraphicsRenderer::ShaderDecRef(Handle handle) {
+void GraphicsRenderer::ShaderDecRef(ShaderHandle handle) {
   ShaderRef& ref = _shader_ref[handle.idx];
   i16 refs = --ref.ref_count;
   if (refs == 0) {
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_SHADER);
-    cmdbuf.Write(handle);
-    _frame->Free(handle);
+    _gi->DestroyShader(handle);
+    _shader_handles.Free(handle);
   }
 }
 
-void GraphicsRenderer::ShaderOwn(Handle handle) {
+void GraphicsRenderer::ShaderOwn(ShaderHandle handle) {
   ShaderRef& ref = _shader_ref[handle.idx];
   if (!ref.owned) {
     ref.owned = true;
@@ -1206,15 +835,12 @@ void GraphicsRenderer::ShaderOwn(Handle handle) {
   }
 }
 
-Handle GraphicsRenderer::FindVertexDecl(const VertexDecl& decl) {
-  Handle decl_handle = _decl_ref.Find(decl.hash);
+VertexDeclHandle GraphicsRenderer::FindVertexDecl(const VertexDecl& decl) {
+  VertexDeclHandle decl_handle = _decl_ref.Find(decl.hash);
 
   if (!decl_handle) {
-    Handle temp{_vertex_decl_handles.Alloc()};
-    decl_handle = temp;
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_VERTEX_DECL);
-    cmdbuf.Write(decl_handle);
-    cmdbuf.Write(decl);
+    decl_handle = _vertex_decl_handles.Alloc();
+    _gi->CreateVertexDecl(decl_handle, decl);
   }
 
   return decl_handle;
@@ -1226,14 +852,10 @@ void GraphicsRenderer::FreeAllHandles(RenderFrame* frame) {
 TransientIndexBuffer* GraphicsRenderer::CreateTransientIndexBuffer(u32 size) {
   TransientIndexBuffer* tib = nullptr;
 
-  Handle handle{_index_buffer_handles.Alloc()};
+  IndexBufferHandle handle = _index_buffer_handles.Alloc();
   if (!handle) c3_log("Failed to allocate transient index buffer handle.\n");
   else {
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_INDEX_BUFFER);
-    u16 flags = C3_BUFFER_NONE;
-    cmdbuf.Write(handle);
-    cmdbuf.Write(size);
-    cmdbuf.Write(flags);
+    _gi->CreateDynamicIndexBuffer(handle, size, C3_BUFFER_NONE);
 
     tib = (TransientIndexBuffer*)C3_ALLOC(g_allocator, sizeof(TransientIndexBuffer) + size);
     tib->data = (u8*)&tib[1];
@@ -1245,21 +867,20 @@ TransientIndexBuffer* GraphicsRenderer::CreateTransientIndexBuffer(u32 size) {
 }
 
 void GraphicsRenderer::DestroyTransientIndexBuffer(TransientIndexBuffer* tib) {
-  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_DYNAMIC_INDEX_BUFFER);
-  cmdbuf.Write(tib->handle);
-  _frame->Free(tib->handle);
+  _gi->DestroyIndexBuffer(tib->handle);
+  _index_buffer_handles.Free(tib->handle);
   C3_FREE(g_allocator, tib);
 }
 
 TransientVertexBuffer* GraphicsRenderer::CreateTransientVertexBuffer(u32 size, const VertexDecl* decl) {
   TransientVertexBuffer* tvb = NULL;
 
-  Handle handle{_vertex_buffer_handles.Alloc()};
+  VertexBufferHandle handle = _vertex_buffer_handles.Alloc();
 
   if (!handle) c3_log("Failed to allocate transient vertex buffer handle.\n");
   else {
     u16 stride = 0;
-    Handle decl_handle;
+    VertexDeclHandle decl_handle;
 
     if (decl) {
       decl_handle = FindVertexDecl(*decl);
@@ -1268,11 +889,7 @@ TransientVertexBuffer* GraphicsRenderer::CreateTransientVertexBuffer(u32 size, c
       stride = decl->stride;
     }
 
-    CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::CREATE_DYNAMIC_VERTEX_BUFFER);
-    cmdbuf.Write(handle);
-    cmdbuf.Write(size);
-    u16 flags = C3_BUFFER_NONE;
-    cmdbuf.Write(flags);
+    _gi->CreateDynamicVertexBuffer(handle, size, C3_BUFFER_NONE);
 
     tvb = (TransientVertexBuffer*)C3_ALLOC(g_allocator, sizeof(TransientVertexBuffer) + size);
     tvb->data = (u8*)&tvb[1];
@@ -1287,9 +904,8 @@ TransientVertexBuffer* GraphicsRenderer::CreateTransientVertexBuffer(u32 size, c
 }
 
 void GraphicsRenderer::DestroyTransientVertexBuffer(TransientVertexBuffer* tvb) {
-  CommandBuffer& cmdbuf = _frame->GetCommandBuffer(CommandBuffer::DESTROY_DYNAMIC_VERTEX_BUFFER);
-  cmdbuf.Write(tvb->handle);
-  _frame->Free(tvb->handle);
+  _gi->DestroyVertexBuffer(tvb->handle);
+  _vertex_buffer_handles.Free(tvb->handle);
   C3_FREE(g_allocator, tvb);
 }
 

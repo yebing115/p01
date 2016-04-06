@@ -2,7 +2,6 @@
 
 #include "Data/DataType.h"
 #include "Data/String.h"
-#include "ECS/Component.h"
 
 class Variant;
 typedef vector<Variant> VariantList;
@@ -14,12 +13,10 @@ public:
     T_INT,
     T_FLOAT,
     T_STRING,
-    T_COMPONENT,
   };
   Variant() : _type(T_VOID) {}
   Variant(int i) : _type(T_INT), _i(i) {}
   Variant(float f) : _type(T_FLOAT), _f(f) {}
-  Variant(COMPONENT_HANDLE h) : _type(T_COMPONENT), _component(h) {}
   Variant(const Variant&) {}
   Variant(Variant&&) {}
   ~Variant() {}
@@ -37,6 +34,5 @@ private:
     float3x3 _m3;
     float4x4 _m4;
     String _str;
-    COMPONENT_HANDLE _component;
   };
 };

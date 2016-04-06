@@ -4,5 +4,5 @@
 #include "Graphics/GraphicsTypes.h"
 
 struct Program {
-  Handle _handle;
+  ProgramHandle _handle;
 };

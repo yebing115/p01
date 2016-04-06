@@ -12,10 +12,10 @@ extern const u8 quad_vsh_data[15352];
 extern const u8 quad_fsh_data[15084];
 
 struct IMGUIState {
-  Handle _font_texture;
-  Handle _program;
+  TextureHandle _font_texture;
+  ProgramHandle _program;
   float2 _win_size;
-  Handle _constant_win_size;
+  ConstantHandle _constant_win_size;
 } g_imgui;
 
 void on_render_draw_lists(ImDrawData* data);
@@ -86,7 +86,6 @@ void on_render_draw_lists(ImDrawData* data) {
   u64 render_state = C3_STATE_RGB_WRITE | C3_STATE_ALPHA_WRITE | C3_STATE_BLEND_ALPHA;
   GR->SetViewSeq(view, true);
   GR->SetViewRect(view, 0, 0, (u16)g_imgui._win_size.x, (u16)g_imgui._win_size.y);
-  GR->SetViewClear(view, C3_CLEAR_COLOR, 0x808080ff);
   GR->SetConstant(g_imgui._constant_win_size, g_imgui._win_size.ptr());
   for (int i = 0; i < data->CmdListsCount; ++i) {
     auto cmd = data->CmdLists[i];
@@ -104,7 +103,7 @@ void on_render_draw_lists(ImDrawData* data) {
                        u16(batch.ClipRect.z - batch.ClipRect.x),
                        u16(batch.ClipRect.w - batch.ClipRect.y));
         //c3_log("imgui texture handle: %d, %p\n", Handle((u32)uintptr_t(batch.TextureId)).idx, batch.TextureId);
-        GR->SetTexture(0, Handle((u32)uintptr_t(batch.TextureId)));
+        GR->SetTexture(0, TextureHandle((u32)uintptr_t(batch.TextureId)));
         GR->SetVertexBuffer(&tvb);
         GR->SetIndexBuffer(&tib, idx_offset, batch.ElemCount);
         GR->SetState(render_state);

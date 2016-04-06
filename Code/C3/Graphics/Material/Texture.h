@@ -3,7 +3,6 @@
 #include "Graphics/GraphicsInterface.h"
 
 struct Texture {
-  Handle _handle;
+  TextureHandle _handle;
   TextureInfo _info;
-  const MemoryBlock* _mem;
 };

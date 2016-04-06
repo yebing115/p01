@@ -34,16 +34,12 @@ void RenderFrame::Start() {
   render_item_count = 0;
   matrix_cache.Reset();
   rect_cache.Reset();
-  pre_cmd_buffer.Start();
-  post_cmd_buffer.Start();
   vb_offset = 0;
   ib_offset = 0;
   discard = false;
 }
 
 void RenderFrame::Finish() {
-  pre_cmd_buffer.Finish();
-  post_cmd_buffer.Finish();
   constant_max = max(constant_max, constant_buffer->GetPos());
   constant_buffer->Finish();
 }
@@ -72,7 +68,7 @@ void RenderFrame::Discard() {
 
 void RenderFrame::SetMarker(const char* marker) { constant_buffer->WriteMarker(marker); }
 
-void RenderFrame::SetVertexBuffer(Handle handle, u32 vertex_start, u32 vertex_size) {
+void RenderFrame::SetVertexBuffer(VertexBufferHandle handle, u32 vertex_start, u32 vertex_size) {
   current.start_vertex = vertex_start;
   current.num_vertices = vertex_size;
   current.vertex_buffer = handle;
@@ -94,7 +90,7 @@ void RenderFrame::SetState(u64 state, u32 rgba) {
   current.rgba = rgba;
 }
 
-void RenderFrame::SetIndexBuffer(Handle handle, u32 start_index, u32 num_indices) {
+void RenderFrame::SetIndexBuffer(IndexBufferHandle handle, u32 start_index, u32 num_indices) {
   current.start_index = start_index;
   current.num_indices = num_indices;
   current.index_buffer = handle;
@@ -107,13 +103,13 @@ void RenderFrame::SetIndexBuffer(const TransientIndexBuffer* tib, u32 first_inde
   discard = num_indices == 9;
 }
 
-void RenderFrame::SetTexture(u8 unit, Handle handle, u32 flags) {
+void RenderFrame::SetTexture(u8 unit, TextureHandle handle, u32 flags) {
   current.bind[unit].idx = (u16)handle.idx;
   current.bind[unit].type = Binding::Texture;
   current.bind[unit].flags = (flags & C3_SAMPLER_DEFAULT_FLAGS) ? C3_SAMPLER_DEFAULT_FLAGS : flags;
 }
 
-void RenderFrame::SetConstant(ConstantType type, Handle handle, const void* value, u16 num) {
+void RenderFrame::SetConstant(ConstantHandle handle, ConstantType type, const void* value, u16 num) {
   ConstantBuffer::Update(constant_buffer);
   constant_buffer->WriteConstant(type, (u16)handle.idx, value, num);
 }
@@ -170,6 +166,7 @@ u32 RenderFrame::AllocTransientVertexBuffer(u32& num_in_out, u16 stride) {
   return offset;
 }
 
+#if 0
 void RenderFrame::SetInstanceDataBuffer(const InstanceDataBuffer* idb, u32 num) {
   current.instance_data_offset = idb->offset;
   current.instance_data_stride = idb->stride;
@@ -184,16 +181,9 @@ void RenderFrame::SetInstanceDataBuffer(Handle handle, u32 start_vertex, u32 num
   current.num_vertices = num;
   current.instance_data_buffer = handle;
 }
+#endif
 
-void RenderFrame::SetViewName(u8 view, const char* name) {
-  CommandBuffer& cmd = GetCommandBuffer(CommandBuffer::UPDATE_VIEW_NAME);
-  cmd.Write(view);
-  u8 len = (u8)strlen(name);
-  cmd.Write(len);
-  cmd.Write((const u8*)name, len + 1);
-}
-
-void RenderFrame::Submit(u8 view, Handle program, i32 depth) {
+void RenderFrame::Submit(u8 view, ProgramHandle program, i32 depth) {
   if (discard) {
     Discard();
     return;

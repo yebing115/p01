@@ -20,8 +20,7 @@
 #define SYSTEM_ENCODING UTF_8
 #endif
 
-#define C3_MAX_MODELS (10 << 10)
-
+//////////////////////////////////////////////////////////////////////////
 #define C3_MAX_VIEWS                UINT8_C(127)
 #define C3_MAX_VIEW_NAME            256
 #define C3_VIEW_NAME_RESERVED       6
@@ -49,7 +48,14 @@
 #define C3_TRANSIENT_INDEX_BUFFER_SIZE (2 << 16)
 #define C3_TRANSIENT_VERTEX_BUFFER_SIZE (6 << 20)
 
+//////////////////////////////////////////////////////////////////////////
 #define C3_MAX_ASSETS 4096
 #define C3_MAX_JOBS 2048
 #define C3_MAX_WORKER_THREADS 8
 #define C3_MAX_FIBERS 256
+
+//////////////////////////////////////////////////////////////////////////
+#define C3_MAX_ENTITIES     (10 << 10)
+#define C3_MAX_CAMERAS      8
+#define C3_MAX_MODELS       (10 << 10)
+#define C3_MAX_TRANSFORMS   (10 << 10)

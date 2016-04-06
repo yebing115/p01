@@ -1,32 +1,31 @@
 #pragma once
-#include "ECS/Component.h"
-#include "ECS/World.h"
+#include "ECS/GameWorld.h"
 #include "Reflection/Variant.h"
 
 class IComponentProperty {
 public:
-  virtual Variant GetValue(COMPONENT_HANDLE) = 0;
-  virtual void SetValue(COMPONENT_HANDLE, const Variant&) {}
+  virtual Variant GetValue(RAW_HANDLE_TYPE) = 0;
+  virtual void SetValue(RAW_HANDLE_TYPE, const Variant&) {}
 
   const char* _name;
 };
 
-template <typename S>
+template <HandleType TYPE, typename S>
 class ComponentPropertyInt : public IComponentProperty {
-  typedef int (S::*Getter)(COMPONENT_HANDLE) const;
-  typedef void (S::*Setter)(COMPONENT_HANDLE, int);
+  typedef int (S::*Getter)(Handle) const;
+  typedef void (S::*Setter)(Handle, int);
 public:
   ComponentPropertyInt(const char* name, Getter getter, Setter setter = nullptr)
   : _getter(getter), _setter(setter) { _name = name; }
-  Variant GetValue(COMPONENT_HANDLE cmp) override {
-    auto sys = World::Instance()->GetSystem(cmp.type);
+  Variant GetValue(RAW_HANDLE_TYPE cmp) override {
+    auto sys = GameWorld::Instance()->GetSystem(TYPE);
     if (!sys) return Variant();
-    return ((static_cast<S*>(sys))->*_getter)(cmp);
+    return ((static_cast<S*>(sys))->*_getter)(Handle<TYPE>(cmp));
   }
-  void SetValue(COMPONENT_HANDLE cmp, const Variant& v) {
+  void SetValue(RAW_HANDLE_TYPE cmp, const Variant& v) {
     if (!_setter) return;
-    auto sys = World::Instance()->GetSystem(cmp.type);
-    if (sys) ((static_cast<S*>(sys))->*_setter)(cmp, v.ToInt());
+    auto sys = GameWorld::Instance()->GetSystem(TYPE);
+    if (sys) ((static_cast<S*>(sys))->*_setter)(Handle<TYPE>(cmp), v.ToInt());
   }
 private:
   Getter _getter;

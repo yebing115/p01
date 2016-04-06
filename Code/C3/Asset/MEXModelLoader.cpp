@@ -9,14 +9,6 @@ struct CreateModelParam {
   const MemoryBlock* _ib_mem;
 };
 
-DEFINE_JOB_ENTRY(create_model) {
-  CreateModelParam* param = (CreateModelParam*)arg;
-  auto GR = GraphicsRenderer::Instance();
-  param->_model->_vb = GR->CreateVertexBuffer(param->_vb_mem, param->_decl);
-  u32 ib_flags = param->_header->num_indices >= 0x10000 ? C3_BUFFER_INDEX32 : C3_BUFFER_NONE;
-  param->_model->_ib = GR->CreateIndexBuffer(param->_ib_mem, ib_flags);
-}
-
 DEFINE_JOB_ENTRY(load_mex_model) {
   auto asset = (Asset*)arg;
   auto f = FileSystem::Instance()->OpenRead(asset->_desc._filename);
@@ -48,18 +40,16 @@ DEFINE_JOB_ENTRY(load_mex_model) {
   }
 
   CreateModelParam param;
-  param._model = (Model*)asset->_header->GetData();
-  param._header = &header;
-  param._vb_mem = mem_alloc(header.num_vertices * header.vertex_stride);
+  auto vb_mem = mem_alloc(header.num_vertices * header.vertex_stride);
   int index_size = header.num_indices >= 0x10000 ? 4 : 2;
-  param._ib_mem = mem_alloc(header.num_indices * index_size);
+  auto ib_mem = mem_alloc(header.num_indices * index_size);
   f->Seek(header.vertex_data_offset);
-  f->ReadBytes(param._vb_mem->data, param._vb_mem->size);
+  f->ReadBytes(vb_mem->data, vb_mem->size);
   f->Seek(header.index_data_offset);
-  f->ReadBytes(param._ib_mem->data, param._ib_mem->size);
+  f->ReadBytes(ib_mem->data, ib_mem->size);
   FileSystem::Instance()->Close(f);
 
-  auto& vd = param._decl;
+  VertexDecl vd;
   vd.Begin();
   for (int i = 0; i < header.num_attrs; ++i) {
     MeshAttr& attr = header.attrs[i];
@@ -68,10 +58,10 @@ DEFINE_JOB_ENTRY(load_mex_model) {
   }
   vd.End();
 
-  auto JS = JobScheduler::Instance();
-  Job job;
-  job.InitMainJob(create_model, &param);
-  JS->WaitAndFreeJobs(JS->SubmitJobs(&job, 1));
+  auto GR = GraphicsRenderer::Instance();
+  model->_vb = GR->CreateVertexBuffer(vb_mem, vd);
+  u32 ib_flags = header.num_indices >= 0x10000 ? C3_BUFFER_INDEX32 : C3_BUFFER_NONE;
+  model->_ib = GR->CreateIndexBuffer(ib_mem, ib_flags);
 
   asset->_state = ASSET_STATE_READY;
 }

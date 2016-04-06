@@ -20,10 +20,10 @@ void ConstantBuffer::WriteConstant(ConstantType type, u16 loc, const void* value
   Write(value, CONSTANT_TYPE_SIZE[type] * num);
 }
 
-void ConstantBuffer::WriteConstantHandle(ConstantType type, u16 loc, Handle handle, u16 num) {
+void ConstantBuffer::WriteConstantHandle(ConstantType type, u16 loc, ConstantHandle handle, u16 num) {
   u32 opcode = EncodeOpcode(type, loc, num, false);
   Write(opcode);
-  Write(&handle, sizeof(Handle));
+  Write(&handle, sizeof(ConstantHandle));
 }
 
 void ConstantBuffer::WriteMarker(const char* marker) {

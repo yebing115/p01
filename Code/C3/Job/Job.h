@@ -3,7 +3,6 @@
 
 enum JobType {
   JOB_TYPE_WORKER,      // run on any threads.
-  JOB_TYPE_RENDER,      // run on main thread(render related).
   JOB_TYPE_MAIN,        // run on main thread.
   NUM_JOB_TYPES,
 };
@@ -21,7 +20,6 @@ struct Job {
     _type = JOB_TYPE_WORKER;
   }
   void InitWorkerJob(JobFn fn, void* user_data) { Init(fn, user_data, JOB_TYPE_WORKER); }
-  void InitRenderJob(JobFn fn, void* user_data) { Init(fn, user_data, JOB_TYPE_RENDER); }
   void InitMainJob(JobFn fn, void* user_data) { Init(fn, user_data, JOB_TYPE_MAIN); }
 };
 

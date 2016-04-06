@@ -18,10 +18,10 @@ struct Binding {
 };
 
 struct RenderItem {
-  Handle vertex_buffer;
-  Handle instance_data_buffer;
-  Handle index_buffer;
-  Handle vertex_decl;
+  VertexBufferHandle vertex_buffer;
+  //Handle instance_data_buffer;
+  IndexBufferHandle index_buffer;
+  VertexDeclHandle vertex_decl;
   u32 start_vertex;
   u32 num_vertices;
   u32 start_index;

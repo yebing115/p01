@@ -87,7 +87,7 @@ public:
   }
 
   void WriteConstant(ConstantType type, u16 loc, const void* value, u16 num = 1);
-  void WriteConstantHandle(ConstantType type, u16 loc, Handle handle, u16 num = 1);
+  void WriteConstantHandle(ConstantType type, u16 loc, ConstantHandle handle, u16 num = 1);
   void WriteMarker(const char* marker);
 
 private:
@@ -100,7 +100,7 @@ private:
 
 struct ConstantInfo {
   const void* data;
-  Handle handle;
+  ConstantHandle handle;
 };
 
 class ConstantRegistry {
@@ -114,7 +114,7 @@ public:
     return nullptr;
   }
 
-  const ConstantInfo& Add(Handle handle, stringid name, const void* data) {
+  const ConstantInfo& Add(ConstantHandle handle, stringid name, const void* data) {
     ConstantHashMap::iterator it = _constants.find(name);
     if (it == _constants.end()) {
       ConstantInfo info;

@@ -100,7 +100,7 @@ struct RenderFrame {
   RectCache rect_cache;
 
   u8 view_remap[C3_MAX_VIEWS];
-  Handle fb[C3_MAX_VIEWS];
+  FrameBufferHandle fb[C3_MAX_VIEWS];
   SortKey sort_key;
   u64 sort_keys[C3_MAX_DRAW_CALLS];
   u16 sort_values[C3_MAX_DRAW_CALLS];
@@ -118,18 +118,16 @@ struct RenderFrame {
 
   Resolution resolution;
 
-  CommandBuffer pre_cmd_buffer;
-  CommandBuffer post_cmd_buffer;
   bool discard;
 
-  Handle free_index_buffer_handle[C3_MAX_INDEX_BUFFERS];
-  Handle free_vertex_decl_handle[C3_MAX_VERTEX_DECLS];
-  Handle free_vertex_buffer_handle[C3_MAX_VERTEX_BUFFERS];
-  Handle free_shader_handle[C3_MAX_SHADERS];
-  Handle free_program_handle[C3_MAX_PROGRAMS];
-  Handle free_texture_handle[C3_MAX_TEXTURES];
-  Handle free_frame_buffer_handle[C3_MAX_FRAME_BUFFERS];
-  Handle free_constant_handle[C3_MAX_CONSTANTS];
+  IndexBufferHandle free_index_buffer_handle[C3_MAX_INDEX_BUFFERS];
+  VertexDeclHandle free_vertex_decl_handle[C3_MAX_VERTEX_DECLS];
+  VertexBufferHandle free_vertex_buffer_handle[C3_MAX_VERTEX_BUFFERS];
+  ShaderHandle free_shader_handle[C3_MAX_SHADERS];
+  ProgramHandle free_program_handle[C3_MAX_PROGRAMS];
+  TextureHandle free_texture_handle[C3_MAX_TEXTURES];
+  FrameBufferHandle free_frame_buffer_handle[C3_MAX_FRAME_BUFFERS];
+  ConstantHandle free_constant_handle[C3_MAX_CONSTANTS];
   u16 num_free_index_buffer_handles;
   u16 num_free_vertex_decl_handles;
   u16 num_free_vertex_buffer_handles;
@@ -154,11 +152,11 @@ struct RenderFrame {
   void SetMarker(const char* marker);
   void SetState(u64 state, u32 rgba);
   void SetVertexBuffer(const TransientVertexBuffer* tvb, u32 start_vertex, u32 num_vertices);
-  void SetVertexBuffer(Handle handle, u32 start_vertex, u32 num_vertices);
+  void SetVertexBuffer(VertexBufferHandle handle, u32 start_vertex, u32 num_vertices);
   void SetIndexBuffer(const TransientIndexBuffer* tib, u32 first_index, u32 num_indices);
-  void SetIndexBuffer(Handle handle, u32 start_index, u32 num_indices);
-  void SetTexture(u8 unit, Handle handle, u32 flags);
-  void SetConstant(ConstantType type, Handle handle, const void* value, u16 num);
+  void SetIndexBuffer(IndexBufferHandle handle, u32 start_index, u32 num_indices);
+  void SetTexture(u8 unit, TextureHandle handle, u32 flags);
+  void SetConstant(ConstantHandle handle, ConstantType type, const void* value, u16 num);
   void SetScissor(i16 x, i16 y, i16 width, i16 height);
   u16 SetTransform(const void* m, u16 num);
   void SetTransform(u16 cache, u16 num);
@@ -167,17 +165,11 @@ struct RenderFrame {
   u32 AllocTransientIndexBuffer(u32& num_in_out);
   bool CheckAvailTransientVertexBuffer(u32 num, u16 stride);
   u32 AllocTransientVertexBuffer(u32& num_in_out, u16 stride);
+#if 0
   void SetInstanceDataBuffer(const InstanceDataBuffer* idb, u32 num);
   void SetInstanceDataBuffer(Handle handle, u32 start_vertex, u32 num, u16 stride);
-  void SetViewName(u8 view, const char* name);
-  void Submit(u8 view, Handle program, i32 tag);
+#endif
+  void Submit(u8 view, ProgramHandle program, i32 tag);
 
-  CommandBuffer& GetCommandBuffer(CommandBuffer::CommandType type) {
-    auto& cmd = type < CommandBuffer::END ? pre_cmd_buffer : post_cmd_buffer;
-    cmd.Write((u8)type);
-    return cmd;
-  }
-
-  void Free(Handle handle) { free_frame_buffer_handle[num_free_frame_buffer_handles++] = handle; }
   void ResetFreeHandles();
 };

@@ -7,3 +7,4 @@
 #include "Text/C3Text.h"
 #include "Graphics/C3Graphics.h"
 #include "Job/C3Job.h"
+#include "ECS/C3ECS.h"

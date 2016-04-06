@@ -93,9 +93,9 @@ struct VertexBufferD3D11 : public BufferD3D11 {
   VertexBufferD3D11()
     : BufferD3D11() {}
 
-  void Create(u32 size, void* data, Handle decl_handle, u16 flags);
+  void Create(u32 size, void* data, VertexDeclHandle decl_handle, u16 flags);
 
-  Handle _decl;
+  VertexDeclHandle _decl;
 };
 
 struct ShaderD3D11 {
@@ -228,7 +228,7 @@ struct FrameBufferD3D11 {
   , _num(0)
   , _num_th(0) {}
 
-  void Create(u8 num, const Handle* handles);
+  void Create(u8 num, const TextureHandle* handles);
   void Create(u16 dense_idx, void* nwh, u32 width, u32 height, TextureFormat depth_format);
   u16 Destroy();
   void PreReset(bool force = false);
@@ -245,7 +245,7 @@ struct FrameBufferD3D11 {
   u16 _dense_idx;
   u8 _num;
   u8 _num_th;
-  Handle _th[ATTACHMENT_POINT_COUNT];
+  TextureHandle _th[ATTACHMENT_POINT_COUNT];
 };
 
 struct TextureStage {
@@ -318,34 +318,32 @@ public:
 
   void Init() override;
   void Shutdown() override;
-  void CreateIndexBuffer(Handle handle, MemoryBlock* mem, u16 flags) override;
-  void DestroyIndexBuffer(Handle handle) override;
-  void CreateVertexDecl(Handle handle, const VertexDecl& decl) override;
-  void DestroyVertexDecl(Handle handle) override;
-  void CreateVertexBuffer(Handle handle, MemoryBlock* mem, Handle decl_handle, u16 flags) override;
-  void DestroyVertexBuffer(Handle handle) override;
-  void CreateDynamicIndexBuffer(Handle handle, u32 size, u16 flags) override;
-  void UpdateDynamicIndexBuffer(Handle handle, u32 offset, u32 size, MemoryBlock* mem) override;
-  void DestroyDynamicIndexBuffer(Handle handle) override;
-  void CreateDynamicVertexBuffer(Handle handle, u32 size, u16 flags) override;
-  void UpdateDynamicVertexBuffer(Handle handle, u32 offset, u32 size, MemoryBlock* mem) override;
-  void DestroyDynamicVertexBuffer(Handle handle) override;
-  void CreateShader(Handle handle, MemoryBlock* mem) override;
-  void DestroyShader(Handle handle) override;
-  void CreateProgram(Handle handle, Handle vsh, Handle fsh) override;
-  void DestroyProgram(Handle handle) override;
-  void CreateTexture(Handle handle, MemoryBlock* mem, u32 flags, u8 skip) override;
-  void UpdateTextureBegin(Handle handle, u8 side, u8 mip) override;
-  void UpdateTexture(Handle handle, u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryBlock* mem) override;
+  void CreateIndexBuffer(IndexBufferHandle handle, const MemoryBlock* mem, u16 flags) override;
+  void DestroyIndexBuffer(IndexBufferHandle handle) override;
+  void CreateVertexDecl(VertexDeclHandle handle, const VertexDecl& decl) override;
+  void DestroyVertexDecl(VertexDeclHandle handle) override;
+  void CreateVertexBuffer(VertexBufferHandle handle, const MemoryBlock* mem,
+                          VertexDeclHandle decl_handle, u16 flags) override;
+  void DestroyVertexBuffer(VertexBufferHandle handle) override;
+  void CreateDynamicIndexBuffer(IndexBufferHandle handle, u32 size, u16 flags) override;
+  void UpdateDynamicIndexBuffer(IndexBufferHandle handle, u32 offset, u32 size, const MemoryBlock* mem) override;
+  void CreateDynamicVertexBuffer(VertexBufferHandle handle, u32 size, u16 flags) override;
+  void UpdateDynamicVertexBuffer(VertexBufferHandle handle, u32 offset, u32 size, const MemoryBlock* mem) override;
+  void CreateShader(ShaderHandle handle, const MemoryBlock* mem) override;
+  void DestroyShader(ShaderHandle handle) override;
+  void CreateProgram(ProgramHandle handle, ShaderHandle vsh, ShaderHandle fsh) override;
+  void DestroyProgram(ProgramHandle handle) override;
+  void CreateTexture(TextureHandle handle, const MemoryBlock* mem, u32 flags, u8 skip) override;
+  void UpdateTextureBegin(TextureHandle handle, u8 side, u8 mip) override;
+  void UpdateTexture(TextureHandle handle, u8 side, u8 mip, const TextureRect& rect, u16 z, u16 depth, u16 pitch, const MemoryBlock* mem) override;
   void UpdateTextureEnd() override;
-  void ResizeTexture(Handle handle, u16 width, u16 height) override;
-  void DestroyTexture(Handle handle) override;
-  void CreateFrameBuffer(Handle handle, u8 num, const Handle* texture_handles) override;
-  void CreateFrameBuffer(Handle handle, void* nwh, u32 width, u32 height, TextureFormat depth_format) override;
-  void DestroyFrameBuffer(Handle handle) override;
-  void CreateConstant(Handle handle, ConstantType type, u16 num, stringid name) override;
-  void DestroyConstant(Handle handle) override;
-  void UpdateViewName(u8 id, const char* name) override;
+  void ResizeTexture(TextureHandle handle, u16 width, u16 height) override;
+  void DestroyTexture(TextureHandle handle) override;
+  void CreateFrameBuffer(FrameBufferHandle handle, u8 num, const TextureHandle* texture_handles) override;
+  void CreateFrameBuffer(FrameBufferHandle handle, void* nwh, u32 width, u32 height, TextureFormat depth_format) override;
+  void DestroyFrameBuffer(FrameBufferHandle handle) override;
+  void CreateConstant(ConstantHandle handle, ConstantType type, u16 num, stringid name) override;
+  void DestroyConstant(ConstantHandle handle) override;
   void UpdateConstant(u16 loc, const void* data, u32 size) override;
   void SetMarker(const char* marker, u32 size) override;
   void Submit(RenderFrame* render, ClearQuad& clear_quad) override;
@@ -365,7 +363,7 @@ private:
   void PostReset();
   void InvalidateCache();
   void _SetConstant(u8 flags, u32 loc, const void* val, u32 num);
-  void SetFrameBuffer(Handle fbh, bool msaa = true);
+  void SetFrameBuffer(FrameBufferHandle fbh, bool msaa = true);
   void Clear(const ViewClear& view_clear, const float palette[][4]);
   void Clear(ClearQuad& clear_quad, const Rect& rect, const ViewClear& clear, const float palette[][4]);
   void SetInputLayout(const VertexDecl& vertex_decl, const ProgramD3D11& program, u16 num_instance_data);
@@ -382,7 +380,7 @@ private:
 
   u16 _lost;
   u16 _num_windows;
-  Handle _windows[C3_MAX_FRAME_BUFFERS];
+  FrameBufferHandle _windows[C3_MAX_FRAME_BUFFERS];
 
   ID3D11RenderTargetView* _back_buffer_color;
   ID3D11DepthStencilView* _back_buffer_depth_stencil;
@@ -399,7 +397,7 @@ private:
   ID3D11DeviceContext* _context;
   DXGI_SWAP_CHAIN_DESC _scd;
 
-  Handle _fbh;
+  FrameBufferHandle _fbh;
   Resolution _resolution;
   bool _wireframe;
   bool _rt_msaa;

@@ -10,8 +10,8 @@ struct ModelPart {
 
 struct Model {
   stringid _filename;
-  Handle _vb;
-  Handle _ib;
+  VertexBufferHandle _vb;
+  IndexBufferHandle _ib;
   u16 _num_parts;
   ModelPart _parts[];
   static size_t ComputeSize(u16 num_parts) {

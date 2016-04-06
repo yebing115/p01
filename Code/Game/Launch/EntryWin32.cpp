@@ -38,21 +38,10 @@ void ParseCommandLine(LPTSTR /*lpCmdLine*/) {
   for (int i = 0; i < argc; ++i) g_platform_data.arguments.emplace_back((wchar_t*)argv[i]);
 }
 
-class Q: public Object {
-public:
-  float K(int i) { 
-    return float(i);
-  }
-  int q;
-};
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE /*hPrevInstance*/,
                      _In_ LPTSTR    lpCmdLine,
                      _In_ int      nCmdShow) {
-
-  Reflector r;
-  //r.Reflect("k", Q::K);
-  r.Reflect("k", &Q::q);
 
   SetThreadIdealProcessor(GetCurrentThread(), 0);
 

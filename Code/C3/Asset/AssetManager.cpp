@@ -38,10 +38,20 @@ void AssetManager::Load(Asset* asset) {
 
 atomic_int* AssetManager::LoadAsync(Asset* asset) {
   c3_assert_return_x(asset, nullptr);
-  asset->_state = ASSET_STATE_LOADING;
+  AssetState old_state;
+retry:
+  old_state = asset->_state;
+  while (old_state == ASSET_STATE_LOADING || old_state == ASSET_STATE_UNLOADING) {
+    JobScheduler::Instance()->Yield();
+    old_state = asset->_state;
+  }
+  if (old_state == ASSET_STATE_READY) return nullptr;
+  while (!asset->_state.compare_exchange_strong(old_state, ASSET_STATE_LOADING))
+    goto retry;
   return asset->_desc._ops->_load_async_fn(asset);
 }
 
+// TODO: check asset->_state
 void AssetManager::Unload(Asset* asset) {
   c3_assert_return(asset);
   if (asset->_ref == 0) return;
@@ -89,5 +99,6 @@ Asset* AssetManager::GetOrCreateAsset(const AssetDesc& desc) {
   asset->_state = ASSET_STATE_EMPTY;
   asset->_desc = desc;
   asset->_header = nullptr;
+  asset->_ref = 1;
   return asset;
 }

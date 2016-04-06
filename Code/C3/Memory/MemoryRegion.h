@@ -34,6 +34,7 @@ inline void ResizableMemoryRegion::Resize(u32 new_size) {}
 struct AllocatedMemory : public ResizableMemoryRegion {
   IAllocator* allocator;
 
+  AllocatedMemory(IAllocator* a) : allocator(a) {}
   void Resize(u32 new_size) override {
     data = C3_REALLOC(allocator, data, new_size);
     size = data ? new_size : 0;
@@ -41,10 +42,9 @@ struct AllocatedMemory : public ResizableMemoryRegion {
 };
 
 inline AllocatedMemory* mem_alloc(u32 size) {
-  auto mem = ::new AllocatedMemory;
+  auto mem = ::new AllocatedMemory(g_allocator);
   mem->data = C3_ALLOC(g_allocator, size);
   mem->size = size;
-  mem->allocator = g_allocator;
   return mem;
 }
 inline AllocatedMemory* mem_copy(const void* data, u32 size) {

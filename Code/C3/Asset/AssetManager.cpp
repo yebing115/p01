@@ -27,13 +27,25 @@ AssetManager::AssetManager(): _num_assets(0) {
 
 AssetManager::~AssetManager() {}
 
-Asset* AssetManager::Get(const AssetDesc& desc) {
-  auto it = _asset_map.find(String::GetID(desc._filename));
-  return (it == _asset_map.end() ? nullptr : _assets + it->second);
+Asset* AssetManager::Get(AssetType type, const char* filename) {
+  AssetDesc desc;
+  AssetOperations* ops;
+  bool resolved = Resolve(type, filename, desc, ops);
+  if (!resolved) return nullptr;
+  return GetOrCreateAsset(desc, ops);
 }
 
 void AssetManager::Load(Asset* asset) {
   JobScheduler::Instance()->WaitJobs(LoadAsync(asset));
+}
+
+Asset* AssetManager::Load(AssetType type, const char* filename) {
+  AssetDesc desc;
+  AssetOperations* ops;
+  bool resolved = Resolve(type, filename, desc, ops);
+  if (!resolved) return nullptr;
+  Asset* asset = GetOrCreateAsset(desc, ops);
+  return asset;
 }
 
 atomic_int* AssetManager::LoadAsync(Asset* asset) {
@@ -48,7 +60,16 @@ retry:
   if (old_state == ASSET_STATE_READY) return nullptr;
   while (!asset->_state.compare_exchange_strong(old_state, ASSET_STATE_LOADING))
     goto retry;
-  return asset->_desc._ops->_load_async_fn(asset);
+  return asset->_ops->_load_async_fn(asset);
+}
+
+atomic_int* AssetManager::LoadAsync(AssetType type, const char* filename) {
+  AssetDesc desc;
+  AssetOperations* ops;
+  bool resolved = Resolve(type, filename, desc, ops);
+  if (!resolved) return nullptr;
+  Asset* asset = GetOrCreateAsset(desc, ops);
+  return LoadAsync(asset);
 }
 
 // TODO: check asset->_state
@@ -58,30 +79,32 @@ void AssetManager::Unload(Asset* asset) {
   --asset->_ref;
   if (asset->_ref == 0 && asset->_state == ASSET_STATE_READY) {
     asset->_state = ASSET_STATE_UNLOADING;
-    asset->_desc._ops->_unload_fn(asset);
+    asset->_ops->_unload_fn(asset);
   }
 }
 
-AssetDesc AssetManager::Resolve(AssetType type, const char* filename) {
-  AssetDesc desc;
-  desc._type = type;
-  desc._flags = 0;
-  desc._ops = &NULL_ASSET_OPS;
-  strcpy(desc._filename, filename);
+bool AssetManager::Resolve(AssetType type, const char* filename, AssetDesc& out_desc, AssetOperations*& out_ops) {
+  out_desc._type = type;
+  out_desc._flags = 0;
+  out_ops = &NULL_ASSET_OPS;
+  strcpy(out_desc._filename, filename);
 
   const char* suffix = strrchr(filename, '.');
-  if (!suffix) return desc;
+  if (!suffix) {
+    c3_log("[C3] Asset resolve failed, bad filename: '%s'.", filename ? filename : "<null>");
+    return false;
+  }
   for (AssetLoaderType* loader = ASSET_LOADERS; loader < ASSET_LOADERS + ARRAY_SIZE(ASSET_LOADERS); ++loader) {
     if (loader->_type == type && strcmp(loader->_suffix, suffix) == 0) {
-      desc._ops = loader->_ops;
+      out_ops = loader->_ops;
       break;
     }
   }
 
-  return desc;
+  return true;
 }
 
-Asset* AssetManager::GetOrCreateAsset(const AssetDesc& desc) {
+Asset* AssetManager::GetOrCreateAsset(const AssetDesc& desc, AssetOperations* ops) {
   auto asset_id = String::GetID(desc._filename);
   auto it = _asset_map.find(asset_id);
   if (it != _asset_map.end()) {
@@ -98,6 +121,7 @@ Asset* AssetManager::GetOrCreateAsset(const AssetDesc& desc) {
   ++_num_assets;
   asset->_state = ASSET_STATE_EMPTY;
   asset->_desc = desc;
+  asset->_ops = ops;
   asset->_header = nullptr;
   asset->_ref = 1;
   return asset;

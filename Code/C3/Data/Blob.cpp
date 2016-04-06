@@ -1,19 +1,23 @@
 #include "C3PCH.h"
 #include "Blob.h"
 
-BlobWriter::BlobWriter() {}
-BlobWriter::BlobWriter(const BlobWriter& rhs) : _data(rhs._data) {}
+BlobWriter::BlobWriter(IAllocator* allocator): _pos(0) {
+  _mem = new AllocatedMemory(allocator);
+}
 
-BlobWriter& BlobWriter::operator =(const BlobWriter& rhs) {
-  _data = rhs._data;
-  return *this;
+BlobWriter::~BlobWriter() {
+  safe_delete(_mem);
+}
+
+void BlobWriter::Reserve(int size) {
+  if (_mem->size < size) _mem->Resize(size);
 }
 
 void BlobWriter::Write(const void* data, int size) {
-  if (size) {
-    int pos = _data.size();
-    _data.resize(_data.size() + size);
-    memcpy(&_data[0] + pos, data, size);
+  if (size > 0) {
+    if (_pos + size > _mem->size) _mem->Resize(ALIGN_256(_pos + size));
+    memcpy((u8*)_mem->data + _pos, data, size);
+    _pos += size;
   }
 }
 
@@ -27,11 +31,11 @@ void BlobWriter::WriteString(const char* string) {
   }
 }
 
+BlobReader::BlobReader(MemoryRegion* mem)
+: _data((const u8*)mem->data), _size(mem->size), _pos(0) {}
+
 BlobReader::BlobReader(const void* data, int size)
 : _data((const u8*)data), _size(size), _pos(0) {}
-
-BlobReader::BlobReader(const BlobWriter& blob)
-: _data((const u8*)blob.GetData()), _size(blob.GetSize()), _pos(0) {}
 
 const void* BlobReader::Skip(int size) {
   auto* pos = _data + _pos;

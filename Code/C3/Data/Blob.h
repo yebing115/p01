@@ -1,15 +1,16 @@
 #pragma once
 #include "DataType.h"
+#include "Pattern/NonCopyable.h"
+#include "Memory/MemoryRegion.h"
 
 class BlobWriter {
 public:
-  BlobWriter();
-  BlobWriter(const BlobWriter& blob);
-  BlobWriter& operator =(const BlobWriter& rhs);
+  BlobWriter(IAllocator* allocator = g_allocator);
+  ~BlobWriter();
 
-  void Reserve(int size) { _data.reserve(size); }
-  const void* GetData() const { return _data.empty() ? nullptr : &_data[0]; }
-  int GetSize() const { return _data.size(); }
+  void Reserve(int size);
+  const void* GetData() const { return _mem->data; }
+  int GetSize() const { return (int)_mem->size; }
   void Write(const void* data, int size);
   void WriteString(const char* string);
   template <class T> void Write(const T& value) { Write(&value, sizeof(T)); }
@@ -17,16 +18,19 @@ public:
     u8 v = value;
     Write(&v, sizeof(v));
   }
-  void Clear() { _data.clear(); }
+  void Clear() { _pos = 0; }
 
 private:
-  vector<u8> _data;
+  AllocatedMemory* _mem;
+  u32 _pos;
+
+  NON_COPYABLE(BlobWriter);
 };
 
 class BlobReader {
 public:
+  BlobReader(MemoryRegion* mem);
   BlobReader(const void* data, int size);
-  explicit BlobReader(const BlobWriter& blob);
 
   bool Read(void* data, u32 size);
   bool ReadString(char* data, u32 max_size);
@@ -52,4 +56,6 @@ private:
   const u8* _data;
   int _size;
   int _pos;
+
+  NON_COPYABLE(BlobReader);
 };

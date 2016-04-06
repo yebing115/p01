@@ -29,8 +29,7 @@ struct AssetOperations;
 struct AssetDesc {
   u32 _type;
   u32 _flags;
-  char _filename[120 - POINTER_SIZE];
-  AssetOperations* _ops;
+  char _filename[120];
 };
 static_assert(sizeof(AssetDesc) == 128, "Bad sizeof(AssetDesc)");
 
@@ -45,6 +44,7 @@ struct Asset {
   SpinLock _lock;
   u32 _ref;
   AssetDesc _desc;
+  AssetOperations* _ops;
   AssetMemoryHeader* _header;
 };
 
@@ -65,24 +65,17 @@ public:
   AssetManager();
   ~AssetManager();
 
-  Asset* Get(const AssetDesc& desc);
-  Asset* Get(AssetType type, const char* filename) { return Get(Resolve(type, filename)); }
-  Asset* Load(const AssetDesc& desc) { 
-    auto asset = GetOrCreateAsset(desc);
-    Load(asset);
-    return asset;
-  }
-  Asset* Load(AssetType type, const char* filename) { return Load(Resolve(type, filename)); }
+  Asset* Get(AssetType type, const char* filename);
+  Asset* Load(AssetType type, const char* filename);
+  atomic_int* LoadAsync(AssetType type, const char* filename);
   void Load(Asset* asset);
-  atomic_int* LoadAsync(AssetType type, const char* filename) { return LoadAsync(Resolve(type, filename)); }
-  atomic_int* LoadAsync(const AssetDesc& desc) { return LoadAsync(GetOrCreateAsset(desc)); }
   atomic_int* LoadAsync(Asset* asset);
   void Unload(Asset* asset);
 
-  static AssetDesc Resolve(AssetType type, const char* filename);
+  static bool Resolve(AssetType type, const char* filename, AssetDesc& out_desc, AssetOperations*& out_ops);
 
 private:
-  Asset* GetOrCreateAsset(const AssetDesc& desc);
+  Asset* GetOrCreateAsset(const AssetDesc& desc, AssetOperations* ops);
   unordered_map<stringid, int> _asset_map;
   Asset _assets[C3_MAX_ASSETS];
   u32 _num_assets;

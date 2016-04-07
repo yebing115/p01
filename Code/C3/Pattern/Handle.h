@@ -3,7 +3,6 @@
 
 enum HandleType {
   INVALID_HANDLE = -1,
-  GENERIC_HANDLE,
   
   TEXTURE_HANDLE,
   FRAME_BUFFER_HANDLE,
@@ -22,6 +21,8 @@ enum HandleType {
   CAMERA_HANDLE,
   MODEL_RENDERER_HANDLE,
   COMPONENT_HANDLE_END,
+
+  NUM_HANDLE_TYPES = COMPONENT_HANDLE_END
 };
 //#define NUM_COMPONENT_HANDLE_TYPES (COMPONENT_HANDLE_END - COMPONENT_HANDLE_START)
 
@@ -32,13 +33,13 @@ enum HandleType {
 #define HANDLE_TYPE_BIT_WIDTH   8
 #define RAW_HANDLE_TYPE         u32
 
-template <HandleType TYPE>
-struct Handle {
+struct GenericHandle {
   RAW_HANDLE_TYPE idx : HANDLE_INDEX_BIT_WIDTH;
   RAW_HANDLE_TYPE age : HANDLE_AGE_BIT_WIDTH;
   RAW_HANDLE_TYPE type : HANDLE_TYPE_BIT_WIDTH;
-  Handle() { Reset(); }
-  explicit Handle(RAW_HANDLE_TYPE raw) { *((RAW_HANDLE_TYPE*)this) = raw; }
+
+  GenericHandle() { Reset(); }
+  explicit GenericHandle(RAW_HANDLE_TYPE raw) { *((RAW_HANDLE_TYPE*)this) = raw; }
   RAW_HANDLE_TYPE ToRaw() const { return *((RAW_HANDLE_TYPE*)this); }
   operator bool() const { return IsValid(); }
   explicit operator RAW_HANDLE_TYPE() const { return ToRaw(); }
@@ -48,7 +49,11 @@ struct Handle {
   void Reset() { *((RAW_HANDLE_TYPE*)this) = INVALID_HANDLE_RAW; }
 };
 
-typedef Handle<GENERIC_HANDLE> GenericHandle;
+template <HandleType TYPE>
+struct Handle : public GenericHandle {
+  Handle() {}
+  explicit Handle(RAW_HANDLE_TYPE raw) : GenericHandle(raw) {}
+};
 
 typedef Handle<TEXTURE_HANDLE> TextureHandle;
 typedef Handle<FRAME_BUFFER_HANDLE> FrameBufferHandle;

@@ -10,10 +10,10 @@ struct ModelPartRenderer {
 
 struct ModelRenderer {
   EntityHandle _entity;
-  char _filename[MAX_ASSET_NAME];
+  Asset* _model;
   vector<ModelPartRenderer> _part_list;
   void Init() {
-    _filename[0] = '\0';
+    _model = nullptr;
     _part_list.clear();
   }
 };

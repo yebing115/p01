@@ -22,14 +22,17 @@ struct Transform {
 };
 
 class ISystem;
-class GameWorld : public Object {
+class GameWorld : public ISystem {
 public:
   GameWorld();
   ~GameWorld();
-  
+
   EntityHandle CreateEntity();
   EntityHandle CreateEntity(EntityHandle parent);
   void DestroyEntity(EntityHandle handle);
+
+  bool OwnComponentType(HandleType type) override;
+  GenericHandle CreateComponent(EntityHandle entity, HandleType type) override;
 
   TransformHandle CreateTransform(EntityHandle handle);
   void DestroyTransform(TransformHandle handle);
@@ -38,8 +41,6 @@ public:
 
   void AddSystem(ISystem* system) { _systems.push_back(system); }
   ISystem* GetSystem(HandleType type) const;
-
-  static void RegisterReflectInfos();
 
 private:
   void DestroyEntity(Entity* e);

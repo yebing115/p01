@@ -57,5 +57,5 @@
 //////////////////////////////////////////////////////////////////////////
 #define C3_MAX_ENTITIES     (10 << 10)
 #define C3_MAX_CAMERAS      8
-#define C3_MAX_MODELS       (10 << 10)
+#define C3_MAX_MODEL_RENDERERS       (10 << 10)
 #define C3_MAX_TRANSFORMS   (10 << 10)

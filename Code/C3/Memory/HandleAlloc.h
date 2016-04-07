@@ -38,7 +38,7 @@ public:
     _spin_lock.Unlock();
   }
   u32 GetUsed() const { return _used; }
-  bool IsValid(Handle<TYPE> h) {
+  bool IsValid(Handle<TYPE> h) const {
     bool valid = (h.idx < COUNT) && (h.type == TYPE) && (_indices[h.idx] < _used) && (_handles[h.idx].age == h.age);
     return valid;
   }

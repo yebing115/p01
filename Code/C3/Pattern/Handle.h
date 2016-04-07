@@ -41,6 +41,7 @@ struct GenericHandle {
   GenericHandle() { Reset(); }
   explicit GenericHandle(RAW_HANDLE_TYPE raw) { *((RAW_HANDLE_TYPE*)this) = raw; }
   RAW_HANDLE_TYPE ToRaw() const { return *((RAW_HANDLE_TYPE*)this); }
+  void SetRaw(RAW_HANDLE_TYPE raw) { *((RAW_HANDLE_TYPE*)this) = raw; }
   operator bool() const { return IsValid(); }
   explicit operator RAW_HANDLE_TYPE() const { return ToRaw(); }
   bool IsValid() const { return *((u32*)this) != INVALID_HANDLE_RAW; }
@@ -54,6 +55,13 @@ struct Handle : public GenericHandle {
   Handle() {}
   explicit Handle(RAW_HANDLE_TYPE raw) : GenericHandle(raw) {}
 };
+
+namespace std {
+template <HandleType TYPE>
+struct hash<Handle<TYPE>> {
+  size_t operator ()(const Handle<TYPE>& h) const { return h.ToRaw(); }
+};
+}
 
 typedef Handle<TEXTURE_HANDLE> TextureHandle;
 typedef Handle<FRAME_BUFFER_HANDLE> FrameBufferHandle;

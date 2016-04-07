@@ -54,14 +54,19 @@ void GameWorld::DestroyEntity(Entity* e) {
 
 ISystem* GameWorld::GetSystem(HandleType type) const {
   for (auto sys : _systems) {
-    if (sys->OwnHandleType(type)) return sys;
+    if (sys->OwnComponentType(type)) return sys;
   }
   return nullptr;
 }
 
-void GameWorld::RegisterReflectInfos() {
-  //ComponentRegistry::SetName(CAMERA_COMPONENT, "Camera");
-  //ComponentRegistry::Add(CAMERA_COMPONENT, );
+bool GameWorld::OwnComponentType(HandleType type) {
+  return (type == TRANSFORM_HANDLE || type == CAMERA_HANDLE);
+}
+
+GenericHandle GameWorld::CreateComponent(EntityHandle entity, HandleType type) {
+  if (type == TRANSFORM_HANDLE) return CreateTransform(entity);
+  else if (type == CAMERA_HANDLE) return CreateCamera(entity);
+  else return GenericHandle();
 }
 
 CameraHandle GameWorld::CreateCamera(EntityHandle eh) {

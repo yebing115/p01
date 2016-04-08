@@ -31,16 +31,31 @@ public:
   EntityHandle CreateEntity(EntityHandle parent);
   void DestroyEntity(EntityHandle handle);
 
-  bool OwnComponentType(HandleType type) override;
+  bool OwnComponentType(HandleType type) const override;
   GenericHandle CreateComponent(EntityHandle entity, HandleType type) override;
 
   TransformHandle CreateTransform(EntityHandle handle);
-  void DestroyTransform(TransformHandle handle);
+  void DestroyTransform(GenericHandle handle);
+  
+  // Camera control
   CameraHandle CreateCamera(EntityHandle handle);
-  void DestroyCamera(CameraHandle handle);
+  void DestroyCamera(GenericHandle handle);
+  void SetCameraPos(GenericHandle handle, const vec& pos);
+  const vec& GetCameraPos(GenericHandle handle) const;
+  void SetCameraFront(GenericHandle handle, const vec& front);
+  const vec& GetCameraFront(GenericHandle handle) const;
+  void SetCameraUp(GenericHandle handle, const vec& up);
+  const vec& GetCameraUp(GenericHandle handle) const;
+  void SetCameraClipPlane(GenericHandle handle, float near, float far);
+  float GetCameraNear(GenericHandle handle) const;
+  float GetCameraFar(GenericHandle handle) const;
+  float GetDistance(GenericHandle handle, const vec& p) const;
 
   void AddSystem(ISystem* system) { _systems.push_back(system); }
   ISystem* GetSystem(HandleType type) const;
+
+  void Update(float dt, bool paused);
+  void Render(float dt, bool paused);
 
 private:
   void DestroyEntity(Entity* e);
@@ -50,12 +65,16 @@ private:
 
   Transform _transforms[C3_MAX_CAMERAS];
   HandleAlloc<TRANSFORM_HANDLE, C3_MAX_TRANSFORMS> _transform_handles;
+  unordered_map<EntityHandle, TransformHandle> _transform_map;
 
   Camera _cameras[C3_MAX_CAMERAS];
   HandleAlloc<CAMERA_HANDLE, C3_MAX_CAMERAS> _camera_handles;
-
+  unordered_map<EntityHandle, CameraHandle> _camera_map;
+  
   vector<ISystem*> _systems;
   list_head _entity_list;
+
+  friend class RenderSystem;
 
   SUPPORT_REFLECT(GameWorld)
   SUPPORT_SINGLETON(GameWorld)

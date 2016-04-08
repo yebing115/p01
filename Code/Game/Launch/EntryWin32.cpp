@@ -61,6 +61,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return false;
   }
 
+  InputManager::CreateInstance();
+
   s_app = AppConfig::CreateApplication();
   imgui_init(s_hwnd);
 
@@ -243,33 +245,43 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
       break;
     case WM_KEYDOWN:
       IO.KeysDown[wParam] = true;
+      InputManager::Instance()->_SetKeyDown(wParam);
       break;
     case WM_KEYUP:
       IO.KeysDown[wParam] = false;
+      InputManager::Instance()->_SetKeyUp(wParam);
       break;
     case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
       s_mouse_pressed[0] = true;
+      InputManager::Instance()->_SetMouseDown(LEFT_BUTTON);
       break;
     case WM_LBUTTONUP:
       s_mouse_pressed[0] = false;
+      InputManager::Instance()->_SetMouseUp(LEFT_BUTTON);
       break;
     case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
       s_mouse_pressed[2] = true;
+      InputManager::Instance()->_SetMouseDown(MIDDLE_BUTTON);
       break;
     case WM_MBUTTONUP:
       s_mouse_pressed[2] = false;
+      InputManager::Instance()->_SetMouseUp(MIDDLE_BUTTON);
       break;
     case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
       s_mouse_pressed[1] = true;
+      InputManager::Instance()->_SetMouseDown(RIGHT_BUTTON);
       break;
     case WM_RBUTTONUP:
       s_mouse_pressed[1] = false;
+      InputManager::Instance()->_SetMouseUp(RIGHT_BUTTON);
       break;
     case WM_MOUSEMOVE:
       s_mouse_position.Set((float)GET_X_LPARAM(lParam), s_window_size.y - (float)GET_Y_LPARAM(lParam));
+      InputManager::Instance()->_SetMousePos((float)GET_X_LPARAM(lParam), s_window_size.y - (float)GET_Y_LPARAM(lParam));
       break;
     case WM_MOUSEWHEEL:
       s_mouse_wheel = (float)GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+      InputManager::Instance()->_SetMouseWheel((float)GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA);
       break;
     case WM_ACTIVATE:
       if (wParam == WA_INACTIVE) {
@@ -281,7 +293,10 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
       break;
     }
     case WM_CHAR:
-      if (wParam > 0 && wParam < 0x10000) IO.AddInputCharacter((ImWchar)wParam);
+      if (wParam > 0 && wParam < 0x10000) {
+        IO.AddInputCharacter((ImWchar)wParam);
+        InputManager::Instance()->_AddInputCharacter((wchar_t)wParam);
+      }
       break;
     case WM_HOTKEY:
       break;

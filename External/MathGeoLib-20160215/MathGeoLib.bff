@@ -5,6 +5,8 @@
 								.MathGeoLibCompilerOptions	= ' /wd6262'	// Function uses '%u' bytes of stack:  exceeds /analyze:stacksize '16384'.  Consider moving some data to heap.
 															+ ' /wd28251'	// warning C28251: Inconsistent annotation for '_setjmp': this instance has no annotations. See <no file>(0).
 															+ ' /wd6011'
+															+ ' /D"MATH_SILENT_ASSUME"'
+															+ ' /D"MATH_ENABLE_INSECURE_OPTIMIZATIONS"'
 						      ]
 
 {

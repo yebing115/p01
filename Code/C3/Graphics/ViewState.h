@@ -69,12 +69,12 @@ struct ViewState {
       } break;
       case PREDEFINED_CONSTANT_MODEL_VIEW: {
         const float4x4& model = render->matrix_cache._cache[draw.matrix];
-        float4x4 model_view = model * _view[eye][view];
+        float4x4 model_view = _view[eye][view] * model;
         renderer->_SetConstantMatrix4(flags, predefined.loc, &model_view, min<u32>(MaxRegCount, predefined.count));
       } break;
       case PREDEFINED_CONSTANT_MODEL_VIEW_PROJ: {
         const float4x4& model = render->matrix_cache._cache[draw.matrix];
-        float4x4 model_view_proj = model * _view_proj[eye][view];
+        float4x4 model_view_proj = _view_proj[eye][view] * model;
         renderer->_SetConstantMatrix4(flags, predefined.loc, &model_view_proj, min<u32>(MaxRegCount, predefined.count));
       } break;
       case PREDEFINED_CONSTANT_ALPHA_REF: {

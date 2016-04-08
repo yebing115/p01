@@ -38,3 +38,20 @@ template <typename T>
 T clamp(const T& value, const T& min_value, const T& max_value) {
   return max<T>(min<T>(value, max_value), min_value);
 }
+
+
+inline unsigned float_flip(unsigned f) {
+  unsigned mask = -int(f >> 31) | 0x80000000;
+  return f ^ mask;
+}
+
+// Taking highest 10 bits for rough sort of floats.
+// 0.01 maps to 752; 0.1 to 759; 1.0 to 766; 10.0 to 772;
+// 100.0 to 779 etc. Negative numbers go similarly in 0..511 range.
+inline unsigned depth_to_bits(float depth) {
+  union { float f; unsigned i; } f2i;
+  f2i.f = depth;
+  f2i.i = float_flip(f2i.i); // flip bits to be sortable
+  unsigned b = f2i.i >> 22; // take highest 10 bits
+  return b;
+}

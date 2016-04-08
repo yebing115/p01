@@ -1666,10 +1666,11 @@ void GraphicsInterfaceD3D11::SaveScreenshot(const String& path) {}
 void GraphicsInterfaceD3D11::_SetConstant(u8 flags, u32 loc, const void* val, u32 num) {
   if (flags & CONSTANT_FRAGMENTBIT) {
     memcpy(&_fs_scratch[loc], val, num * 4);
-    _fs_changes += num;
+    //_fs_changes += num;
+    _fs_changes = max(_fs_changes, loc + num * 4);
   } else {
     memcpy(&_vs_scratch[loc], val, num * 4);
-    _vs_changes += num;
+    _vs_changes = max(_vs_changes, loc + num * 4);
   }
 }
 

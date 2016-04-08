@@ -139,6 +139,8 @@ void HLSLWriter::WriteShader(ShaderNode* node) {
     else {
       _shader->cbuffer_size = (u16)buffer_desc.Size;
 
+      for (auto& var_decl : _shader->uniforms) var_decl->loc = 0;
+
       for (u32 jj = 0; jj < buffer_desc.Variables; ++jj) {
         ID3D11ShaderReflectionVariable* var = cbuffer->GetVariableByIndex(jj);
         ID3D11ShaderReflectionType* type = var->GetType();
@@ -151,7 +153,7 @@ void HLSLWriter::WriteShader(ShaderNode* node) {
         ConstantType constant_type = find_constant_type(const_desc);
 
         if (CONSTANT_COUNT != constant_type && (var_desc.uFlags & D3D_SVF_USED)) {
-          VarDeclNode* c = find_constant(_shader, hash_string(const_desc.Name));
+          VarDeclNode* c = find_constant(_shader, hash_string(var_desc.Name));
           if (c) c->loc = (u16)var_desc.StartOffset;
         }
       }

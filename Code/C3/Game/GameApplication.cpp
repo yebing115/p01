@@ -13,6 +13,7 @@ GameApplication::~GameApplication() {
 }
 
 void GameApplication::Update(float dt) {
+  InputManager::Instance()->Update(dt, _paused);
   if (_game) _game->OnUpdate(dt, _paused);
 }
 

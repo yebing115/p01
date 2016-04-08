@@ -28,6 +28,7 @@ DEFINE_JOB_ENTRY(load_mex_model) {
   auto model = (Model*)asset->_header->GetData();
 
   model->_filename = String::GetID(asset->_desc._filename);
+  model->_aabb = header.aabb;
   model->_num_parts = header.num_parts;
   ModelPart* part = model->_parts;
   ModelPart* part_end = model->_parts + header.num_parts;
@@ -37,6 +38,7 @@ DEFINE_JOB_ENTRY(load_mex_model) {
     f->ReadBytes(&mesh_part, sizeof(MeshPart));
     part->_start_index = mesh_part.start_index;
     part->_num_indices = mesh_part.num_indices;
+    part->_aabb = mesh_part.aabb;
   }
 
   CreateModelParam param;

@@ -9,6 +9,10 @@ void Camera::SetFrame(const vec& pos, const vec& front, const vec& up) {
   _frustum.SetFrame(pos, front, up);
 }
 
+void Camera::SetClipPlane(float n, float f) {
+  _frustum.SetViewPlaneDistances(n, f);
+}
+
 void Camera::SetOrthographic(float w, float h) {
   _frustum.SetOrthographic(w, h);
 }

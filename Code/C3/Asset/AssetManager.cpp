@@ -45,6 +45,7 @@ Asset* AssetManager::Load(AssetType type, const char* filename) {
   bool resolved = Resolve(type, filename, desc, ops);
   if (!resolved) return nullptr;
   Asset* asset = GetOrCreateAsset(desc, ops);
+  Load(asset);
   return asset;
 }
 

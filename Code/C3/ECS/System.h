@@ -6,8 +6,10 @@
 
 class ISystem : public Object {
 public:
-  virtual bool OwnComponentType(HandleType type) = 0;
+  virtual bool OwnComponentType(HandleType type) const = 0;
   virtual GenericHandle CreateComponent(EntityHandle entity, HandleType type) = 0;
+  virtual void Update(float dt, bool paused) {}
+  virtual void Render(float dt, bool paused) {}
 private:
   SUPPORT_REFLECT(ISystem)
 };

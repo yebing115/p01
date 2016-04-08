@@ -47,7 +47,7 @@ VarDeclNode* find_constant(ShaderNode* node, stringid name) {
   return nullptr;
 }
 
-HLSLWriter::HLSLWriter(): _f(nullptr) {}
+HLSLWriter::HLSLWriter(): _f(nullptr), _indent(0) {}
 HLSLWriter::~HLSLWriter() {}
 
 void HLSLWriter::SetOutput(const String& filename) {
@@ -67,7 +67,9 @@ void HLSLWriter::WriteShader(ShaderNode* node) {
       WriteIndent();
       WriteString("float4 position : SV_POSITION;\n");
     }
-    for (auto var_decl : node->inputs) WriteInputDecl(var_decl);
+    for (auto var_decl : node->inputs) {
+      WriteInputDecl(var_decl);
+    }
     --_indent;
     WriteString("};\n");
   }

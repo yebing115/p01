@@ -44,7 +44,7 @@ void ViewState::Reset(RenderFrame* render, bool hmd_enabled) {
 #endif
   for (u32 i = 0; i < C3_MAX_VIEWS; ++i) {
     for (u32 eye = 0; eye < u32(hmd_enabled) + 1; ++eye) {
-      _view_proj[eye][i] = _view[eye][i] * render->proj[eye][i];
+      _view_proj[eye][i] = render->proj[eye][i] * _view[eye][i];
     }
   }
 }

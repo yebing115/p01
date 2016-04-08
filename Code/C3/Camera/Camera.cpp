@@ -2,7 +2,7 @@
 #include "Camera.h"
 
 void Camera::Init() {
-  _frustum.SetKind(FrustumSpaceGL, FrustumRightHanded);
+  _frustum.SetKind(FrustumSpaceD3D, FrustumRightHanded);
 }
 
 void Camera::SetFrame(const vec& pos, const vec& front, const vec& up) {

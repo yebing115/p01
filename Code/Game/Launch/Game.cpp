@@ -4,8 +4,6 @@
 #include "Graphics/RenderSystem.h"
 
 Game::Game() {
-  _model = AssetManager::Instance()->Load(ASSET_TYPE_MODEL, "Models/vulkanscene.mex");
-  _texture = AssetManager::Instance()->Load(ASSET_TYPE_TEXTURE, "Models/textures/background.dds");
   auto world = GameWorld::CreateInstance();
   auto e = world->CreateEntity();
   world->CreateCamera(e);
@@ -13,7 +11,7 @@ Game::Game() {
   auto renderer = new RenderSystem;
   world->AddSystem(renderer);
   world->CreateComponent(e, MODEL_RENDERER_HANDLE);
-  renderer->SetModelFilename(e, "Models/vulkanscene.mex");
+  renderer->SetModelFilename(e, "Models/sponza.mex");
 }
 
 void Game::OnUpdate(float dt, bool paused) {

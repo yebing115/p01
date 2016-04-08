@@ -108,8 +108,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     s_app->Update(dt);
     s_app->Render(dt);
 
-    ImGui::Text("Hello, world!");
-    ImGui::ShowTestWindow();
     ImGui::Render();
 
     GraphicsRenderer::Instance()->Frame();

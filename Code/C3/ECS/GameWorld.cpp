@@ -61,19 +61,46 @@ ISystem* GameWorld::GetSystem(HandleType type) const {
 }
 
 void GameWorld::Update(float dt, bool paused) {
+  ImGui::Begin("Test");
   int n = _camera_handles.GetUsed();
   for (int i = 0; i < n; ++i) {
     auto& camera = _cameras[_camera_handles.GetHandleAt(i).idx];
-    auto c = _camera_handles.GetHandleAt(i);
+    auto handle = _camera_handles.GetHandleAt(i);
+    auto IM = InputManager::Instance();
     if (!ImGui::GetIO().WantCaptureKeyboard) {
-      if (InputManager::Instance()->IsKeyPressed(VK_W)) {
-        SetCameraPos(c, GetCameraPos(c) + vec::unitY * dt * 10.f);
+      auto p = GetCameraPos(handle);
+      if (IM->IsKeyDown(VK_W)) {
+        p += camera._frustum.Front() * dt * 1.f;
+      }
+      if (IM->IsKeyDown(VK_S)) {
+        p -= camera._frustum.Front() * dt * 1.f;
+      }
+      if (IM->IsKeyDown(VK_A)) {
+        p -= camera._frustum.WorldRight() * dt * 1.f;
+      }
+      if (IM->IsKeyDown(VK_D)) {
+        p += camera._frustum.WorldRight() * dt * 1.f;
+      }
+      SetCameraPos(handle, p);
+    }
+    static float2 last_pos;
+    if (!ImGui::GetIO().WantCaptureMouse) {
+      if (IM->IsMouseDown(RIGHT_BUTTON)) {
+        if (!IM->IsMouseClicked(RIGHT_BUTTON)) {
+          auto drag_delta = IM->GetMousePos() - last_pos;
+          Quat q(float3::unitY, drag_delta.x > 0.f ? 0.02f : -0.02f);
+          auto eye = GetCameraPos(handle);
+          camera._frustum.Translate(-eye);
+          camera._frustum.Transform(q);
+          camera._frustum.Translate(eye);
+        }
+        last_pos = IM->GetMousePos();
       }
     }
-    if (!ImGui::GetIO().WantCaptureMouse) {
-    }
+    ImGui::Text("camera pos: %s\n", GetCameraPos(handle).ToString().c_str());
   }
   for (auto& sys : _systems) sys->Update(dt, paused);
+  ImGui::End();
 }
 
 void GameWorld::Render(float dt, bool paused) {
@@ -96,7 +123,7 @@ CameraHandle GameWorld::CreateCamera(EntityHandle eh) {
     _camera_map.insert(make_pair(eh, h));
     _cameras[h.idx]._entity = eh;
     _cameras[h.idx].Init();
-    _cameras[h.idx].SetFrame(vec(0, 2, 50), vec(0, 0, -1), vec(0, 1, 0));
+    _cameras[h.idx].SetFrame(vec(0, 1, 10), vec(0, 0, -1), vec(0, 1, 0));
     _cameras[h.idx].SetPerspective(DegToRad(25.f), DegToRad(25.f));
     _cameras[h.idx].SetClipPlane(1.f, 1000.f);
   }

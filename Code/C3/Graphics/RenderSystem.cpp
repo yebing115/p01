@@ -80,8 +80,8 @@ void RenderSystem::Render(float dt, bool paused) {
   auto& camera = world->_cameras[world->_camera_handles.GetHandleAt(0).idx];
   auto view = GR->PushView();
   auto win_size = GR->GetWindowSize();
-  camera.SetVerticalFovAndAspectRatio(DegToRad(40.f), win_size.x / win_size.y);
-  camera.SetClipPlane(5, 200);
+  camera.SetAspect(win_size.x / win_size.y);
+  camera.SetClipPlane(1, 2000);
   GR->SetViewRect(view, 0, 0, win_size.x, win_size.y);
   GR->SetViewClear(view, C3_CLEAR_COLOR | C3_CLEAR_DEPTH, 0, 1.f);
   GR->SetViewTransform(view, camera.GetViewMatrix().ptr(), camera.GetProjectionMatrix().ptr());

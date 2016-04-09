@@ -104,6 +104,14 @@ float2 InputManager::GetMousePos() const {
   return _mouse_pos;
 }
 
+float2 InputManager::GetMousePosPrev() const {
+  return _mouse_pos_prev;
+}
+
+float2 InputManager::GetMouseDelta() const {
+  return _mouse_delta;
+}
+
 float2 InputManager::GetMouseDragDelta(MouseButton button, float lock_threshold) const {
   c3_assert_return_x((int)button >= 0 && (int)button < NUM_MOUSE_BUTTONS, float2::zero);
   if (lock_threshold < 0.0f) lock_threshold = MOUSE_DRAG_THREHOLD;
@@ -121,7 +129,17 @@ void InputManager::ResetMouseDragDelta(MouseButton button) {
   _mouse_clicked_pos[button] = _mouse_pos;
 }
 
-void InputManager::Update(float dt, bool paused) {
+float2 InputManager::GetMouseClickedPos(MouseButton button) const {
+  c3_assert_return_x((int)button >= 0 && (int)button < NUM_MOUSE_BUTTONS, float2::zero);
+  return _mouse_clicked_pos[button];
+}
+
+float InputManager::GetMouseClickedTime(MouseButton button) const {
+  c3_assert_return_x((int)button >= 0 && (int)button < NUM_MOUSE_BUTTONS, 0.f);
+  return _mouse_clicked_time[button];
+}
+
+void InputManager::NewFrame(float dt) {
   _dt = dt;
   _time += dt;
   // Update inputs state
@@ -131,7 +149,6 @@ void InputManager::Update(float dt, bool paused) {
     _mouse_delta.Set(0.0f, 0.0f);
   else
     _mouse_delta = _mouse_pos - _mouse_pos_prev;
-  _mouse_pos_prev = _mouse_pos;
   for (int i = 0; i < ARRAY_SIZE(_mouse_down); i++) {
     _mouse_clicked[i] = _mouse_down[i] && _mouse_down_duration[i] < 0.0f;
     _mouse_released[i] = !_mouse_down[i] && _mouse_down_duration[i] >= 0.0f;
@@ -156,6 +173,12 @@ void InputManager::Update(float dt, bool paused) {
   for (int i = 0; i < ARRAY_SIZE(_keys_down); i++) {
     _keys_down_duration[i] = _keys_down[i] ? (_keys_down_duration[i] < 0.0f ? 0.0f : _keys_down_duration[i] + dt) : -1.0f;
   }
+}
+
+void InputManager::Forgot() {
+  _mouse_pos_prev = _mouse_pos;
+  _mouse_wheel = 0.f;
+  memset(_input_characters, 0, sizeof(_input_characters));
 }
 
 void InputManager::_SetMousePos(float x, float y) {

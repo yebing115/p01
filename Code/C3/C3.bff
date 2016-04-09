@@ -50,6 +50,7 @@
 			.ExtraCompilerOptions		= .C3IncludePaths
 										+ .C3CompilerOptions
 										+ .MathGeoLibIncludePaths
+										+ .MathGeoLibCompilerOptions
 										+ .LibIconvIncludePaths
 										+ .IMGUIIncludePaths
 										+ .Lz4IncludePaths

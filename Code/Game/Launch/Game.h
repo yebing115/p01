@@ -6,10 +6,11 @@ class Game : public IGame {
 public:
   Game();
   void OnUpdate(float dt, bool paused) override;
-
   void OnRender(float dt, bool paused) override;
 
 private:
-  Asset* _model;
-  Asset* _texture;
+  void UpdateDebugCamera(float dt);
+
+  EntityHandle _debug_camera;
+  EntityHandle _model;
 };

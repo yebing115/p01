@@ -298,9 +298,9 @@ int main(int argc, char* argv[]) {
   Assimp::Importer importer;
   unsigned int flags = aiProcess_CalcTangentSpace |
     aiProcess_Triangulate |
-    //aiProcess_JoinIdenticalVertices |
-    //aiProcess_OptimizeMeshes |
-    //aiProcess_ImproveCacheLocality |
+    aiProcess_JoinIdenticalVertices |
+    aiProcess_OptimizeMeshes |
+    aiProcess_ImproveCacheLocality |
     aiProcess_SortByPType;
   if (g_options.input_type == INPUT_TYPE_FBX) flags |= aiProcess_PreTransformVertices;
   auto scene = importer.ReadFile(argv[1], flags);

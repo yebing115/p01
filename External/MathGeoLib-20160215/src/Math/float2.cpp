@@ -423,7 +423,7 @@ float2 float2::ProjectToNorm(const float2 &direction) const
 
 float float2::AngleBetween(const float2 &other) const
 {
-	return acos(Dot(other)) / Sqrt(LengthSq() * other.LengthSq());
+	return acos(Dot(other) / Sqrt(LengthSq() * other.LengthSq()));
 }
 
 float float2::AngleBetweenNorm(const float2 &other) const

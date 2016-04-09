@@ -10,6 +10,9 @@ public:
   ~InputManager();
 
   bool IsKeyDown(int key_index) const;
+  bool IsKeyCtrlDown() const { return _key_ctrl; }
+  bool IsKeyShiftDown() const { return _key_shift; }
+  bool IsKeyAltDown() const { return _key_alt; }
   bool IsKeyPressed(int key_index, bool repeat = true) const;
   bool IsKeyReleased(int key_index) const;
   bool IsMouseDown(MouseButton button) const;
@@ -18,10 +21,16 @@ public:
   bool IsMouseReleased(MouseButton button) const;
   bool IsMouseDragging(MouseButton button = LEFT_BUTTON, float lock_threshold = -1.0f) const;
   float2 GetMousePos() const;
+  float2 GetMousePosPrev() const;
+  float2 GetMouseDelta() const;
   float2 GetMouseDragDelta(MouseButton button = LEFT_BUTTON, float lock_threshold = -1.0f) const;
   void ResetMouseDragDelta(MouseButton button = LEFT_BUTTON);
+  float GetMouseWheel() const { return _mouse_wheel; }
+  float2 GetMouseClickedPos(MouseButton button = LEFT_BUTTON) const;
+  float GetMouseClickedTime(MouseButton button = LEFT_BUTTON) const;
 
-  void Update(float dt, bool paused);
+  void NewFrame(float dt);
+  void Forgot();
 
   void _SetMousePos(float x, float y);
   void _SetMouseDown(MouseButton button);
@@ -47,6 +56,7 @@ private:
   float _dt;
   double _time;
   float2 _mouse_pos_prev;
+  float2 _mouse_pos_prev_saved;
   float2 _mouse_delta;
   bool _mouse_clicked[NUM_MOUSE_BUTTONS];
   float2 _mouse_clicked_pos[NUM_MOUSE_BUTTONS];

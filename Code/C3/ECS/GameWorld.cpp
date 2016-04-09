@@ -61,46 +61,7 @@ ISystem* GameWorld::GetSystem(HandleType type) const {
 }
 
 void GameWorld::Update(float dt, bool paused) {
-  ImGui::Begin("Test");
-  int n = _camera_handles.GetUsed();
-  for (int i = 0; i < n; ++i) {
-    auto& camera = _cameras[_camera_handles.GetHandleAt(i).idx];
-    auto handle = _camera_handles.GetHandleAt(i);
-    auto IM = InputManager::Instance();
-    if (!ImGui::GetIO().WantCaptureKeyboard) {
-      auto p = GetCameraPos(handle);
-      if (IM->IsKeyDown(VK_W)) {
-        p += camera._frustum.Front() * dt * 1.f;
-      }
-      if (IM->IsKeyDown(VK_S)) {
-        p -= camera._frustum.Front() * dt * 1.f;
-      }
-      if (IM->IsKeyDown(VK_A)) {
-        p -= camera._frustum.WorldRight() * dt * 1.f;
-      }
-      if (IM->IsKeyDown(VK_D)) {
-        p += camera._frustum.WorldRight() * dt * 1.f;
-      }
-      SetCameraPos(handle, p);
-    }
-    static float2 last_pos;
-    if (!ImGui::GetIO().WantCaptureMouse) {
-      if (IM->IsMouseDown(RIGHT_BUTTON)) {
-        if (!IM->IsMouseClicked(RIGHT_BUTTON)) {
-          auto drag_delta = IM->GetMousePos() - last_pos;
-          Quat q(float3::unitY, drag_delta.x > 0.f ? 0.02f : -0.02f);
-          auto eye = GetCameraPos(handle);
-          camera._frustum.Translate(-eye);
-          camera._frustum.Transform(q);
-          camera._frustum.Translate(eye);
-        }
-        last_pos = IM->GetMousePos();
-      }
-    }
-    ImGui::Text("camera pos: %s\n", GetCameraPos(handle).ToString().c_str());
-  }
   for (auto& sys : _systems) sys->Update(dt, paused);
-  ImGui::End();
 }
 
 void GameWorld::Render(float dt, bool paused) {
@@ -123,8 +84,10 @@ CameraHandle GameWorld::CreateCamera(EntityHandle eh) {
     _camera_map.insert(make_pair(eh, h));
     _cameras[h.idx]._entity = eh;
     _cameras[h.idx].Init();
-    _cameras[h.idx].SetFrame(vec(0, 1, 10), vec(0, 0, -1), vec(0, 1, 0));
-    _cameras[h.idx].SetPerspective(DegToRad(25.f), DegToRad(25.f));
+    _cameras[h.idx].SetFrame(vec(0, 1, 100), vec(0, 0, -1), vec(0, 1, 0));
+    auto aspect = GraphicsRenderer::Instance()->GetWindowAspect();
+    auto v_fov = DegToRad(80.f);
+    _cameras[h.idx].SetVerticalFovAndAspectRatio(v_fov, aspect);
     _cameras[h.idx].SetClipPlane(1.f, 1000.f);
   }
   return h;
@@ -166,6 +129,12 @@ const MATH_NAMESPACE_NAME::vec& GameWorld::GetCameraUp(GenericHandle gh) const {
   return _cameras[handle.idx]._frustum.Up();
 }
 
+vec GameWorld::GetCameraRight(GenericHandle gh) const {
+  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
+  if (handle) return _cameras[handle.idx].GetRight();
+  else return vec::unitX;
+}
+
 void GameWorld::SetCameraClipPlane(GenericHandle gh, float near, float far) {
   auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
   _cameras[handle.idx]._frustum.SetViewPlaneDistances(near, far);
@@ -184,6 +153,33 @@ float GameWorld::GetCameraFar(GenericHandle gh) const {
 float GameWorld::GetDistance(GenericHandle gh, const vec& p) const {
   auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
   return _cameras[handle.idx]._frustum.Distance(p);
+}
+
+void GameWorld::PanCamera(GenericHandle gh, float dx, float dy) {
+  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
+  if (handle) _cameras[handle.idx].Pan(dx, dy);
+}
+
+void GameWorld::TransformCamera(GenericHandle gh, const Quat& q) {
+  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
+  if (handle) _cameras[handle.idx].Transform(q);
+}
+
+void GameWorld::ZoomCamera(GenericHandle gh, float zoom_factor) {
+  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
+  if (handle) _cameras[handle.idx].Zoom(zoom_factor);
+}
+
+float GameWorld::GetCameraVerticalFov(GenericHandle gh) const {
+  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
+  if (handle) return _cameras[handle.idx]._frustum.VerticalFov();
+  return 0.f;
+}
+
+float GameWorld::GetCameraAspect(GenericHandle gh) const {
+  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
+  if (handle) return _cameras[handle.idx]._frustum.AspectRatio();
+  return 1.f;
 }
 
 TransformHandle GameWorld::CreateTransform(EntityHandle eh) {

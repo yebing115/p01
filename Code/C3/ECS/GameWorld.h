@@ -46,10 +46,17 @@ public:
   const vec& GetCameraFront(GenericHandle handle) const;
   void SetCameraUp(GenericHandle handle, const vec& up);
   const vec& GetCameraUp(GenericHandle handle) const;
+  vec GetCameraRight(GenericHandle handle) const;
   void SetCameraClipPlane(GenericHandle handle, float near, float far);
   float GetCameraNear(GenericHandle handle) const;
   float GetCameraFar(GenericHandle handle) const;
   float GetDistance(GenericHandle handle, const vec& p) const;
+  void PanCamera(GenericHandle handle, const float2& p) { PanCamera(handle, p.x, p.y); }
+  void PanCamera(GenericHandle handle, float dx, float dy);
+  void TransformCamera(GenericHandle handle, const Quat& q);
+  void ZoomCamera(GenericHandle handle, float zoom_factor);
+  float GetCameraVerticalFov(GenericHandle handle) const;
+  float GetCameraAspect(GenericHandle handle) const;
 
   void AddSystem(ISystem* system) { _systems.push_back(system); }
   ISystem* GetSystem(HandleType type) const;

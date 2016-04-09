@@ -61,7 +61,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return false;
   }
 
-  InputManager::CreateInstance();
+  auto IM = InputManager::CreateInstance();
 
   s_app = AppConfig::CreateApplication();
   imgui_init(s_hwnd);
@@ -95,6 +95,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
       }
     }
     //ProcessXInput();
+    IM->NewFrame(dt);
 
     GraphicsRenderer::Instance()->Reset((u16)s_window_size.x, (u16)s_window_size.y,
                                         C3_RESET_VSYNC);
@@ -102,6 +103,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     IO.KeyCtrl = (GetKeyState(VK_LCONTROL) & 0x8000) || (GetKeyState(VK_RCONTROL) & 0x8000);
     IO.KeyShift = (GetKeyState(VK_LSHIFT) & 0x8000) || (GetKeyState(VK_RSHIFT) & 0x8000);
     IO.KeyAlt = (GetKeyState(VK_LMENU) & 0x8000) || (GetKeyState(VK_RMENU) & 0x8000);
+    IM->_SetKeyCtrl(IO.KeyCtrl);
+    IM->_SetKeyShift(IO.KeyShift);
+    IM->_SetKeyAlt(IO.KeyAlt);
     imgui_new_frame(s_window_size, s_mouse_position, s_mouse_pressed, s_mouse_wheel, dt);
     s_mouse_wheel = 0.f;
 
@@ -111,6 +115,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     ImGui::Render();
 
     GraphicsRenderer::Instance()->Frame();
+
+    IM->Forgot();
   }
 
   return (int) msg.wParam;

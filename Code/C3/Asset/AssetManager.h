@@ -4,9 +4,6 @@
 #include "Platform/C3Platform.h"
 #include "Data/DataType.h"
 #include "Data/String.h"
-#include "Graphics/Model/Model.h"
-#include "Graphics/Material/Program.h"
-#include "Graphics/Material/Texture.h"
 
 #define MAX_ASSET_NAME  120
 

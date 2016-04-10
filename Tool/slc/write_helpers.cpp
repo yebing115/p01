@@ -100,7 +100,7 @@ void write_binary(ShaderNode* shader, const void* payload, size_t playload_size,
     else if (var_type == VAR_TYPE_VEC4) constant.constant_type = CONSTANT_VEC4;
     else if (var_type == VAR_TYPE_MAT3) constant.constant_type = CONSTANT_MAT3;
     else if (var_type == VAR_TYPE_MAT4) constant.constant_type = CONSTANT_MAT4;
-    else if (var_type == VAR_TYPE_BOOL) constant.constant_type = CONSTANT_BOOL;
+    else if (var_type == VAR_TYPE_BOOL) constant.constant_type = CONSTANT_BOOL32;
     else {
       printf("Invalid shader uniform var_type: %s\n", VAR_TYPE_NAMES[var_type]);
       exit(-1);

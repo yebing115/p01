@@ -20,7 +20,7 @@ enum GraphicsHandleType {
 };
 
 enum ConstantType {
-  CONSTANT_BOOL,
+  CONSTANT_BOOL32,
   CONSTANT_INT,
   CONSTANT_FLOAT,
   CONSTANT_VEC2,

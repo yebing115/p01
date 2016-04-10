@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Graphics/Material/Material.h"
+
 #define MAX_MESH_ATTRS  10
 
 enum MeshAttrFlag {
@@ -12,8 +14,10 @@ enum MeshAttrFlag {
 /************************************************************************/
 /* MeshHeader
 /* MeshStringTable + strings
+/* MeshMaterial[num_materials]
 /* MeshPart[num_parts]
-/* Vertex[num_vertices]
+/* VertexData
+/* IndexData
 /************************************************************************/
 struct MeshStringTable {
   u32 size;
@@ -25,6 +29,23 @@ struct MeshAttr {
   u8 num;
   u8 data_type;
   u8 flags;
+};
+
+struct MeshMaterialParam {
+  MaterialParamType type;
+  union {
+    vec _vec;
+    struct {
+      stringid _filename;
+      u32 _flags;
+    } _tex2d;
+  };
+};
+
+struct MeshMaterial {
+  stringid material_shader;
+  u32 num_params;
+  MeshMaterialParam params;
 };
 
 struct MeshPart {
@@ -42,12 +63,13 @@ struct MeshHeader {
   AABB aabb;
   u16 vertex_stride;
   u16 num_attrs;
+  u16 num_materials;
   u16 num_parts;
-  u16 pad0;
+  u32 material_data_offset;
   u32 part_data_offset;
   u32 vertex_data_offset;
   u32 index_data_offset;
   MeshAttr attrs[MAX_MESH_ATTRS];
 };
-static_assert(sizeof(MeshHeader) == 96, "Bad sizeof MeshHeader.");
+static_assert(sizeof(MeshHeader) == 100, "Bad sizeof MeshHeader.");
 #pragma pack(pop)

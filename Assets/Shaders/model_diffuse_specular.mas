@@ -1,0 +1,31 @@
+[
+	{
+		"technique": "forward",
+		"pass": "geometry",
+		"render_state": [
+			"RGB_WRITE",
+			"ALPHA_WRITE",
+			"DEPTH_WRITE",
+			"DEPTH_TEST",
+			"BLEND_NORMAL",
+		],
+		"vs_source": "model.vs",
+		"vs_defines": {},
+		"vs_binary": "",
+		"fs_source": "model.fs",
+		"fs_defines": {
+			"USE_SPECULAR": true,
+		},
+		"fs_binary": "",
+		"properties": {
+			"diffuse_color": {
+				"type": "vec4",
+				"value": "WHITE",
+			},
+			"diffuse_tex": {
+				"type": "sampler2D",
+				"texture": "WHITE",
+			}
+		}
+	}
+]

@@ -1,0 +1,26 @@
+[
+	{
+		"technique": "forward",
+		"pass": "geometry",
+		"render_state" : [
+			"RGB_WRITE",
+			"ALPHA_WRITE",
+			"DEPTH_WRITE",
+			"DEPTH_TEST",
+			"BLEND_NORMAL",
+		],
+		"vertex_shader" : "model.vs",
+		"fragment_shader" : "model.fs",
+		"defines" : {},
+		"properties" : {
+			"diffuse_color" : {
+				"type" : "vec4",
+				"value" : "WHITE",
+			},
+			"diffuse_tex" : {
+				"type" : "sampler2D",
+				"texture" : "WHITE",
+			}
+		}
+	}
+]

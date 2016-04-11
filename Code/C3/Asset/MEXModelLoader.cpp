@@ -13,15 +13,24 @@ DEFINE_JOB_ENTRY(load_mex_model) {
   f->ReadBytes(&header, sizeof(header));
 
   SpinLockGuard lock_guard(&asset->_lock);
-  auto model_size = Model::ComputeSize(header.num_parts);
-  asset->_header = (AssetMemoryHeader*)C3_ALLOC(g_allocator, ASSET_MEMORY_SIZE(0, model_size));
-  asset->_header->_size = ASSET_MEMORY_SIZE(0, model_size);
-  asset->_header->_num_depends = 0;
+  auto model_size = Model::ComputeSize(header.num_materials, header.num_parts);
+  u32 asset_mem_size = ASSET_MEMORY_SIZE(header.num_materials, model_size);
+  asset->_header = (AssetMemoryHeader*)C3_ALLOC(g_allocator, asset_mem_size);
+  asset->_header->_size = asset_mem_size;
+  asset->_header->_num_depends = header.num_materials;
   auto model = (Model*)asset->_header->GetData();
-
+  model->Init(header.num_materials, header.num_parts);
   strcpy(model->_filename, asset->_desc._filename);
-  model->_aabb.minPoint = header.aabb_min;
-  model->_aabb.maxPoint = header.aabb_max;
+
+  MeshMaterial mesh_material;
+  auto AM = AssetManager::Instance();
+  f->Seek(header.material_data_offset);
+  for (int i = 0; i < header.num_materials; ++i) {
+    f->ReadBytes(&mesh_material, sizeof(MeshMaterial));
+    model->_materials[i] = AM->Load(ASSET_TYPE_MATERIAL, mesh_material.filename);
+    asset->_header->_depends[i] = model->_materials[i]->_desc;
+  }
+
   model->_num_parts = header.num_parts;
   ModelPart* part = model->_parts;
   ModelPart* part_end = model->_parts + header.num_parts;
@@ -33,8 +42,11 @@ DEFINE_JOB_ENTRY(load_mex_model) {
     part->_num_indices = mesh_part.num_indices;
     part->_aabb.minPoint = mesh_part.aabb_min;
     part->_aabb.maxPoint = mesh_part.aabb_max;
+    part->_material_index = mesh_part.material_index;
   }
 
+  model->_aabb.minPoint = header.aabb_min;
+  model->_aabb.maxPoint = header.aabb_max;
   auto vb_mem = mem_alloc(header.num_vertices * header.vertex_stride);
   int index_size = header.num_indices >= 0x10000 ? 4 : 2;
   auto ib_mem = mem_alloc(header.num_indices * index_size);

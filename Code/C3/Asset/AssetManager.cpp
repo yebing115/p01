@@ -2,6 +2,7 @@
 #include "AssetManager.h"
 #include "DDSTextureLoader.h"
 #include "MEXModelLoader.h"
+#include "MaterialLoader.h"
 
 DEFINE_SINGLETON_INSTANCE(AssetManager);
 
@@ -19,6 +20,8 @@ struct AssetLoaderType {
 static AssetLoaderType ASSET_LOADERS[] = {
   {ASSET_TYPE_TEXTURE, ".dds", &DDS_TEXTURE_OPS},
   {ASSET_TYPE_MODEL, ".mex", &MEX_MODEL_OPS},
+  {ASSET_TYPE_MATERIAL_SHADER, ".mas", &MATERIAL_SHADER_OPS},
+  {ASSET_TYPE_MATERIAL, ".mat", &MATERIAL_OPS},
 };
 
 AssetManager::AssetManager(): _num_assets(0) {

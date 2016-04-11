@@ -4,6 +4,7 @@
 RenderSystem::RenderSystem() {
   auto GR = GraphicsRenderer::Instance();
 
+  /*
   auto vsh_file = FileSystem::Instance()->OpenRead("Shaders/Forward/Geometry/model.vsb");
   c3_assert(vsh_file && vsh_file->IsValid());
   auto vsh_mem = mem_alloc(vsh_file->GetSize());
@@ -20,6 +21,7 @@ RenderSystem::RenderSystem() {
 
   _program = GR->CreateProgram(vsh, fsh);
   c3_assert(_program);
+  */
 }
 
 RenderSystem::~RenderSystem() {

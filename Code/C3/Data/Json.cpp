@@ -169,8 +169,9 @@ bool JsonReader::Peek(char* key, int max_size, JsonValueType* out_type) {
 }
 
 void JsonReader::EndReadObject() {
-  _current_value = _stack.back();
-  _current_node = _current_value.toNode();
+  auto& value = _stack.back();
+  _current_node = value.toNode()->next;
+  _current_value = _current_node ? _current_node->value : gason::JsonValue();
   _stack.pop_back();
 }
 
@@ -245,8 +246,9 @@ bool JsonReader::ReadStringElement(char* out, int max_size, const char* default_
 }
 
 void JsonReader::EndReadArray() {
-  _current_value = _stack.back();
-  _current_node = _current_value.toNode();
+  auto& value = _stack.back();
+  _current_node = value.toNode()->next;
+  _current_value = _current_node ? _current_node->value : gason::JsonValue();
   _stack.pop_back();
 }
 

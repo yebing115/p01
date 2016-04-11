@@ -10,9 +10,9 @@
 			"BLEND_NORMAL",
 		],
 		"vs_source" : "model.vs",
-		"vs_defines" : {},
+		"vs_defines" : [],
 		"fs_source" : "model.fs",
-		"fs_defines" : {},
+		"fs_defines" : [],
 		"properties" : {
 			"diffuse_color" : {
 				"type" : "vec4",

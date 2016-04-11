@@ -14,7 +14,7 @@ Game::Game() {
   _model = world->CreateEntity();
   world->CreateTransform(_model);
   world->CreateComponent(_model, MODEL_RENDERER_HANDLE);
-  renderer->SetModelFilename(_model, "Models/sponza.mex");
+  renderer->SetModelFilename(_model, "Models/Sponza/sponza.mex");
 }
 
 void Game::OnUpdate(float dt, bool paused) {

@@ -329,6 +329,7 @@ VCXProject( 'UpdateSolution-proj' )
 #include "../External/fcpp/FCPP.bff"
 #include "../External/assimp-3.1.1/assimp.bff"
 #include "../External/lz4-20150629/lz4.bff"
+#include "../External/gason--_20160411/gason--.bff"
 
 // Engine
 #include "C3/C3.bff"
@@ -395,7 +396,7 @@ VSSolution( 'solution' )
     .Folder_0_External =
     [ 
         .Path           = '0. External'
-        .Projects       = { 'MathGeoLib-proj', 'LibIconv-proj', 'IMGUI-proj', 'FCPP-proj', 'Assimp-proj', 'lz4-proj' }
+        .Projects       = { 'MathGeoLib-proj', 'LibIconv-proj', 'IMGUI-proj', 'FCPP-proj', 'Assimp-proj', 'lz4-proj', 'Gason-proj' }
     ]
     .Folder_1_Engine =
     [ 

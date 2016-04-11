@@ -2,6 +2,7 @@
 
 #include "Platform/PlatformConfig.h"
 
+#if 0
 #define VK_GAMEPAD_A 0x88
 #define VK_GAMEPAD_B 0x89
 #define VK_GAMEPAD_X 0x8a
@@ -16,6 +17,7 @@
 #define VK_GAMEPAD_RIGHT 0x93
 #define VK_GAMEPAD_START 0x94
 #define VK_GAMEPAD_BACK 0x95
+#endif
 
 #define VK_A 'A'
 #define VK_B 'B'

@@ -41,6 +41,7 @@
 		Using( .LibIconv_Windows_MSVC )
 		Using( .IMGUI_Windows_MSVC )
 		Using( .Lz4_Windows_MSVC )
+		Using( .Gason_Windows_MSVC )
 		
 		// Objects
 		ObjectList( '$ProjectName$-Lib-$Platform$-$Config$' )
@@ -60,6 +61,7 @@
 										+ .LibIconvIncludePaths
 										+ .IMGUIIncludePaths
 										+ .Lz4IncludePaths
+										+ .GasonIncludePaths
 		}
 
 		// Executable
@@ -73,6 +75,7 @@
 				'MathGeoLib-Lib-$Platform$-$Config$',
 				'IMGUI-Lib-$Platform$-$Config$',
 				'Lz4-Lib-$Platform$-$Config$',
+				'Gason-Lib-$Platform$-$Config$',
 			}
 			.LinkerOutput				= '$OutputBase$\p01.exe'
 			.LinkerOptions				+ ' /SUBSYSTEM:WINDOWS'

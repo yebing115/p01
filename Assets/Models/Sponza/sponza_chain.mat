@@ -1,0 +1,1 @@
+{"shader":"model_normal","properties":{"diffuse_tex":{"value":"sponza/chain_texture.tga","flags":""},"opacity_tex":{"value":"sponza/chain_texture_mask.tga","flags":""},"normal_tex":{"value":"sponza/chain_texture_ddn.tga","flags":""}}}

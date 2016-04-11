@@ -41,6 +41,7 @@
 		Using( .LibIconv_Windows_MSVC )
 		Using( .IMGUI_Windows_MSVC )
 		Using( .FCPP_Windows_MSVC )
+		Using( .Gason_Windows_MSVC )
 		
 		// Objects
 		ObjectList( '$ProjectName$-Lib-$Platform$-$Config$' )
@@ -59,6 +60,7 @@
 										+ .LibIconvIncludePaths
 										+ .IMGUIIncludePaths
 										+ .FCPPIncludePaths
+										+ .GasonIncludePaths
 										+ ' /wd4201'
 										+ ' /wd28183'
 		}
@@ -74,6 +76,7 @@
 				'MathGeoLib-Lib-$Platform$-$Config$',
 				'IMGUI-Lib-$Platform$-$Config$',
 				'FCPP-Lib-$Platform$-$Config$',
+				'Gason-Lib-$Platform$-$Config$',
 			}
 			.LinkerOutput				= '$OutputBase$\slc.exe'
 			.LinkerOptions				+ ' /SUBSYSTEM:CONSOLE'

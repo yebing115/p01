@@ -1,0 +1,73 @@
+// Gason
+//------------------------------------------------------------------------------
+.GasonBasePath			= '../External/gason--_20160411'
+.Gason_Windows_MSVC	= [	.GasonIncludePaths		= ' /I"$GasonBasePath$\src"'
+						.GasonCompilerOptions	= ' /wd6262'	// Function uses '%u' bytes of stack:  exceeds /analyze:stacksize '16384'.  Consider moving some data to heap.
+												+ ' /wd28251'	// warning C28251: Inconsistent annotation for '_setjmp': this instance has no annotations. See <no file>(0).
+												+ ' /wd6011'
+					]
+
+{
+	.ProjectName		= 'Gason'
+	.ProjectPath		= '$GasonBasePath$\src'
+
+	// Visual Studio Project Generation
+	//--------------------------------------------------------------------------
+	VCXProject( '$ProjectName$-proj' )
+	{
+		.ProjectOutput				= '../tmp/VisualStudio/Projects/$ProjectName$.vcxproj'
+		.ProjectInputPaths			= '$ProjectPath$'
+        .ProjectFiles               = '../External/gason--_20160411/gason--.bff'
+		.ProjectBasePath			= '$ProjectPath$\'
+	}
+
+	// Only build specific files
+	.CompilerInputPath        		= '$GasonBasePath$\'
+
+	// Windows (MSVC)
+	//--------------------------------------------------------------------------
+	ForEach( .Config in .Configs_Windows_MSVC )
+	{
+		Using( .Config )
+		.OutputBase + '\$Platform$-$Config$'
+
+		Using( .Gason_Windows_MSVC )
+
+		// Static Library
+		Library( '$ProjectName$-Lib-$Platform$-$Config$' )
+		{
+			.CompilerOptions			+ .GasonIncludePaths
+										+ .GasonCompilerOptions
+                                        + ' /wd6319' // use of the comma-operator in a tested expression causes the left argument to be ignored when it has no side-effects
+                                        + ' /wd6385'
+                                        + ' /wd4458'
+										+ ' /wd6031'
+										+ ' /wd28251'
+										+ ' /wd28252'
+										+ ' /wd28253'
+            .LibrarianOptions           + ' /ignore:4221'
+
+			// Output
+			.CompilerOutputPath			= '$OutputBase$\$ProjectName$\'
+ 			.LibrarianOutput 			= '$OutputBase$\$ProjectName$\$ProjectName$.lib'
+		}
+		Alias( '$ProjectName$-$Platform$-$Config$' ) { .Targets = '$ProjectName$-Lib-$Platform$-$Config$' }
+	}
+
+	// Aliases
+	//--------------------------------------------------------------------------
+	// Per-Config
+	Alias( '$ProjectName$-Debug' )		{ .Targets = { '$ProjectName$-X86-Debug',   '$ProjectName$-X64-Debug' } }
+	Alias( '$ProjectName$-Profile' )	{ .Targets = { '$ProjectName$-X86-Profile', '$ProjectName$-X64-Profile' } }
+	Alias( '$ProjectName$-Release' )	{ .Targets = { '$ProjectName$-X86-Release', '$ProjectName$-X64-Release' } }
+
+	// Per-Platform
+	Alias( '$ProjectName$-X86' )		{ .Targets = { '$ProjectName$-X86-Debug', '$ProjectName$-X64-Release', '$ProjectName$-X86-Profile' } }
+	Alias( '$ProjectName$-X64' )		{ .Targets = { '$ProjectName$-X64-Debug', '$ProjectName$-X64-Release', '$ProjectName$-X64-Profile' } }
+
+	// All
+	Alias( '$ProjectName$' )
+	{
+		.Targets = { '$ProjectName$-Debug', '$ProjectName$-Profile', '$ProjectName$-Release' }
+	}
+}

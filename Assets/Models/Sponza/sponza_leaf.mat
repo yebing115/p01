@@ -1,0 +1,1 @@
+{"shader":"model_specular_normal","properties":{"diffuse_tex":{"value":"sponza/sponza_thorn_diff.tga","flags":""},"opacity_tex":{"value":"sponza/sponza_thorn_mask.tga","flags":""},"specular_tex":{"value":"sponza/sponza_thorn_spec.tga","flags":""},"normal_tex":{"value":"sponza/sponza_thorn_ddn.tga","flags":""}}}

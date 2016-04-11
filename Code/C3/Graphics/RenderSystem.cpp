@@ -4,14 +4,14 @@
 RenderSystem::RenderSystem() {
   auto GR = GraphicsRenderer::Instance();
 
-  auto vsh_file = FileSystem::Instance()->OpenRead("Shaders/model.vsb");
+  auto vsh_file = FileSystem::Instance()->OpenRead("Shaders/Forward/Geometry/model.vsb");
   c3_assert(vsh_file && vsh_file->IsValid());
   auto vsh_mem = mem_alloc(vsh_file->GetSize());
   vsh_file->ReadBytes(vsh_mem->data, vsh_mem->size);
   FileSystem::Instance()->Close(vsh_file);
   auto vsh = GR->CreateShader(vsh_mem);
 
-  auto fsh_file = FileSystem::Instance()->OpenRead("Shaders/model.fsb");
+  auto fsh_file = FileSystem::Instance()->OpenRead("Shaders/Forward/Geometry/model.fsb");
   c3_assert(fsh_file && fsh_file->IsValid());
   auto fsh_mem = mem_alloc(fsh_file->GetSize());
   fsh_file->ReadBytes(fsh_mem->data, fsh_mem->size);

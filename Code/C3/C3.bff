@@ -5,9 +5,9 @@
 						.C3IncludePaths		= ' /I"$C3BasePath$"'
 						.C3CompilerOptions	= ' /wd6262'	// Function uses '%u' bytes of stack:  exceeds /analyze:stacksize '16384'.  Consider moving some data to heap.
 											+ ' /wd6319'
-                      + ' /wd6385'
-                      + ' /wd6011'
-                      + ' /wd6255'
+											+ ' /wd6385'
+											+ ' /wd6011'
+											+ ' /wd6255'
 											+ ' /wd28251'	// warning C28251: Inconsistent annotation for '_setjmp': this instance has no annotations. See <no file>(0).
 											+ ' /wd28252'
 											+ ' /wd28253'
@@ -43,6 +43,7 @@
 		Using( .LibIconv_Windows_MSVC )
 		Using( .IMGUI_Windows_MSVC )
 		Using( .Lz4_Windows_MSVC )
+		Using( .Gason_Windows_MSVC )
 
 		// Static Library
 		Library( '$ProjectName$-Lib-$Platform$-$Config$' )
@@ -54,6 +55,7 @@
 										+ .LibIconvIncludePaths
 										+ .IMGUIIncludePaths
 										+ .Lz4IncludePaths
+										+ .GasonIncludePaths
 
 			.PCHInputFile				= '$C3BasePath$\$PCHName$.cpp'
 			.PCHOutputFile				= '$OutputBase$\$ProjectName$\$PCHName$.pch'

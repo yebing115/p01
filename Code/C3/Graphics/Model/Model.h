@@ -2,6 +2,7 @@
 #include "Data/DataType.h"
 #include "Data/String.h"
 #include "Pattern/Handle.h"
+#include "Asset/AssetManager.h"
 
 struct ModelPart {
   u32 _start_index;
@@ -10,7 +11,7 @@ struct ModelPart {
 };
 
 struct Model {
-  stringid _filename;
+  char _filename[MAX_ASSET_NAME];
   VertexBufferHandle _vb;
   IndexBufferHandle _ib;
   AABB _aabb;

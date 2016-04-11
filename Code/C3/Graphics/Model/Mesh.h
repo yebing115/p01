@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Graphics/Material/Material.h"
-
 #define MAX_MESH_ATTRS  10
+#define MAX_MESH_MATERIAL_NAME_LEN 64
+#define MAX_MESH_PART_NAME_LEN 64
 
 enum MeshAttrFlag {
   MESH_ATTR_DEFAULT = 0,
@@ -13,7 +13,6 @@ enum MeshAttrFlag {
 #pragma pack(push, 1)
 /************************************************************************/
 /* MeshHeader
-/* MeshStringTable + strings
 /* MeshMaterial[num_materials]
 /* MeshPart[num_parts]
 /* VertexData
@@ -31,36 +30,25 @@ struct MeshAttr {
   u8 flags;
 };
 
-struct MeshMaterialParam {
-  MaterialParamType type;
-  union {
-    vec _vec;
-    struct {
-      stringid _filename;
-      u32 _flags;
-    } _tex2d;
-  };
-};
-
 struct MeshMaterial {
-  stringid material_shader;
-  u32 num_params;
-  MeshMaterialParam params;
+  char filename[MAX_MESH_MATERIAL_NAME_LEN];
 };
 
 struct MeshPart {
-  stringid name;
-  stringid material;
+  char name[MAX_MESH_PART_NAME_LEN];
+  u32 material_index;
   u32 start_index;
   u32 num_indices;
-  AABB aabb;
+  float3 aabb_min;
+  float3 aabb_max;
 };
 
 struct MeshHeader {
   u32 magic;
   u32 num_vertices;
   u32 num_indices;
-  AABB aabb;
+  float3 aabb_min;
+  float3 aabb_max;
   u16 vertex_stride;
   u16 num_attrs;
   u16 num_materials;

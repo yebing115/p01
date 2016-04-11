@@ -1,14 +1,6 @@
 #include "C3PCH.h"
 #include "MEXModelLoader.h"
 
-struct CreateModelParam {
-  Model* _model;
-  MeshHeader* _header;
-  VertexDecl _decl;
-  const MemoryRegion* _vb_mem;
-  const MemoryRegion* _ib_mem;
-};
-
 DEFINE_JOB_ENTRY(load_mex_model) {
   auto asset = (Asset*)arg;
   auto f = FileSystem::Instance()->OpenRead(asset->_desc._filename);
@@ -27,8 +19,9 @@ DEFINE_JOB_ENTRY(load_mex_model) {
   asset->_header->_num_depends = 0;
   auto model = (Model*)asset->_header->GetData();
 
-  model->_filename = String::GetID(asset->_desc._filename);
-  model->_aabb = header.aabb;
+  strcpy(model->_filename, asset->_desc._filename);
+  model->_aabb.minPoint = header.aabb_min;
+  model->_aabb.maxPoint = header.aabb_max;
   model->_num_parts = header.num_parts;
   ModelPart* part = model->_parts;
   ModelPart* part_end = model->_parts + header.num_parts;
@@ -38,10 +31,10 @@ DEFINE_JOB_ENTRY(load_mex_model) {
     f->ReadBytes(&mesh_part, sizeof(MeshPart));
     part->_start_index = mesh_part.start_index;
     part->_num_indices = mesh_part.num_indices;
-    part->_aabb = mesh_part.aabb;
+    part->_aabb.minPoint = mesh_part.aabb_min;
+    part->_aabb.maxPoint = mesh_part.aabb_max;
   }
 
-  CreateModelParam param;
   auto vb_mem = mem_alloc(header.num_vertices * header.vertex_stride);
   int index_size = header.num_indices >= 0x10000 ? 4 : 2;
   auto ib_mem = mem_alloc(header.num_indices * index_size);

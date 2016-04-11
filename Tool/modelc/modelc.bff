@@ -41,6 +41,7 @@
 		Using( .LibIconv_Windows_MSVC )
 		Using( .IMGUI_Windows_MSVC )
 		Using( .Assimp_Windows_MSVC )
+		Using( .Gason_Windows_MSVC )
 		
 		// Objects
 		ObjectList( '$ProjectName$-Lib-$Platform$-$Config$' )
@@ -59,6 +60,7 @@
 										+ .LibIconvIncludePaths
 										+ .IMGUIIncludePaths
 										+ .AssimpIncludePaths
+										+ .GasonIncludePaths
 										+ ' /wd4201'
 										+ ' /wd28183'
 										+ ' -D"NO_LOG_MANAGER"'
@@ -75,6 +77,7 @@
 				'MathGeoLib-Lib-$Platform$-$Config$',
 				'IMGUI-Lib-$Platform$-$Config$',
 				'Assimp-Lib-$Platform$-$Config$',
+				'Gason-Lib-$Platform$-$Config$',
 			}
 			.LinkerOutput				= '$OutputBase$\modelc.exe'
 			.LinkerOptions				+ ' /SUBSYSTEM:CONSOLE'

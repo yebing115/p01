@@ -1,11 +1,6 @@
 #include "C3PCH.h"
 #include "DDSTextureLoader.h"
 
-struct CreateTextureParam {
-  Texture* _texture;
-  const MemoryRegion* _mem;
-};
-
 DEFINE_JOB_ENTRY(load_dds_texture) {
   auto asset = (Asset*)arg;
   auto f = FileSystem::Instance()->OpenRead(asset->_desc._filename);

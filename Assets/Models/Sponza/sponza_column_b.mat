@@ -1,0 +1,1 @@
+{"shader":"model_specular_normal","properties":{"diffuse_tex":{"value":"sponza/sponza_column_b_diff.tga","flags":""},"specular_tex":{"value":"sponza/sponza_column_b_spec.tga","flags":""},"normal_tex":{"value":"sponza/sponza_column_b_ddn.tga","flags":""}}}

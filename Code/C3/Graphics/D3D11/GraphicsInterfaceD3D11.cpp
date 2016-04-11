@@ -1770,7 +1770,7 @@ void GraphicsInterfaceD3D11::Commit(ConstantBuffer& _uniformBuffer) {
       _SetConstant(u8(type), loc, mat4.ptr(), num * 16);
     } break;
     
-    CASE_IMPLEMENT_UNIFORM(BOOL, I, int, 1);
+    CASE_IMPLEMENT_UNIFORM(BOOL32, I, int, 1);
     CASE_IMPLEMENT_UNIFORM(INT, I, int, 1);
     CASE_IMPLEMENT_UNIFORM(FLOAT, I, float, 1);
     CASE_IMPLEMENT_UNIFORM(VEC2, F, float, 2);

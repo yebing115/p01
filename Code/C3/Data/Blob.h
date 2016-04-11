@@ -15,7 +15,7 @@ public:
   void WriteString(const char* string);
   template <class T> void Write(const T& value) { Write(&value, sizeof(T)); }
   template <> void Write<bool>(const bool& value) {
-    u8 v = value;
+    u32 v = value;
     Write(&v, sizeof(v));
   }
   void Clear() { _pos = 0; }
@@ -41,7 +41,7 @@ public:
     return v;
   }
   template <> bool Read<bool>() {
-    u8 v;
+    u32 v;
     Read(&v, sizeof(v));
     return v != 0;
   }

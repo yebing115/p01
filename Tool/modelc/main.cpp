@@ -1,11 +1,14 @@
 #include <assimp/Importer.hpp>      // C++ importer interface
+#include <assimp/material.h>
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 #include "Data/DataType.h"
 #include "Data/String.h"
+#include "Data/Json.h"
 #include "Graphics/GraphicsTypes.h"
 #include "Graphics/VertexFormat.h"
 #include "Graphics/GraphicsRenderer.h"
@@ -18,11 +21,11 @@ struct ProgramOption {
   stringid input_type;
   String input_filename;
   String output_filename;
+  String output_dir;
   String model_name;
   u32 attr_mask;
   u32 verbose;
 } g_options;
-
 
 void error(const char* fmt, ...) {
   char buf[1024];
@@ -43,15 +46,95 @@ void copy_vertex_attr(u8* buf, u32 num, u16 stride, const void* attr_data, size_
   }
 }
 
+void process_material(aiMaterial* material, const char* filename) {
+  bool has_specular_tex = (material->GetTextureCount(aiTextureType_SPECULAR) > 0);
+  bool has_normal_tex = (material->GetTextureCount(aiTextureType_NORMALS) > 0);
+  bool has_opacity_tex = (material->GetTextureCount(aiTextureType_OPACITY) > 0);
+
+  u32 buf_capacity = 256 << 10;
+  char* buf = (char*)malloc(buf_capacity);
+  JsonWriter writer(buf, buf_capacity);
+
+  const char* flags_string = "";
+  aiString path;
+  aiTextureMapMode mapmode = aiTextureMapMode_Wrap;
+  
+  writer.BeginWriteObject();
+  if (has_specular_tex && has_normal_tex) writer.WriteString("shader", "model_specular_normal");
+  else if (has_specular_tex) writer.WriteString("shader", "model_specular");
+  else if (has_normal_tex) writer.WriteString("shader", "model_normal");
+  else writer.WriteString("shader", "model_diffuse");
+  
+  writer.BeginWriteObject("properties");
+
+  {
+    writer.BeginWriteObject("diffuse_tex");
+    material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr,
+                         nullptr, nullptr, &mapmode);
+    if (mapmode == aiTextureMapMode_Clamp) flags_string = "UV_CLAMP";
+    else if (mapmode == aiTextureMapMode_Mirror) flags_string = "UV_MIRROR";
+    writer.WriteString("value", path.C_Str());
+    writer.WriteString("flags", flags_string);
+    writer.EndWriteObject();
+  }
+
+  if (has_opacity_tex) {
+    writer.BeginWriteObject("opacity_tex");
+    material->GetTexture(aiTextureType_OPACITY, 0, &path, nullptr, nullptr,
+                         nullptr, nullptr, &mapmode);
+    if (mapmode == aiTextureMapMode_Clamp) flags_string = "UV_CLAMP";
+    else if (mapmode == aiTextureMapMode_Mirror) flags_string = "UV_MIRROR";
+    writer.WriteString("value", path.C_Str());
+    writer.WriteString("flags", flags_string);
+    writer.EndWriteObject();
+  }
+
+  if (has_specular_tex) {
+    writer.BeginWriteObject("specular_tex");
+    material->GetTexture(aiTextureType_SPECULAR, 0, &path, nullptr, nullptr,
+                         nullptr, nullptr, &mapmode);
+    if (mapmode == aiTextureMapMode_Clamp) flags_string = "UV_CLAMP";
+    else if (mapmode == aiTextureMapMode_Mirror) flags_string = "UV_MIRROR";
+    writer.WriteString("value", path.C_Str());
+    writer.WriteString("flags", flags_string);
+    writer.EndWriteObject();
+  }
+
+  if (has_normal_tex) {
+    writer.BeginWriteObject("normal_tex");
+    material->GetTexture(aiTextureType_NORMALS, 0, &path, nullptr, nullptr,
+                         nullptr, nullptr, &mapmode);
+    if (mapmode == aiTextureMapMode_Clamp) flags_string = "UV_CLAMP";
+    else if (mapmode == aiTextureMapMode_Mirror) flags_string = "UV_MIRROR";
+    writer.WriteString("value", path.C_Str());
+    writer.WriteString("flags", flags_string);
+    writer.EndWriteObject();
+  }
+
+  writer.EndWriteObject(); // properties
+  writer.EndWriteObject(); // root
+  if (!writer.IsValid()) error("Failed to import material '%s'.\n", filename);
+
+  char fullpath[256];
+  strcpy(fullpath, g_options.output_dir.GetCString());
+  strcat(fullpath, "/");
+  strcat(fullpath, filename);
+  FILE* f = fopen(fullpath, "wb");
+  if (!f) error("Failed to open: '%s'\n", fullpath);
+  fwrite(buf, 1, strlen(buf), f);
+  fclose(f);
+  free(buf);
+}
+
 void process(const aiScene* scene) {
   MeshHeader header;
+  AABB model_aabb;
   memset(&header, 0, sizeof(header));
   header.magic = C3_CHUNK_MAGIC_MEX;
-  header.aabb.SetNegativeInfinity();
+  model_aabb.SetNegativeInfinity();
   vector<MeshPart> parts;
   VertexDecl decl;
   unordered_set<String> part_names;
-  unordered_set<String> material_names;
   unordered_map<String, int> dup_part_names;
   if (scene->mNumMeshes == 0) error("No mesh.\n");
   aiMesh* first_mesh = scene->mMeshes[0];
@@ -112,11 +195,26 @@ void process(const aiScene* scene) {
   header.vertex_stride = decl.stride;
   header.num_attrs = attr - header.attrs;
 
+  header.num_materials = scene->mNumMaterials;
+  vector<MeshMaterial> materials(header.num_materials);
+  for (u32 i = 0; i < scene->mNumMaterials; ++i) {
+    auto& mesh_material = materials[i];
+    memset(&mesh_material, 0, sizeof(mesh_material));
+    auto mat = scene->mMaterials[i];
+    aiString name;
+    if (mat->Get(AI_MATKEY_NAME, name) == aiReturn_SUCCESS) {
+      sprintf(mesh_material.filename, "%s_%s.mat", g_options.model_name.GetCString(),
+              name.C_Str());
+      process_material(mat, mesh_material.filename);
+    }
+  }
+
   u8* vertex_buf = nullptr;
   u32 num_vertices = 0;
   u8* index_buf = nullptr;
   u32 num_indices = 0;
   u32 index_size = 2;
+  // Ensure every part has different name, rename and append suffix '_1', '_2' ... if needed.
   auto patch_part_name = [](const unordered_set<String>& names, unordered_map<String, int>& dups,
                             String& part_name, const String& last_part_name) {
     if (names.count(part_name) == 0 && part_name != "defaultobject") return;
@@ -149,17 +247,8 @@ void process(const aiScene* scene) {
       patch_part_name(part_names, dup_part_names, part_name, last_part_name);
       last_part_name = part_name;
       part_names.insert(part_name);
-      part.name = part_name.GetID();
-      if (scene->HasMaterials()) {
-        aiMaterial* material = scene->mMaterials[sub_mesh->mMaterialIndex];
-        aiString material_name;
-        if (aiGetMaterialString(material, AI_MATKEY_NAME, &material_name) == aiReturn_SUCCESS) {
-          part.material = String::GetID(material_name.C_Str());
-          material_names.insert(material_name.C_Str());
-        } else {
-          part.material = 0;
-        }
-      } else part.material = 0;
+      strcpy(part.name, part_name.GetCString());
+      part.material_index = sub_mesh->mMaterialIndex;
       part.start_index = num_indices;
       part.num_indices = sub_mesh->mNumFaces * 3;
       u32 vstart_offset = num_vertices * decl.stride;
@@ -168,8 +257,11 @@ void process(const aiScene* scene) {
       copy_vertex_attr(vertex_buf + vstart_offset,
                        sub_mesh->mNumVertices, decl.stride,
                        sub_mesh->mVertices, sizeof(float) * 3);
-      part.aabb.SetFrom((vec*)sub_mesh->mVertices, sub_mesh->mNumVertices);
-      header.aabb.Enclose(part.aabb);
+      AABB part_aabb;
+      part_aabb.SetFrom((vec*)sub_mesh->mVertices, sub_mesh->mNumVertices);
+      model_aabb.Enclose(part_aabb);
+      part.aabb_min = part_aabb.minPoint;
+      part.aabb_max = part_aabb.maxPoint;
       if (sub_mesh->HasNormals()) {
         copy_vertex_attr(vertex_buf + vstart_offset + decl.offsets[VERTEX_ATTR_NORMAL],
                          sub_mesh->mNumVertices, decl.stride,
@@ -228,6 +320,8 @@ void process(const aiScene* scene) {
       }
     }
   }
+  header.aabb_min = model_aabb.minPoint;
+  header.aabb_max = model_aabb.maxPoint;
   header.num_parts = (u16)parts.size();
   header.num_vertices = num_vertices;
   header.num_indices = num_indices;
@@ -235,17 +329,17 @@ void process(const aiScene* scene) {
   FILE* f = fopen(g_options.output_filename.GetCString(), "wb");
   if (!f) error("Failed to open output file '%s'.", g_options.output_filename.GetCString());
   fseek(f, sizeof(header), SEEK_SET);
-  u32 strings_size = 0;
-  for (auto& name : part_names) strings_size += name.GetLength() + 1;
-  for (auto& name : material_names) strings_size += name.GetLength() + 1;
-  fwrite(&strings_size, sizeof(u32), 1, f);
-  for (auto& name : part_names) fwrite(name.GetCString(), name.GetLength() + 1, 1, f);
-  for (auto& name : material_names) fwrite(name.GetCString(), name.GetLength() + 1, 1, f);
 
+  u32 file_offset;
   u8 zeros[16];
   memset(zeros, 0, sizeof(zeros));
 
-  u32 file_offset = (u32)ftell(f);
+  file_offset = (u32)ftell(f);
+  header.material_data_offset = ALIGN_16(file_offset);
+  fwrite(zeros, 1, header.material_data_offset - file_offset, f);
+  fwrite(materials.data(), sizeof(MeshMaterial), materials.size(), f);
+
+  file_offset = (u32)ftell(f);
   header.part_data_offset = ALIGN_16(file_offset);
   fwrite(zeros, 1, header.part_data_offset - file_offset, f);
   fwrite(parts.data(), sizeof(MeshPart), parts.size(), f);
@@ -267,16 +361,15 @@ void process(const aiScene* scene) {
   if (index_buf) free(index_buf);
 
   if (g_options.verbose) {
-    auto find_string = [](const unordered_set<String>& table, stringid name) -> const char* {
-      for (auto& s : table) if (s.GetID() == name) return s.GetCString();
-      return "";
-    };
-
+    printf("Materials:\n");
+    for (int i = 0; i < materials.size(); ++i) {
+      printf("  %d: %s\n", i, materials[i].filename);
+    }
     printf("Vertices: %d, Tris: %d, Parts: %d, %s\n", header.num_vertices,
-           header.num_indices / 3, header.num_parts, header.aabb.ToString().c_str());
+           header.num_indices / 3, header.num_parts, model_aabb.ToString().c_str());
     for (auto& p : parts) {
-      printf("%16s: Tris: %d, Material: %s\n", find_string(part_names, p.name),
-             p.num_indices / 3, find_string(material_names, p.material));
+      printf("%16s: Tris: %d, Material: %d\n", p.name,
+             p.num_indices / 3, p.material_index);
     }
     decl.Dump();
   }
@@ -292,8 +385,12 @@ int main(int argc, char* argv[]) {
   g_options.input_type = g_options.input_filename.GetLastSection('.').MakeLower().GetID();
   g_options.attr_mask = (1 << VERTEX_ATTR_POSITION);
   g_options.verbose = 1;
+  g_options.output_dir = ".";
   int idx = max(g_options.model_name.FindLast('/'), g_options.model_name.FindLast('\\'));
   if (idx != -1) g_options.model_name = g_options.model_name.Substr(idx + 1);
+  idx = max(g_options.output_filename.FindLast('/'),
+                g_options.output_filename.FindLast('\\'));
+  if (idx != -1) g_options.output_dir = g_options.output_filename.Substr(0, idx);
 
   Assimp::Importer importer;
   unsigned int flags = aiProcess_CalcTangentSpace |

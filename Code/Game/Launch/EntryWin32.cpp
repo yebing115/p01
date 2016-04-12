@@ -97,7 +97,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     IM->NewFrame(dt);
 
     GraphicsRenderer::Instance()->Reset((u16)s_window_size.x, (u16)s_window_size.y,
-                                        C3_RESET_VSYNC);
+                                        C3_RESET_VSYNC | C3_RESET_SRGB_BACKBUFFER);
 
     IO.KeyCtrl = (GetKeyState(VK_LCONTROL) & 0x8000) || (GetKeyState(VK_RCONTROL) & 0x8000);
     IO.KeyShift = (GetKeyState(VK_LSHIFT) & 0x8000) || (GetKeyState(VK_RSHIFT) & 0x8000);

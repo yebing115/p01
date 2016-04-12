@@ -152,8 +152,8 @@ struct TextureFormatInfo {
 static const TextureFormatInfo s_textureFormat[] = {
   {DXGI_FORMAT_R8_UNORM, DXGI_FORMAT_R8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN}, // RED_8_TEXTURE_FORMAT
   {DXGI_FORMAT_R8G8_UNORM, DXGI_FORMAT_R8G8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN}, // RG_8_TEXTURE_FORMAT
-  {DXGI_FORMAT_B8G8R8X8_UNORM, DXGI_FORMAT_B8G8R8X8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_B8G8R8X8_UNORM_SRGB}, // RGB_8_TEXTURE_FORMAT
-  {DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB}, // RGBA_8_TEXTURE_FORMAT
+  {DXGI_FORMAT_B8G8R8X8_TYPELESS, DXGI_FORMAT_B8G8R8X8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_B8G8R8X8_UNORM_SRGB}, // RGB_8_TEXTURE_FORMAT
+  {DXGI_FORMAT_B8G8R8A8_TYPELESS, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB}, // RGBA_8_TEXTURE_FORMAT
   {DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN}, // RED_32_FLOAT_TEXTURE_FORMAT
   {DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN}, // RGB_16_FLOAT_TEXTURE_FORMAT
   {DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN}, // RGBA_16_FLOAT_TEXTURE_FORMAT
@@ -162,10 +162,10 @@ static const TextureFormatInfo s_textureFormat[] = {
   {DXGI_FORMAT_R16_TYPELESS, DXGI_FORMAT_R16_UNORM, DXGI_FORMAT_D16_UNORM, DXGI_FORMAT_UNKNOWN}, // DEPTH_16_TEXTURE_FORMAT
   {DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_R24_UNORM_X8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT, DXGI_FORMAT_UNKNOWN}, // DEPTH_24_TEXTURE_FORMAT
   {DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_R24_UNORM_X8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT, DXGI_FORMAT_UNKNOWN}, // DEPTH_32_TEXTURE_FORMAT
-  {DXGI_FORMAT_BC1_UNORM, DXGI_FORMAT_BC1_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC1_UNORM_SRGB}, // DXT1_RGB_TEXTURE_FORMAT
-  {DXGI_FORMAT_BC1_UNORM, DXGI_FORMAT_BC1_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC1_UNORM_SRGB}, // DXT1_ARGB_TEXTURE_FORMAT
-  {DXGI_FORMAT_BC2_UNORM, DXGI_FORMAT_BC2_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC2_UNORM_SRGB}, // DXT3_ARGB_TEXTURE_FORMAT
-  {DXGI_FORMAT_BC3_UNORM, DXGI_FORMAT_BC3_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC3_UNORM_SRGB}, // DXT5_ARGB_TEXTURE_FORMAT
+  {DXGI_FORMAT_BC1_TYPELESS, DXGI_FORMAT_BC1_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC1_UNORM_SRGB}, // DXT1_RGB_TEXTURE_FORMAT
+  {DXGI_FORMAT_BC1_TYPELESS, DXGI_FORMAT_BC1_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC1_UNORM_SRGB}, // DXT1_ARGB_TEXTURE_FORMAT
+  {DXGI_FORMAT_BC2_TYPELESS, DXGI_FORMAT_BC2_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC2_UNORM_SRGB}, // DXT3_ARGB_TEXTURE_FORMAT
+  {DXGI_FORMAT_BC3_TYPELESS, DXGI_FORMAT_BC3_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC3_UNORM_SRGB}, // DXT5_ARGB_TEXTURE_FORMAT
 };
 
 static const D3D11_INPUT_ELEMENT_DESC s_attrib[] =
@@ -562,21 +562,9 @@ void TextureD3D11::Create(const MemoryRegion* mem, u32 flags, u8 skip) {
     D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
     memset(&srvd, 0, sizeof(srvd));
 
-    DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
-    if (swizzle) {
-      format = srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
-      srvd.Format = format;
-    } else if (srgb) {
-      format = s_textureFormat[_texture_format].m_fmtSrgb;
-      srvd.Format = format;
-      if (format == DXGI_FORMAT_UNKNOWN) c3_log("sRGB not supported for texture format %d\n", _texture_format);
-    }
-
-    if (format == DXGI_FORMAT_UNKNOWN) {
-      // not swizzled and not sRGB, or sRGB unsupported
-      format = s_textureFormat[_texture_format].m_fmt;
-      srvd.Format = s_textureFormat[_texture_format].m_fmtSrv;
-    }
+    DXGI_FORMAT tex_format = s_textureFormat[_texture_format].m_fmt;
+    DXGI_FORMAT srv_format = s_textureFormat[_texture_format].m_fmtSrv;
+    DXGI_FORMAT srv_srgb_format = s_textureFormat[_texture_format].m_fmtSrgb;
 
     switch (_type) {
     case Texture2D:
@@ -585,7 +573,7 @@ void TextureD3D11::Create(const MemoryRegion* mem, u32 flags, u8 skip) {
       desc.Width = texture_width;
       desc.Height = texture_height;
       desc.MipLevels = num_mips;
-      desc.Format = format;
+      desc.Format = tex_format;
       desc.SampleDesc = msaa;
       desc.Usage = kk == 0 || blit ? D3D11_USAGE_DEFAULT : D3D11_USAGE_IMMUTABLE;
       desc.BindFlags = buffer_only ? 0 : D3D11_BIND_SHADER_RESOURCE;
@@ -636,7 +624,7 @@ void TextureD3D11::Create(const MemoryRegion* mem, u32 flags, u8 skip) {
       desc.Height = texture_height;
       desc.Depth = image_container.depth;
       desc.MipLevels = image_container.num_mips;
-      desc.Format = format;
+      desc.Format = srv_format;
       desc.Usage = kk == 0 || blit ? D3D11_USAGE_DEFAULT : D3D11_USAGE_IMMUTABLE;
       desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
       desc.CPUAccessFlags = 0;
@@ -656,7 +644,12 @@ void TextureD3D11::Create(const MemoryRegion* mem, u32 flags, u8 skip) {
 
     if (!buffer_only) {
       ID3D11Resource* res = _resolved_texture2d ? _resolved_texture2d : _ptr;
+      srvd.Format = srv_format;
       DX_CHECK(g_interface->_device->CreateShaderResourceView(res, &srvd, &_srv));
+      if (srv_srgb_format != DXGI_FORMAT_UNKNOWN) {
+        srvd.Format = srv_srgb_format;
+        DX_CHECK(g_interface->_device->CreateShaderResourceView(res, &srvd, &_srv_srgb));
+      } else _srv_srgb = nullptr;
     }
     if (compute_write) DX_CHECK(g_interface->_device->CreateUnorderedAccessView(_ptr, NULL, &_uav));
 
@@ -720,9 +713,10 @@ void TextureD3D11::Update(u8 side, u8 mip, const TextureRect& rect, u16 z, u16 d
 
 void TextureD3D11::Commit(u8 stage, u32 flags_, const float palette[][4]) {
   TextureStage& ts = g_interface->_texture_stage;
-  ts._srv[stage] = _srv;
   u32 flags = (C3_SAMPLER_DEFAULT_FLAGS & flags_) ? _flags : flags_;
   u32 index = (flags & C3_TEXTURE_BORDER_COLOR_MASK) >> C3_TEXTURE_BORDER_COLOR_SHIFT;
+
+  ts._srv[stage] = ((flags & C3_TEXTURE_SRGB) && _srv_srgb) ? _srv_srgb : _srv;
   ts._sampler[stage] = g_interface->GetSamplerState(flags, palette[index]);
 }
 

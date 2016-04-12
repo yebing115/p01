@@ -1,7 +1,7 @@
 in vec3 a_position;
 in vec3 a_normal;
 #if USE_NORMAL_MAP
-in vec3 a_tangent;
+in vec4 a_tangent;
 #endif
 in vec2 a_texcoord0;
 
@@ -24,8 +24,8 @@ void main() {
   POSITION = pos_out;
   normal_varying = normalize(a_normal * mat3(u_model));
 #if USE_NORMAL_MAP
-  tangent_varying = a_tangent;
-  light_dir_varying = normalize(LIGHT_DIR * transpose(mat3(u_model))) * transpose(mat3(a_tangent, cross(a_normal, a_tangent), a_normal));
+  tangent_varying = a_tangent.rgb;
+  light_dir_varying = normalize(LIGHT_DIR * transpose(mat3(u_model))) * transpose(mat3(a_tangent.rgb, cross(a_normal, a_tangent.rgb) * a_tangent.a, a_normal));
 #else
   light_dir_varying = LIGHT_DIR;
 #endif

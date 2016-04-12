@@ -163,9 +163,9 @@ void process(const aiScene* scene) {
     ++attr;
 }
   if (first_mesh->HasTangentsAndBitangents()) {
-    decl.Add(VERTEX_ATTR_TANGENT, 3, FLOAT_TYPE);
+    decl.Add(VERTEX_ATTR_TANGENT, 4, FLOAT_TYPE);
     attr->attr = VERTEX_ATTR_TANGENT;
-    attr->num = 3;
+    attr->num = 4;
     attr->data_type = FLOAT_TYPE;
     attr->flags = MESH_ATTR_DEFAULT;
     ++attr;
@@ -282,6 +282,15 @@ void process(const aiScene* scene) {
         copy_vertex_attr(vertex_buf + vstart_offset + decl.offsets[VERTEX_ATTR_TANGENT],
                          sub_mesh->mNumVertices, decl.stride,
                          sub_mesh->mTangents, sizeof(float) * 3);
+        u8* start = vertex_buf + vstart_offset + decl.offsets[VERTEX_ATTR_TANGENT];
+        for (int i = 0; i < sub_mesh->mNumVertices; ++i) {
+          float3* tangent = (float3*)&sub_mesh->mTangents[i];
+          float3* bitangent = (float3*)&sub_mesh->mBitangents[i];
+          float3* normal = (float3*)&sub_mesh->mNormals[i];
+          float sign = Sign(Dot(Cross(*tangent, *bitangent), *normal));
+          float4* t4 = (float4*)(start + i * decl.stride);
+          t4->w = sign;
+        }
       }
       if (sub_mesh->HasTextureCoords(0)) {
         copy_vertex_attr(vertex_buf + vstart_offset + decl.offsets[VERTEX_ATTR_TEXCOORD0],

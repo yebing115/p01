@@ -168,15 +168,15 @@ static bool load_material_shader_param(const char* asset_filename, JsonReader& r
       } else if (param._type == MATERIAL_PARAM_TEXTURE2D) {
         param._constant_handle = GR->CreateConstant(String::GetID(param._name), CONSTANT_INT);
         param._tex2d._unit = num_textures++;
-        param._tex2d._flags = C3_TEXTURE_NONE;
+        param._tex2d._flags = C3_TEXTURE_MAG_ANISOTROPIC | C3_TEXTURE_MIN_ANISOTROPIC;
         char texture_filename[MAX_ASSET_NAME];
         char flag_str[MAX_MATERIAL_KEY_LEN];
         if (reader.ReadString("value", texture_filename, sizeof(texture_filename))) {
           param._tex2d._asset = load_texture_asset(asset_filename, texture_filename);
         }
         if (reader.ReadString("flags", flag_str, sizeof(flag_str))) {
-          if (strcmp(flag_str, "UV_CLAMP") == 0) param._tex2d._flags = C3_TEXTURE_U_CLAMP | C3_TEXTURE_V_CLAMP;
-          else if (strcmp(flag_str, "UV_MIRROR") == 0) param._tex2d._flags = C3_TEXTURE_U_MIRROR | C3_TEXTURE_V_MIRROR;
+          if (strcmp(flag_str, "UV_CLAMP") == 0) param._tex2d._flags |= C3_TEXTURE_U_CLAMP | C3_TEXTURE_V_CLAMP;
+          else if (strcmp(flag_str, "UV_MIRROR") == 0) param._tex2d._flags |= C3_TEXTURE_U_MIRROR | C3_TEXTURE_V_MIRROR;
         }
       }
     }

@@ -19,7 +19,8 @@ in vec3 light_dir_varying;
 
 out vec4 color_out;
 
-const vec3 AMBIENT_LIGHT = vec3(0.1, 0.1, 0.1);
+const vec3 AMBIENT_LIGHT = vec3(0.0, 0.0, 0.0);
+const vec3 SUN_COLOR = vec3(0.06299, 0.374256, 1.0); // 64, 156, 255
 
 void main() {
   vec3 color = texture(diffuse_tex, texcoord_varying).rgb * diffuse_color;
@@ -33,7 +34,7 @@ void main() {
 #else
   n = normalize(normal_varying);
 #endif
-  color_out.rgb = clamp(AMBIENT_LIGHT + color * max(0.0, dot(n, light_dir)), vec3(0.0), vec3(1.0)) * alpha;
+  color_out.rgb = clamp(AMBIENT_LIGHT + color * SUN_COLOR * max(0.0, dot(n, light_dir)), vec3(0.0), vec3(1.0)) * alpha;
   color_out.a = alpha;
 }
 

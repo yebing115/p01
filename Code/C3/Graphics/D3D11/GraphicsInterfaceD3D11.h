@@ -207,6 +207,7 @@ struct TextureD3D11 {
   ID3D11Texture2D* _resolved_texture2d;
 
   ID3D11ShaderResourceView* _srv;
+  ID3D11ShaderResourceView* _srv_srgb;
   ID3D11UnorderedAccessView* _uav;
   u32 _flags;
   u32 _width;

@@ -41,7 +41,7 @@ struct AssetMemoryHeader;
 struct Asset {
   atomic<AssetState> _state;
   SpinLock _lock;
-  u32 _ref;
+  atomic_u32 _ref;
   AssetDesc _desc;
   AssetOperations* _ops;
   AssetMemoryHeader* _header;
@@ -70,6 +70,8 @@ public:
   void Load(Asset* asset);
   atomic_int* LoadAsync(Asset* asset);
   void Unload(Asset* asset);
+
+  void InitBuiltinAssets();
 
   static bool Resolve(AssetType type, const char* filename, AssetDesc& out_desc, AssetOperations*& out_ops);
 

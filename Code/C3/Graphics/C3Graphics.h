@@ -6,4 +6,5 @@
 #include "Graphics/Model/Mesh.h"
 #include "Graphics/Model/Model.h"
 #include "Graphics/Material/Texture.h"
+#include "Graphics/Material/Material.h"
 

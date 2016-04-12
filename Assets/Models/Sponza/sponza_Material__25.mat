@@ -1,1 +1,1 @@
-{"shader":"model_normal","properties":{"diffuse_tex":{"value":"sponza/lion.tga","flags":""},"normal_tex":{"value":"sponza/lion_ddn.tga","flags":""}}}
+{"shader":"model_normal","properties":{"diffuse_tex":{"value":"lion.tga","flags":""},"normal_tex":{"value":"lion_ddn.tga","flags":""}}}

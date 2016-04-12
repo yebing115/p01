@@ -54,13 +54,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
   auto JS = JobScheduler::CreateInstance();
   JS->Init(thread::hardware_concurrency());
   AssetManager::CreateInstance();
-
   GraphicsRenderer::CreateInstance();
   if (!InitWindow(hInstance, nCmdShow) ||
       !GraphicsRenderer::Instance()->Init(D3D11_WIN_API)) {
     return false;
   }
-
+  AssetManager::Instance()->InitBuiltinAssets();
   auto IM = InputManager::CreateInstance();
 
   s_app = AppConfig::CreateApplication();

@@ -1,1 +1,1 @@
-{"shader":"model_specular_normal","properties":{"diffuse_tex":{"value":"sponza/sponza_column_a_diff.tga","flags":""},"specular_tex":{"value":"sponza/sponza_column_a_spec.tga","flags":""},"normal_tex":{"value":"sponza/sponza_column_a_ddn.tga","flags":""}}}
+{"shader":"model_specular_normal","properties":{"diffuse_tex":{"value":"sponza_column_a_diff.tga","flags":""},"specular_tex":{"value":"sponza_column_a_spec.tga","flags":""},"normal_tex":{"value":"sponza_column_a_ddn.tga","flags":""}}}

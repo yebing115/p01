@@ -4,10 +4,11 @@
 #include "Memory/MemoryRegion.h"
 #include "Platform/Windows/WindowsHeader.h"
 #include "Algorithm/Hasher.h"
+#include "Graphics/ConstantBuffer.h"
 #include <assert.h>
 
 struct ConstantRemap {
-  ConstantType constant_type;
+  int constant_type;
   D3D_SHADER_VARIABLE_CLASS paramClass;
   D3D_SHADER_VARIABLE_TYPE paramType;
   u8 columns;
@@ -21,13 +22,13 @@ static const ConstantRemap s_constant_remaps[] = {
   {CONSTANT_VEC4, D3D_SVC_VECTOR, D3D_SVT_FLOAT, 0, 0},
   {CONSTANT_MAT3, D3D_SVC_MATRIX_COLUMNS, D3D_SVT_FLOAT, 3, 3},
   {CONSTANT_MAT4, D3D_SVC_MATRIX_COLUMNS, D3D_SVT_FLOAT, 4, 4},
-  {CONSTANT_INT, D3D_SVC_OBJECT, D3D_SVT_SAMPLER, 0, 0},
-  {CONSTANT_INT, D3D_SVC_OBJECT, D3D_SVT_SAMPLER2D, 0, 0},
-  {CONSTANT_INT, D3D_SVC_OBJECT, D3D_SVT_SAMPLER3D, 0, 0},
-  {CONSTANT_INT, D3D_SVC_OBJECT, D3D_SVT_SAMPLERCUBE, 0, 0},
+  {CONSTANT_INT | CONSTANT_SAMPLERBIT, D3D_SVC_OBJECT, D3D_SVT_SAMPLER, 0, 0},
+  {CONSTANT_INT | CONSTANT_SAMPLERBIT, D3D_SVC_OBJECT, D3D_SVT_SAMPLER2D, 0, 0},
+  {CONSTANT_INT | CONSTANT_SAMPLERBIT, D3D_SVC_OBJECT, D3D_SVT_SAMPLER3D, 0, 0},
+  {CONSTANT_INT | CONSTANT_SAMPLERBIT, D3D_SVC_OBJECT, D3D_SVT_SAMPLERCUBE, 0, 0},
 };
 
-ConstantType find_constant_type(const D3D11_SHADER_TYPE_DESC& constDesc) {
+int find_constant_type(const D3D11_SHADER_TYPE_DESC& constDesc) {
   for (u32 ii = 0; ii < ARRAY_SIZE(s_constant_remaps); ++ii) {
     const ConstantRemap& remap = s_constant_remaps[ii];
 
@@ -152,13 +153,22 @@ void HLSLWriter::WriteShader(ShaderNode* node) {
         D3D11_SHADER_TYPE_DESC const_desc;
         hr = type->GetDesc(&const_desc);
         if (FAILED(hr)) continue;
-        ConstantType constant_type = find_constant_type(const_desc);
+        int constant_type = find_constant_type(const_desc);
 
         if (CONSTANT_COUNT != constant_type && (var_desc.uFlags & D3D_SVF_USED)) {
           VarDeclNode* c = find_constant(_shader, hash_string(var_desc.Name));
           if (c) c->loc = (u16)var_desc.StartOffset;
         }
       }
+    }
+
+    for (u32 i = 0; i < desc.BoundResources; ++i) {
+      D3D11_SHADER_INPUT_BIND_DESC bind_desc;
+      memset(&bind_desc, 0, sizeof(bind_desc));
+      hr = reflect->GetResourceBindingDesc(i, &bind_desc);
+      if (FAILED(hr)) continue;
+      VarDeclNode* c = find_constant(_shader, hash_string(bind_desc.Name));
+      if (c) c->loc = bind_desc.BindPoint;
     }
 
     f = fopen(g_options.output_filename.GetCString(), "wb");

@@ -1,1 +1,1 @@
-{"shader":"model_specular","properties":{"diffuse_tex":{"value":"sponza/sponza_fabric_diff.tga","flags":""},"specular_tex":{"value":"sponza/sponza_fabric_spec.tga","flags":""}}}
+{"shader":"model_specular","properties":{"diffuse_tex":{"value":"sponza_fabric_diff.tga","flags":""},"specular_tex":{"value":"sponza_fabric_spec.tga","flags":""}}}

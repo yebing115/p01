@@ -10,18 +10,34 @@
 			"BLEND_NORMAL",
 		],
 		"vs_source" : "model.vs",
-		"vs_defines" : [],
+		"vs_defines" : [
+			"USE_NORMAL_MAP",
+		],
 		"fs_source" : "model.fs",
-		"fs_defines" : [],
+		"fs_defines" : [
+			"USE_NORMAL_MAP",
+		],
 		"properties" : {
 			"diffuse_color" : {
-				"type" : "vec4",
+				"type" : "vec3",
 				"value" : "WHITE",
 			},
 			"diffuse_tex" : {
 				"type" : "sampler2D",
-				"texture" : "WHITE",
-			}
+				"value" : "WHITE",
+			},
+			"opacity" : {
+				"type" : "float",
+				"value" : 1,
+			},
+			"opacity_tex" : {
+				"type" : "sampler2D",
+				"value" : "WHITE",
+			},
+			"normal_tex" : {
+				"type" : "sampler2D",
+				"value" : "UP",
+			},
 		}
 	}
 ]

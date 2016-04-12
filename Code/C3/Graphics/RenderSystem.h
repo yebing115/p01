@@ -23,5 +23,4 @@ private:
   ModelRenderer _model_renderer[C3_MAX_MODEL_RENDERERS];
   HandleAlloc<MODEL_RENDERER_HANDLE, C3_MAX_MODEL_RENDERERS> _model_renderer_handles;
   unordered_map<EntityHandle, ModelRendererHandle> _model_renderer_map;
-  ProgramHandle _program;
 };

@@ -124,13 +124,13 @@ bool JsonReader::BeginReadObject(const char* name) {
   if (name) {
     auto child = _current_value.child(name);
     if (child.isObject()) {
-      _stack.push_back(_current_value);
+      PushStack();
       _current_value = child;
       _current_node = _current_value.toNode();
       return true;
     }
   } else if (_current_node && _current_node->value.isObject()) {
-    _stack.push_back(_current_value);
+    PushStack();
     _current_value = _current_node->value;
     _current_node = _current_value.toNode();
     return true;
@@ -169,23 +169,20 @@ bool JsonReader::Peek(char* key, int max_size, JsonValueType* out_type) {
 }
 
 void JsonReader::EndReadObject() {
-  auto& value = _stack.back();
-  _current_node = value.toNode()->next;
-  _current_value = _current_node ? _current_node->value : gason::JsonValue();
-  _stack.pop_back();
+  PopStack();
 }
 
 bool JsonReader::BeginReadArray(const char* name) {
   if (name) {
     auto child = _current_value.child(name);
     if (child.isArray()) {
-      _stack.push_back(_current_value);
+      PushStack();
       _current_value = child;
       _current_node = _current_value.toNode();
       return true;
     }
   } else if (_current_node && _current_node->value.isArray()) {
-    _stack.push_back(_current_value);
+    PushStack();
     _current_value = _current_node->value;
     _current_node = _current_value.toNode();
     return true;
@@ -246,12 +243,23 @@ bool JsonReader::ReadStringElement(char* out, int max_size, const char* default_
 }
 
 void JsonReader::EndReadArray() {
-  auto& value = _stack.back();
-  _current_node = value.toNode()->next;
-  _current_value = _current_node ? _current_node->value : gason::JsonValue();
-  _stack.pop_back();
+  PopStack();
 }
 
 bool JsonReader::IsValid() const {
   return _status == gason::JSON_PARSE_OK;
+}
+
+void JsonReader::PushStack() {
+  Cursor c;
+  c._node = _current_node;
+  c._value = _current_value;
+  _stack.push_back(c);
+}
+
+void JsonReader::PopStack() {
+  auto& c = _stack.back();
+  _current_value = c._value;
+  _current_node = c._node ? c._node->next : nullptr;
+  _stack.pop_back();
 }

@@ -37,13 +37,20 @@ void error(const char* fmt, ...) {
   exit(-1);
 }
 
-void copy_vertex_attr(u8* buf, u32 num, u16 stride, const void* attr_data, size_t elem_size) {
+void copy_vertex_attr(u8* buf, u32 num, u16 stride, const void* attr_data,
+                      size_t elem_size, size_t attr_stride = 0) {
   const u8* src = (const u8*)attr_data;
   for (u32 i = 0; i < num; ++i) {
     memcpy(buf, src, elem_size);
     buf += stride;
-    src += elem_size;
+    if (attr_stride) src += attr_stride;
+    else src += elem_size;
   }
+}
+
+const char* get_basename(const char* str) {
+  const char* p = max<const char*>(strrchr(str, '/'), strrchr(str, '\\'));
+  return p ? ++p : str;
 }
 
 void process_material(aiMaterial* material, const char* filename) {
@@ -69,11 +76,13 @@ void process_material(aiMaterial* material, const char* filename) {
 
   {
     writer.BeginWriteObject("diffuse_tex");
-    material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr,
-                         nullptr, nullptr, &mapmode);
+    if (material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr,
+                             nullptr, nullptr, &mapmode) != aiReturn_SUCCESS) {
+      path = "WHITE";
+    }
     if (mapmode == aiTextureMapMode_Clamp) flags_string = "UV_CLAMP";
     else if (mapmode == aiTextureMapMode_Mirror) flags_string = "UV_MIRROR";
-    writer.WriteString("value", path.C_Str());
+    writer.WriteString("value", get_basename(path.C_Str()));
     writer.WriteString("flags", flags_string);
     writer.EndWriteObject();
   }
@@ -84,7 +93,7 @@ void process_material(aiMaterial* material, const char* filename) {
                          nullptr, nullptr, &mapmode);
     if (mapmode == aiTextureMapMode_Clamp) flags_string = "UV_CLAMP";
     else if (mapmode == aiTextureMapMode_Mirror) flags_string = "UV_MIRROR";
-    writer.WriteString("value", path.C_Str());
+    writer.WriteString("value", get_basename(path.C_Str()));
     writer.WriteString("flags", flags_string);
     writer.EndWriteObject();
   }
@@ -95,7 +104,7 @@ void process_material(aiMaterial* material, const char* filename) {
                          nullptr, nullptr, &mapmode);
     if (mapmode == aiTextureMapMode_Clamp) flags_string = "UV_CLAMP";
     else if (mapmode == aiTextureMapMode_Mirror) flags_string = "UV_MIRROR";
-    writer.WriteString("value", path.C_Str());
+    writer.WriteString("value", get_basename(path.C_Str()));
     writer.WriteString("flags", flags_string);
     writer.EndWriteObject();
   }
@@ -106,7 +115,7 @@ void process_material(aiMaterial* material, const char* filename) {
                          nullptr, nullptr, &mapmode);
     if (mapmode == aiTextureMapMode_Clamp) flags_string = "UV_CLAMP";
     else if (mapmode == aiTextureMapMode_Mirror) flags_string = "UV_MIRROR";
-    writer.WriteString("value", path.C_Str());
+    writer.WriteString("value", get_basename(path.C_Str()));
     writer.WriteString("flags", flags_string);
     writer.EndWriteObject();
   }
@@ -153,12 +162,14 @@ void process(const aiScene* scene) {
     attr->flags = MESH_ATTR_DEFAULT;
     ++attr;
 }
-#if 0
   if (first_mesh->HasTangentsAndBitangents()) {
     decl.Add(VERTEX_ATTR_TANGENT, 3, FLOAT_TYPE);
-    decl.Add(VERTEX_ATTR_BITANGENT, 3, FLOAT_TYPE);
+    attr->attr = VERTEX_ATTR_TANGENT;
+    attr->num = 3;
+    attr->data_type = FLOAT_TYPE;
+    attr->flags = MESH_ATTR_DEFAULT;
+    ++attr;
   }
-#endif
   if (first_mesh->HasTextureCoords(0)) {
     decl.Add(VERTEX_ATTR_TEXCOORD0, 2, FLOAT_TYPE);
     attr->attr = VERTEX_ATTR_TEXCOORD0;
@@ -267,15 +278,20 @@ void process(const aiScene* scene) {
                          sub_mesh->mNumVertices, decl.stride,
                          sub_mesh->mNormals, sizeof(float) * 3);
       }
+      if (sub_mesh->HasTangentsAndBitangents()) {
+        copy_vertex_attr(vertex_buf + vstart_offset + decl.offsets[VERTEX_ATTR_TANGENT],
+                         sub_mesh->mNumVertices, decl.stride,
+                         sub_mesh->mTangents, sizeof(float) * 3);
+      }
       if (sub_mesh->HasTextureCoords(0)) {
         copy_vertex_attr(vertex_buf + vstart_offset + decl.offsets[VERTEX_ATTR_TEXCOORD0],
                          sub_mesh->mNumVertices, decl.stride,
-                         sub_mesh->mTextureCoords[0], sizeof(float) * 2);
+                         sub_mesh->mTextureCoords[0], sizeof(float) * 2, sizeof(float) * 3);
       }
       if (sub_mesh->HasTextureCoords(1)) {
         copy_vertex_attr(vertex_buf + vstart_offset + decl.offsets[VERTEX_ATTR_TEXCOORD1],
                          sub_mesh->mNumVertices, decl.stride,
-                         sub_mesh->mTextureCoords[1], sizeof(float) * 2);
+                         sub_mesh->mTextureCoords[1], sizeof(float) * 2, sizeof(float) * 3);
       }
       if (sub_mesh->HasVertexColors(0)) {
         copy_vertex_attr(vertex_buf + vstart_offset + decl.offsets[VERTEX_ATTR_COLOR0],

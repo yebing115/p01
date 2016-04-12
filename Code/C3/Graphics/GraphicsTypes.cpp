@@ -12,6 +12,7 @@ const u32 PREDEFINED_CONSTANT_NAME[PREDEFINED_CONSTANT_COUNT] = {
   hash_string("u_view_proj"),
   hash_string("u_inv_view_proj"),
   hash_string("u_model"),
+  hash_string("u_inv_model"),
   hash_string("u_model_view"),
   hash_string("u_model_view_proj"),
   hash_string("u_alpha_ref"),

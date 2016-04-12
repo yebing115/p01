@@ -67,6 +67,10 @@ struct ViewState {
         const float4x4& model = render->matrix_cache._cache[draw.matrix];
         renderer->_SetConstantMatrix4(flags, predefined.loc, &model, min<u32>(draw.num * MaxRegCount, predefined.count));
       } break;
+      case PREDEFINED_CONSTANT_INV_MODEL: {
+        const float4x4& inv_model = render->matrix_cache._cache[draw.matrix].Inverted();
+        renderer->_SetConstantMatrix4(flags, predefined.loc, &inv_model, min<u32>(draw.num * MaxRegCount, predefined.count));
+      } break;
       case PREDEFINED_CONSTANT_MODEL_VIEW: {
         const float4x4& model = render->matrix_cache._cache[draw.matrix];
         float4x4 model_view = _view[eye][view] * model;

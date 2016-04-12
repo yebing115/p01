@@ -23,11 +23,17 @@ DEFINE_JOB_ENTRY(load_mex_model) {
   strcpy(model->_filename, asset->_desc._filename);
 
   MeshMaterial mesh_material;
+  char material_filename[MAX_ASSET_NAME];
   auto AM = AssetManager::Instance();
   f->Seek(header.material_data_offset);
   for (int i = 0; i < header.num_materials; ++i) {
     f->ReadBytes(&mesh_material, sizeof(MeshMaterial));
-    model->_materials[i] = AM->Load(ASSET_TYPE_MATERIAL, mesh_material.filename);
+    strcpy(material_filename, asset->_desc._filename);
+    auto p = strrchr(material_filename, '/');
+    if (!p) p = material_filename;
+    else ++p;
+    strcpy(p, mesh_material.filename);
+    model->_materials[i] = AM->Load(ASSET_TYPE_MATERIAL, material_filename);
     asset->_header->_depends[i] = model->_materials[i]->_desc;
   }
 

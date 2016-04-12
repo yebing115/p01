@@ -93,7 +93,8 @@ void write_binary(ShaderNode* shader, const void* payload, size_t playload_size,
     names.insert(var_decl->var_name.text);
     constant.name = var_decl->var_name.text.GetID();
     auto var_type = var_decl->type_decl->type;
-    if (var_type == VAR_TYPE_INT || var_type == VAR_TYPE_SAMPLER_2D) constant.constant_type = CONSTANT_INT;
+    if (var_type == VAR_TYPE_INT) constant.constant_type = CONSTANT_INT;
+    else if (var_type == VAR_TYPE_SAMPLER_2D) constant.constant_type = CONSTANT_INT | CONSTANT_SAMPLERBIT;
     else if (var_type == VAR_TYPE_FLOAT) constant.constant_type = CONSTANT_FLOAT;
     else if (var_type == VAR_TYPE_VEC2) constant.constant_type = CONSTANT_VEC2;
     else if (var_type == VAR_TYPE_VEC3) constant.constant_type = CONSTANT_VEC3;

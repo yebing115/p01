@@ -63,10 +63,16 @@ public:
   bool IsValid() const;
 
 private:
+  void PushStack();
+  void PopStack();
   gason::JsonAllocator _json_allocator;
   gason::JsonValue _root;
   gason::JsonValue _current_value;
   gason::JsonNode* _current_node;
-  vector<gason::JsonValue> _stack;
+  struct Cursor {
+    gason::JsonValue _value;
+    gason::JsonNode* _node;
+  };
+  vector<Cursor> _stack;
   gason::JsonParseStatus _status;
 };

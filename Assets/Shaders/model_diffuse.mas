@@ -15,13 +15,21 @@
 		"fs_defines" : [],
 		"properties" : {
 			"diffuse_color" : {
-				"type" : "vec4",
+				"type" : "vec3",
 				"value" : "WHITE",
 			},
 			"diffuse_tex" : {
 				"type" : "sampler2D",
 				"value" : "WHITE",
-			}
+			},
+			"opacity" : {
+				"type" : "float",
+				"value" : 1,
+			},
+			"opacity_tex" : {
+				"type" : "sampler2D",
+				"value" : "WHITE",
+			},
 		}
 	}
 ]

@@ -337,6 +337,7 @@ VCXProject( 'UpdateSolution-proj' )
 // Tool
 #include "../Tool/slc/slc.bff"
 #include "../Tool/modelc/modelc.bff"
+#include "../Tool/shaderc/shaderc.bff"
 
 // Game
 #include "Game/p01.bff"
@@ -406,7 +407,7 @@ VSSolution( 'solution' )
     .Folder_2_Tool =
     [ 
         .Path           = '2. Tool'
-        .Projects       = { 'modelc-proj', 'slc-proj' }
+        .Projects       = { 'modelc-proj', 'slc-proj', 'shaderc-proj' }
     ]
     .Folder_3_Game =
     [ 

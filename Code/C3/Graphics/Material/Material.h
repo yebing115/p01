@@ -19,6 +19,7 @@ enum MaterialParamType {
 
 struct MaterialParam {
   char _name[MAX_MATERIAL_KEY_LEN];
+  ConstantHandle _constant_handle;
   MaterialParamType _type;
   union {
     float _vec[4];
@@ -50,4 +51,6 @@ struct Material {
   static size_t ComputeSize(u16 num_params) {
     return sizeof(Material) + num_params * sizeof(MaterialParam);
   }
+
+  void Apply();
 };

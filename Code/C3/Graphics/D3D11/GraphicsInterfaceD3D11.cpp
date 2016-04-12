@@ -398,7 +398,7 @@ void ShaderD3D11::Create(const MemoryRegion* mem) {
       _predefined[_num_predefined].count = c.num;
       _predefined[_num_predefined].type = u8(predefined | fragment_bit);
       _num_predefined++;
-    } else {
+    } else if (!(c.constant_type & CONSTANT_SAMPLERBIT)) {
       const ConstantInfo* info = g_interface->_uniform_reg.Find(c.name);
       if (!info) c3_log("[C3] User defined uniform 'Hash: %08x' is not found, it won't be set.\n", c.name);
 
@@ -408,10 +408,11 @@ void ShaderD3D11::Create(const MemoryRegion* mem) {
         kind = "user";
         _constant_buffer->WriteConstantHandle((ConstantType)(c.constant_type | fragment_bit), c.loc, info->handle, c.num);
       }
+    } else {
+      kind = "sampler";
     }
-
-    if (_constant_buffer) _constant_buffer->Finish();
   }
+  if (_constant_buffer) _constant_buffer->Finish();
 
   const char* code = (const char*)mem->data + header.code_offset;
 

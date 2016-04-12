@@ -1,1 +1,17 @@
-{"shader":"model_specular_normal","properties":{"diffuse_tex":{"value":"sponza/sponza_arch_diff.tga","flags":""},"specular_tex":{"value":"sponza/sponza_arch_spec.tga","flags":""},"normal_tex":{"value":"sponza/sponza_arch_ddn.tga","flags":""}}}
+{
+	"shader" : "model_specular_normal",
+	"properties" : {
+		"diffuse_tex" : {
+			"value" : "sponza_arch_diff.tga",
+			"flags" : ""
+		},
+		"specular_tex" : {
+			"value" : "sponza_arch_spec.tga",
+			"flags" : ""
+		},
+		"normal_tex" : {
+			"value" : "sponza_arch_ddn.tga",
+			"flags" : ""
+		}
+	}
+}

@@ -330,6 +330,8 @@ VCXProject( 'UpdateSolution-proj' )
 #include "../External/assimp-3.1.1/assimp.bff"
 #include "../External/lz4-20150629/lz4.bff"
 #include "../External/gason--_20160411/gason--.bff"
+#include "../External/OptionParser/OptionParser.bff"
+#include "../External/libsquish/libsquish.bff"
 
 // Engine
 #include "C3/C3.bff"
@@ -338,6 +340,7 @@ VCXProject( 'UpdateSolution-proj' )
 #include "../Tool/slc/slc.bff"
 #include "../Tool/modelc/modelc.bff"
 #include "../Tool/shaderc/shaderc.bff"
+#include "../Tool/texc/texc.bff"
 
 // Game
 #include "Game/p01.bff"
@@ -397,7 +400,8 @@ VSSolution( 'solution' )
     .Folder_0_External =
     [ 
         .Path           = '0. External'
-        .Projects       = { 'MathGeoLib-proj', 'LibIconv-proj', 'IMGUI-proj', 'FCPP-proj', 'Assimp-proj', 'lz4-proj', 'Gason-proj' }
+        .Projects       = { 'MathGeoLib-proj', 'LibIconv-proj', 'IMGUI-proj', 'FCPP-proj',
+							'Assimp-proj', 'lz4-proj', 'Gason-proj', 'OptionParser-proj', 'LibSquish-proj' }
     ]
     .Folder_1_Engine =
     [ 
@@ -407,7 +411,7 @@ VSSolution( 'solution' )
     .Folder_2_Tool =
     [ 
         .Path           = '2. Tool'
-        .Projects       = { 'modelc-proj', 'slc-proj', 'shaderc-proj' }
+        .Projects       = { 'modelc-proj', 'slc-proj', 'shaderc-proj', 'texc-proj' }
     ]
     .Folder_3_Game =
     [ 

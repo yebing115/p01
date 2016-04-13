@@ -1,0 +1,121 @@
+// texc
+//------------------------------------------------------------------------------
+{
+	.ProjectName		= 'texc'
+	.ProjectPath		= '../Tool/texc'
+
+	// Visual Studio Project Generation
+	//--------------------------------------------------------------------------
+	VCXProject( '$ProjectName$-proj' )
+	{
+		.ProjectOutput				= '../tmp/VisualStudio/Projects/$ProjectName$.vcxproj'
+		.ProjectInputPaths			= '$ProjectPath$\'
+		.ProjectBasePath			= '$ProjectPath$\'
+
+		.LocalDebuggerCommand		= '^$(SolutionDir)..\^$(Configuration)\texc.exe'
+		.LocalDebuggerWorkingDirectory = '^$(SolutionDir)..\..\Assets\Shaders'
+	}
+
+    // Unity
+    //--------------------------------------------------------------------------
+    {
+        // Common options
+        .UnityInputPath             = '$ProjectPath$\'
+        .UnityOutputPath            = '$OutputBase$\Unity\$ProjectPath$\'
+
+        // Windows
+        Unity( '$ProjectName$-Unity-Windows' )
+        {
+        }
+    }       
+
+	// Windows (MSVC)
+	//--------------------------------------------------------------------------
+	ForEach( .Config in .Configs_Windows_MSVC )
+	{
+		Using( .Config )
+		.OutputBase + '\$Platform$-$Config$'
+
+		Using( .C3_Windows_MSVC )
+		Using( .MathGeoLib_Windows_MSVC )
+		Using( .LibIconv_Windows_MSVC )
+		Using( .IMGUI_Windows_MSVC )
+		Using( .FCPP_Windows_MSVC )
+		Using( .Gason_Windows_MSVC )
+		Using( .OptionParser_Windows_MSVC )
+		Using( .LibSquish_Windows_MSVC )
+		
+		// Objects
+		ObjectList( '$ProjectName$-Lib-$Platform$-$Config$' )
+		{
+			// Input (Unity)
+			.CompilerInputUnity			= '$ProjectName$-Unity-Windows'
+
+			// Output
+			.CompilerOutputPath			= '$OutputBase$\$ProjectName$\'
+ 			.LibrarianOutput 			= '$OutputBase$\$ProjectName$\$ProjectName$.lib'
+
+			// Compiler Options
+			.CompilerOptions			+ .C3IncludePaths
+										+ .C3CompilerOptions
+										+ .MathGeoLibIncludePaths
+										+ .LibIconvIncludePaths
+										+ .IMGUIIncludePaths
+										+ .FCPPIncludePaths
+										+ .GasonIncludePaths
+										+ .OptionParserIncludePaths
+										+ .LibSquishIncludePaths
+										+ ' /wd4201'
+										+ ' /wd28183'
+		}
+
+		// Executable
+		Executable( '$ProjectName$-Exe-$Platform$-$Config$' )
+		{
+			.Libraries					=
+			{
+				'C3-Lib-$Platform$-$Config$',
+				'texc-Lib-$Platform$-$Config$',
+				'LibIconv-Lib-$Platform$-$Config$',
+				'MathGeoLib-Lib-$Platform$-$Config$',
+				'IMGUI-Lib-$Platform$-$Config$',
+				'FCPP-Lib-$Platform$-$Config$',
+				'Gason-Lib-$Platform$-$Config$',
+				'OptionParser-Lib-$Platform$-$Config$',
+				'LibSquish-Lib-$Platform$-$Config$',
+			}
+			.LinkerOutput				= '$OutputBase$\texc.exe'
+			.LinkerOptions				+ ' /SUBSYSTEM:CONSOLE'
+										+ ' kernel32.lib'
+										+ ' user32.lib'
+										+ ' Ws2_32.lib'
+										+ ' OpenGL32.LIB'
+										+ ' Shell32.lib'
+										+ ' DbgHelp.lib'
+										+ ' dxgi.lib'
+										+ ' d3d11.lib'
+										+ ' d3dcompiler.lib'
+		}
+		Alias( '$ProjectName$-$Platform$-$Config$' )
+		{
+			.Targets 					= { '$ProjectName$-Exe-$Platform$-$Config$', 'Copy-LibIconv-DLL-$Platform$-$Config$' }
+		}
+	}
+
+	// Aliases
+	//--------------------------------------------------------------------------
+	// Per-Config
+	Alias( '$ProjectName$-Debug' )		{ .Targets = { '$ProjectName$-X86-Debug',   '$ProjectName$-X64-Debug' } }
+	Alias( '$ProjectName$-Profile' )	{ .Targets = { '$ProjectName$-X86-Profile', '$ProjectName$-X64-Profile' } }
+	Alias( '$ProjectName$-Release' )	{ .Targets = { '$ProjectName$-X86-Release', '$ProjectName$-X64-Release' } }
+
+	// Per-Platform
+	Alias( '$ProjectName$-X86' )		{ .Targets = { '$ProjectName$-X86-Debug', '$ProjectName$-X86-Release', '$ProjectName$-X86-Profile' } }
+	Alias( '$ProjectName$-X64' )		{ .Targets = { '$ProjectName$-X64-Debug', '$ProjectName$-X64-Release', '$ProjectName$-X64-Profile' } }
+
+	// All
+	Alias( '$ProjectName$' )
+	{
+		.Targets = { '$ProjectName$-Debug', '$ProjectName$-Profile', '$ProjectName$-Release' }
+	}
+}

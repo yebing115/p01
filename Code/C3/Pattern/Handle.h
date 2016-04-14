@@ -20,6 +20,7 @@ enum HandleType {
   TRANSFORM_HANDLE,
   CAMERA_HANDLE,
   MODEL_RENDERER_HANDLE,
+  LIGHT_HANDLE,
   COMPONENT_HANDLE_END,
 
   NUM_HANDLE_TYPES = COMPONENT_HANDLE_END
@@ -78,3 +79,4 @@ typedef Handle<ENTITY_HANDLE> EntityHandle;
 typedef Handle<TRANSFORM_HANDLE> TransformHandle;
 typedef Handle<CAMERA_HANDLE> CameraHandle;
 typedef Handle<MODEL_RENDERER_HANDLE> ModelRendererHandle;
+typedef Handle<LIGHT_HANDLE> LightHandle;

@@ -43,6 +43,7 @@ public:
     return valid;
   }
   Handle<TYPE> GetHandleAt(u32 i) const { return _handles[i]; }
+  const Handle<TYPE>* GetPointer() const { return _handles; }
   
 private:
   Handle<TYPE> _handles[COUNT];

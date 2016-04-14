@@ -63,7 +63,7 @@ void RenderSystem::Render(float dt, bool paused) {
   auto view = GR->PushView();
   auto win_size = GR->GetWindowSize();
   camera.SetAspect(win_size.x / win_size.y);
-  camera.SetClipPlane(1, 2000);
+  camera.SetClipPlane(1, 3000);
   GR->SetViewRect(view, 0, 0, win_size.x, win_size.y);
   GR->SetViewClear(view, C3_CLEAR_COLOR | C3_CLEAR_DEPTH, 0, 1.f);
   GR->SetViewTransform(view, camera.GetViewMatrix().ptr(), camera.GetProjectionMatrix().ptr());
@@ -85,7 +85,7 @@ void RenderSystem::Render(float dt, bool paused) {
         GR->SetVertexBuffer(model->_vb);
         GR->SetIndexBuffer(model->_ib, part->_start_index, part->_num_indices);
         GR->SetState(C3_STATE_RGB_WRITE | C3_STATE_ALPHA_WRITE | C3_STATE_DEPTH_WRITE |
-                     C3_STATE_CULL_CW | C3_STATE_DEPTH_TEST_LEQUAL);
+                     C3_STATE_DEPTH_TEST_LESS);
         float dist = camera._frustum.Distance(m.TransformPos(part->_aabb.CenterPoint()));
         auto material = (Material*)model->_materials[part->_material_index]->_header->GetData();
         auto shader = (MaterialShader*)material->_material_shader->_header->GetData();

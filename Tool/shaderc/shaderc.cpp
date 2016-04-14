@@ -31,11 +31,14 @@ void compile_shader(JsonReader& reader, const char* out_dir, const char* src_key
   ++suffix;
   reader.BeginReadArray(defines_key);
   char p[MAX_MATERIAL_KEY_LEN];
+  int num_defines = 0;
   while (reader.ReadStringElement(p, sizeof(p))) {
     if (strlen(p) > 0) {
+      if (num_defines > 0) strcat(defines, ";");
       strcat(defines, p);
       strcat(define_params, " -D");
       strcat(define_params, p);
+      ++num_defines;
     }
   }
   reader.EndReadArray();

@@ -10,9 +10,13 @@
 			"BLEND_NORMAL",
 		],
 		"vs_source" : "model.vs",
-		"vs_defines" : [],
+		"vs_defines" : [
+			"USE_SPECULAR_MAP",
+		],
 		"fs_source" : "model.fs",
-		"fs_defines" : [],
+		"fs_defines" : [
+			"USE_SPECULAR_MAP",
+		],
 		"properties" : {
 			"diffuse_color" : {
 				"type" : "vec3",
@@ -29,6 +33,14 @@
 			"opacity_tex" : {
 				"type" : "sampler2D",
 				"value" : "WHITE",
+			},
+			"specular_tex" : {
+				"type" : "sampler2D",
+				"value" : "WHITE",
+			},
+			"specular_power" : {
+				"type" : "float",
+				"value" : 8.0,
 			},
 		}
 	}

@@ -76,6 +76,6 @@ void Game::UpdateDebugCamera(float dt) {
     }
   }
   ImGui::Text("camera pos: %s\n", world->GetCameraPos(_debug_camera).ToString().c_str());
-  ImGui::Text("camera v_fov: %.3f\n", world->GetCameraVerticalFov(_debug_camera));
+  ImGui::Text("camera v_fov: %.3f\n", RadToDeg(world->GetCameraVerticalFov(_debug_camera)));
   ImGui::End();
 }

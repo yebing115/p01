@@ -11,10 +11,12 @@
 		],
 		"vs_source" : "model.vs",
 		"vs_defines" : [
+			"USE_SPECULAR_MAP",
 			"USE_NORMAL_MAP",
 		],
 		"fs_source" : "model.fs",
 		"fs_defines" : [
+			"USE_SPECULAR_MAP",
 			"USE_NORMAL_MAP",
 		],
 		"properties" : {
@@ -31,6 +33,10 @@
 				"value" : 1,
 			},
 			"opacity_tex" : {
+				"type" : "sampler2D",
+				"value" : "WHITE",
+			},
+			"specular_tex" : {
 				"type" : "sampler2D",
 				"value" : "WHITE",
 			},

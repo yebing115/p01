@@ -17,7 +17,7 @@ DEFINE_JOB_ENTRY(load_dds_texture) {
   asset->_header->_size = ASSET_MEMORY_SIZE(0, sizeof(Texture));
   asset->_header->_num_depends = 0;
   auto texture = (Texture*)asset->_header->GetData();
-  texture->_handle = GraphicsRenderer::Instance()->CreateTexture(mem, C3_TEXTURE_NONE, 0, &texture->_info);
+  texture->_handle = GraphicsRenderer::Instance()->CreateTexture(mem, C3_TEXTURE_MAG_ANISOTROPIC, 0, &texture->_info);
   asset->_state = ASSET_STATE_READY;
 }
 

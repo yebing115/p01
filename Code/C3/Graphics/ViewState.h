@@ -87,6 +87,15 @@ struct ViewState {
       case PREDEFINED_CONSTANT_TIME: {
         renderer->_SetConstantFloat(flags, predefined.loc, &_time, 1);
       } break;
+      case PREDEFINED_CONSTANT_EYE: {
+        u16 view_eye = (view << 1) | eye;
+        if (view_eye != _inv_view_cached) {
+          _inv_view_cached = view_eye;
+          _inv_view = _view[eye][view].Inverted();
+        }
+        auto camera_pos = _inv_view.TranslatePart();
+        renderer->_SetConstantFloat(flags, predefined.loc, &camera_pos, 3);
+      } break;
       default:
         c3_log("[C3] Predefined %d not handled\n", predefined.type);
         break;

@@ -1,15 +1,18 @@
 // texc.cpp : 定义控制台应用程序的入口点。
 //
 
-#include "stdafx.h"
 #include "dds.h"
-#include "OptionParser.h"
-#include "job.h"
+#include "C3PCH.h"
+#include <FreeImage.h>
+#include <squish.h>
+#include <OptionParser.h>
 using namespace optparse;
 
 #ifdef _MSC_VER
 #pragma warning(disable:4996)
 #endif
+
+#define ENABLE_GNM  0
 
 enum PlatformType {
   PLATFORM_PC,
@@ -29,10 +32,22 @@ struct Arguments {
   bool verbose;
 } g_args;
 
+struct CompressJobData {
+  const uint8_t* ibuf;
+  uint8_t* obuf;
+  int pitch;
+  int mask;
+  int flags;
+
+  CompressJobData() {}
+  CompressJobData(const uint8_t* i_buf, int pitch_, uint8_t* o_buf, int f, int m = 0xffffffff)
+  : ibuf(i_buf), pitch(pitch_), obuf(o_buf), flags(f), mask(m) {}
+};
+
+
+#if ENABLE_GNM
 static Gnm::Texture g_gnm_texture;
-static JobQueue g_job_queue(4096);
-static int g_request_exit = 0;
-static std::atomic_int g_num_jobs;
+#endif
 
 void usage() {
   printf("Usage:\n"
@@ -93,6 +108,7 @@ void write_dds_data(int w, int h, int mip, const void* image_data, int image_siz
   fflush(f);
 }
 
+#if ENABLE_GNM
 int compute_gnf_stream_size(int w, int h) {
   int num_mips = g_args.mipmap ? compute_mipmap_count(w, h) : 1;
   Gnm::DataFormat data_format = Gnm::kDataFormatB8G8R8A8Unorm;
@@ -167,15 +183,20 @@ void write_gnf_data(int w, int h, int mip, const void* image_data, int image_siz
   free(tiled_data);
   fflush(f);
 }
+#endif
 
 void write_image_header(int w, int h) {
   if (g_args.platform == PLATFORM_PC) write_dds_header(w, h);
+#if ENABLE_GNM
   else if (g_args.platform == PLATFORM_PS4) write_gnf_header(w, h);
+#endif
 }
 
 void write_image_data(int w, int h, int mip, const void* image_data, int image_size) {
   if (g_args.platform == PLATFORM_PC) write_dds_data(w, h, mip, image_data, image_size);
+#if ENABLE_GNM
   else if (g_args.platform == PLATFORM_PS4) write_gnf_data(w, h, mip, image_data, image_size);
+#endif
 }
 
 void image_bgra_to_rgba(void* in_data, int w, int h) {
@@ -189,33 +210,19 @@ void image_bgra_to_rgba(void* in_data, int w, int h) {
   }
 }
 
-void compress_thread(JobQueue& job_queue) {
-  Job job;
+void do_compress_job(void* user_data) {
+  CompressJobData* job_data = (CompressJobData*)user_data;
   squish::u8 rgba[64];
-  while (!g_request_exit) {
-    if (job_queue.dequeue(job)) {
-      squish::u8* p = rgba;
-      for (int py = 0; py < 4; ++py) {
-        for (int px = 0; px < 4; ++px) {
-          int offset = 4 * py + px;
-          if (job.mask & (1 << offset)) {
-            memcpy(rgba + offset * 4, job.ibuf + py * job.pitch + px * 4, 4);
-          }
-        }
+  squish::u8* p = rgba;
+  for (int py = 0; py < 4; ++py) {
+    for (int px = 0; px < 4; ++px) {
+      int offset = 4 * py + px;
+      if (job_data->mask & (1 << offset)) {
+        memcpy(rgba + offset * 4, job_data->ibuf + py * job_data->pitch + px * 4, 4);
       }
-      squish::CompressMasked(rgba, job.mask, job.obuf, job.flags);
-      --g_num_jobs;
-    } else std::this_thread::yield();
+    }
   }
-}
-
-void create_compress_threads() {
-  g_num_jobs.store(0);
-  int n = std::thread::hardware_concurrency();
-  for (int i = 0; i < n; ++i) {
-    std::thread t(compress_thread, std::ref(g_job_queue));
-    t.detach();
-  }
+  squish::CompressMasked(rgba, job_data->mask, job_data->obuf, job_data->flags);
 }
 
 void compress_image(const void* in_data, int width, int height, void* out_data) {
@@ -229,18 +236,29 @@ void compress_image(const void* in_data, int width, int height, void* out_data) 
   int bytes_per_block = ((g_args.flags & squish::kDxt1) != 0) ? 8 : 16;
 
   auto src_pitch = width * 4;
+  vector<CompressJobData> job_datas;
+  auto JS = JobScheduler::Instance();
+  job_datas.reserve(height / 4 * width / 4);
   for (int y = 0, m = height / 4; y < m; ++y) {
     for (int x = 0, n = width / 4; x < n; ++x) {
-      Job job(src + (y * 4 * src_pitch + x * 4 * 4), src_pitch,
-              dst + (y * n + x) * bytes_per_block, g_args.flags);
-      ++g_num_jobs;
-      while (!g_job_queue.enqueue(job))
-        ;
+      job_datas.emplace_back(src + (y * 4 * src_pitch + x * 4 * 4), src_pitch,
+                              dst + (y * n + x) * bytes_per_block, g_args.flags);
     }
   }
-
-  while (g_num_jobs.load() > 0)
-    ;
+  vector<Job> jobs(job_datas.size());
+  for (int i = 0, n = (int)job_datas.size(); i < n; ++i) {
+    jobs[i].InitWorkerJob(&do_compress_job, &job_datas[i]);
+  }
+  Job* start_job = &jobs[0];
+  int i = 0;
+  int n = jobs.size();
+  while (i < n) {
+    int m = min(n - i, 2000);
+    auto label = JS->SubmitJobs(start_job, m);
+    JS->WaitJobs(label);
+    start_job += m;
+    i += m;
+  }
 }
 
 void compress() {
@@ -335,6 +353,7 @@ void parse_arguments(int argc, char* argv[]) {
   auto options = parser.parse_args(argc, (const char**)argv);
   auto args = parser.args();
 
+  memset(&g_args, 0, sizeof(g_args));
   g_args.platform = strcmp(options.get("platform"), "ps4") == 0 ? PLATFORM_PS4 : PLATFORM_PC;
   if (args.size() != 1) {
     printf("Parse argument failed: only accept one input filename.\n");
@@ -363,6 +382,12 @@ void parse_arguments(int argc, char* argv[]) {
   }
   if (g_args.platform == PLATFORM_PC) strcpy(p, ".dds");
   else if (g_args.platform == PLATFORM_PS4) strcpy(p, ".gnf");
+#if !ENABLE_GNM
+  if (g_args.platform == PLATFORM_PS4) {
+    printf("GNF texture not supported.\n");
+    exit(-1);
+  }
+#endif
   g_args.output_file = fopen(g_args.output_filename, "wb");
   if (!g_args.output_file) {
     printf("Failed to open output file %s\n", g_args.output_filename);
@@ -371,9 +396,11 @@ void parse_arguments(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
+  mem_init();
+  JobScheduler::CreateInstance();
+  JobScheduler::Instance()->Init(thread::hardware_concurrency());
   FreeImage_Initialise();
   parse_arguments(argc, argv);
-  create_compress_threads();
   compress();
   FreeImage_DeInitialise();
   return 0;

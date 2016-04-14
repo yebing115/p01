@@ -13,7 +13,7 @@
 		.ProjectBasePath			= '$ProjectPath$\'
 
 		.LocalDebuggerCommand		= '^$(SolutionDir)..\^$(Configuration)\texc.exe'
-		.LocalDebuggerWorkingDirectory = '^$(SolutionDir)..\..\Assets\Shaders'
+		.LocalDebuggerWorkingDirectory = '^$(SolutionDir)..\..\Assets'
 	}
 
     // Unity
@@ -44,6 +44,7 @@
 		Using( .Gason_Windows_MSVC )
 		Using( .OptionParser_Windows_MSVC )
 		Using( .LibSquish_Windows_MSVC )
+		Using( .FreeImage_Windows_MSVC )
 		
 		// Objects
 		ObjectList( '$ProjectName$-Lib-$Platform$-$Config$' )
@@ -65,6 +66,7 @@
 										+ .GasonIncludePaths
 										+ .OptionParserIncludePaths
 										+ .LibSquishIncludePaths
+										+ .FreeImageIncludePaths
 										+ ' /wd4201'
 										+ ' /wd28183'
 		}
@@ -83,6 +85,7 @@
 				'Gason-Lib-$Platform$-$Config$',
 				'OptionParser-Lib-$Platform$-$Config$',
 				'LibSquish-Lib-$Platform$-$Config$',
+				'FreeImage-Lib-$Platform$-$Config$',
 			}
 			.LinkerOutput				= '$OutputBase$\texc.exe'
 			.LinkerOptions				+ ' /SUBSYSTEM:CONSOLE'
@@ -98,7 +101,7 @@
 		}
 		Alias( '$ProjectName$-$Platform$-$Config$' )
 		{
-			.Targets 					= { '$ProjectName$-Exe-$Platform$-$Config$', 'Copy-LibIconv-DLL-$Platform$-$Config$' }
+			.Targets 					= { '$ProjectName$-Exe-$Platform$-$Config$', 'Copy-LibIconv-DLL-$Platform$-$Config$', 'Copy-FreeImage-DLL-$Platform$-$Config$' }
 		}
 	}
 

@@ -1,0 +1,37 @@
+// FreeImage
+//------------------------------------------------------------------------------
+.FreeImageBasePath			= '../External/FreeImage-3.17.0'
+.FreeImage_Windows_MSVC	= [	
+								.FreeImageIncludePaths		= ' /I"$FreeImageBasePath$/Dist/include"'
+							]
+
+{
+	.ProjectName		= 'FreeImage'
+	.ProjectPath		= '$FreeImageBasePath$/Dist'
+
+	// Visual Studio Project Generation
+	//--------------------------------------------------------------------------
+	VCXProject( '$ProjectName$-proj' )
+	{
+		.ProjectOutput				= '../tmp/VisualStudio/Projects/$ProjectName$.vcxproj'
+		.ProjectInputPaths			= '$ProjectPath$\'
+        .ProjectFiles               = '../External/FreeImage-3.17.0/FreeImage.bff'
+		.ProjectBasePath			= '$ProjectPath$\'
+	}
+	ForEach( .Config in .Configs_Windows_MSVC )
+	{
+		Using( .Config )
+		.OutputBase + '\$Platform$-$Config$'
+		
+		Copy( 'Copy-$ProjectName$-DLL-$Platform$-$Config$' )
+		{
+			.Source   = { '$FreeImageBasePath$/Dist/$Platform$/FreeImage.dll' }
+			.Dest     = '$OutputBase$/'
+		}
+		Alias( '$ProjectName$-Lib-$Platform$-$Config$' )
+		{
+			Using( .FreeImage_Windows_MSVC )
+ 			.Targets 				= '$FreeImageBasePath$/Dist/$Platform$/FreeImage.lib'
+		}
+	}
+}

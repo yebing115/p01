@@ -332,6 +332,7 @@ VCXProject( 'UpdateSolution-proj' )
 #include "../External/gason--_20160411/gason--.bff"
 #include "../External/OptionParser/OptionParser.bff"
 #include "../External/libsquish/libsquish.bff"
+#include "../External/FreeImage-3.17.0/FreeImage.bff"
 
 // Engine
 #include "C3/C3.bff"
@@ -401,7 +402,8 @@ VSSolution( 'solution' )
     [ 
         .Path           = '0. External'
         .Projects       = { 'MathGeoLib-proj', 'LibIconv-proj', 'IMGUI-proj', 'FCPP-proj',
-							'Assimp-proj', 'lz4-proj', 'Gason-proj', 'OptionParser-proj', 'LibSquish-proj' }
+							'Assimp-proj', 'lz4-proj', 'Gason-proj', 'OptionParser-proj', 'LibSquish-proj',
+							'FreeImage-proj' }
     ]
     .Folder_1_Engine =
     [ 

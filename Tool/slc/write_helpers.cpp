@@ -85,10 +85,12 @@ void write_binary(ShaderNode* shader, const void* payload, size_t playload_size,
     }
   }
 
-  header.num_constants = (u8)shader->uniforms.size();
-  for (int i = 0; i < header.num_constants; ++i) {
+  header.num_constants = 0;
+  int n = shader->uniforms.size();
+  for (int i = 0; i < n; ++i) {
     VarDeclNode* var_decl = shader->uniforms[i];
-    ShaderInfo::Constant& constant = header.constants[i];
+    if (var_decl->loc == UINT16_MAX) continue;
+    ShaderInfo::Constant& constant = header.constants[header.num_constants++];
     name_len += (u16)var_decl->var_name.text.GetLength() + 1;
     names.insert(var_decl->var_name.text);
     constant.name = var_decl->var_name.text.GetID();

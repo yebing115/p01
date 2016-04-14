@@ -142,7 +142,7 @@ void HLSLWriter::WriteShader(ShaderNode* node) {
     else {
       _shader->cbuffer_size = (u16)buffer_desc.Size;
 
-      for (auto& var_decl : _shader->uniforms) var_decl->loc = 0;
+      for (auto& var_decl : _shader->uniforms) var_decl->loc = UINT16_MAX;
 
       for (u32 jj = 0; jj < buffer_desc.Variables; ++jj) {
         ID3D11ShaderReflectionVariable* var = cbuffer->GetVariableByIndex(jj);

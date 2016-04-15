@@ -42,6 +42,7 @@ public:
 
 private:
   void ApplyLight(Light* light);
+  void GetLightViewProj(Light* light, float4x4& view_matrix, float4x4& proj_matrix) const;
 
   ModelRenderer _model_renderer[C3_MAX_MODEL_RENDERERS];
   HandleAlloc<MODEL_RENDERER_HANDLE, C3_MAX_MODEL_RENDERERS> _model_renderer_handles;
@@ -57,4 +58,6 @@ private:
   ConstantHandle _constant_light_dir;
   ConstantHandle _constant_light_falloff;
   ConstantHandle _constant_light_transform;
+
+  FrameBufferHandle _shadow_fb;
 };

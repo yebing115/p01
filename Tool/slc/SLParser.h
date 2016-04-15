@@ -72,7 +72,8 @@ struct VarDeclNode: public ASTNode {
   TypeDeclNode* type_decl;
   Token var_name;
   ExpressionNode* init;
-  u16 loc; // annotated by writer(constant location)
+  u16 loc;
+  bool user_loc;
 };
 
 enum FuncParamFlag {

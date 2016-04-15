@@ -25,10 +25,12 @@
 		"vs_source" : "model.vs",
 		"vs_defines" : [
 			"USE_NORMAL_MAP",
+			"USE_SHADOW_MAP",
 		],
 		"fs_source" : "model.fs",
 		"fs_defines" : [
 			"USE_NORMAL_MAP",
+			"USE_SHADOW_MAP",
 		],
 		"properties" : {
 			"diffuse_color" : {

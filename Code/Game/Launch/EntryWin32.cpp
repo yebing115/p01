@@ -70,6 +70,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
   s_min_frame_time = 1.0f / AppConfig::MAX_FPS;
   bool first_frame = true;
 
+  auto GR = GraphicsRenderer::Instance();
+
+  GR->Reset((u16)s_window_size.x, (u16)s_window_size.y,
+            C3_RESET_VSYNC | C3_RESET_SRGB_BACKBUFFER);
+
   auto& IO = ImGui::GetIO();
   MSG msg;
   while (1) {
@@ -96,8 +101,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     //ProcessXInput();
     IM->NewFrame(dt);
 
-    GraphicsRenderer::Instance()->Reset((u16)s_window_size.x, (u16)s_window_size.y,
-                                        C3_RESET_VSYNC | C3_RESET_SRGB_BACKBUFFER);
+    if (!GR->GetWindowSize().Equals(s_window_size)) {
+      GR->Reset((u16)s_window_size.x, (u16)s_window_size.y,
+                C3_RESET_VSYNC | C3_RESET_SRGB_BACKBUFFER);
+    }
 
     IO.KeyCtrl = (GetKeyState(VK_LCONTROL) & 0x8000) || (GetKeyState(VK_RCONTROL) & 0x8000);
     IO.KeyShift = (GetKeyState(VK_LSHIFT) & 0x8000) || (GetKeyState(VK_RSHIFT) & 0x8000);

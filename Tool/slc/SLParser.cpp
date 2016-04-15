@@ -118,7 +118,7 @@ bool SLParser::VarOrFuncDecl(ASTNode*& node) {
   return true;
 }
 
-// TypeDecl TOKEN_ID TOKEN_SEMICOLON
+// TypeDecl TOKEN_ID TOKEN_SEMICOLON (TOKEN_COLON TOKEN_INTEGER)?
 bool SLParser::VarDecl(VarDeclNode*& node, bool match_semicolon) {
   TypeDeclNode* type_decl = nullptr;
   Token id;
@@ -128,7 +128,16 @@ bool SLParser::VarDecl(VarDeclNode*& node, bool match_semicolon) {
   node->type_decl = type_decl;
   node->var_name = id;
   node->node_type = NODE_TYPE_VAR_DECL;
+  node->loc = 0;
+  node->user_loc = false;
   node->init = nullptr;
+  if (_lexer.Peek().type == TOKEN_COLON) {
+    _lexer.Next();
+    Token loc;
+    SL_CHECK(Match(TOKEN_INTEGER, &loc));
+    node->user_loc = true;
+    node->loc = loc.ToInt();
+  }
   if (_lexer.Peek().type == TOKEN_ASSIGN) {
     _lexer.Next();
     SL_CHECK(Expression(node->init));

@@ -14,7 +14,9 @@ out vec2 texcoord_varying;
 out vec3 light_ref_dir_varying;
 out vec3 light_vec_varying;
 out vec3 eye_vec_varying;
-out vec4 light_coord;
+#if USE_SHADOW_MAP
+out vec4 light_coord_varying;
+#endif
 
 uniform mat4 u_model;
 uniform mat4 u_view_proj;
@@ -48,5 +50,7 @@ void main() {
   light_ref_dir_varying = light_dir;
 #endif
   texcoord_varying = a_texcoord0;
-  light_coord = pos * light_transform;
+#if USE_SHADOW_MAP
+  light_coord_varying = pos * light_transform;
+#endif
 }

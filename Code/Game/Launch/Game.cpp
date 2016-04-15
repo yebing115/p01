@@ -11,9 +11,6 @@ Game::Game() {
   _debug_camera = world->CreateEntity();
   world->CreateCamera(_debug_camera);
 
-  auto t1 = AssetManager::Instance()->Load(ASSET_TYPE_MATERIAL_SHADER, "Shaders/model_diffuse.mas");
-  auto t2 = AssetManager::Instance()->Load(ASSET_TYPE_MATERIAL, "Models/Sponza/sponza_arch.mat");
-
   _model = world->CreateEntity();
   world->CreateTransform(_model);
   world->CreateComponent(_model, MODEL_RENDERER_HANDLE);

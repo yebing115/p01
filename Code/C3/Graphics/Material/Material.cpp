@@ -25,6 +25,7 @@ void Material::ApplyParams(SubShader* sub_shader) {
     MaterialParam* p = sub_shader->_params + i;
     for (u32 j = 0; j < _num_params; ++j) {
       if (strcmp(_params[j]._name, p->_name) == 0) {
+        _params[j]._tex2d._unit = p->_tex2d._unit;
         p = _params + j;
         break;
       }
@@ -42,7 +43,7 @@ void Material::ApplyParams(SubShader* sub_shader) {
       flags = p->_tex2d._flags;
       // TODO: dirty workaround.
       if (strstr(p->_name, "normal") == nullptr) flags |= C3_TEXTURE_SRGB;
-      GR->SetTexture(p->_tex2d._unit, texture->_handle, flags);
+      if (p->_tex2d._unit != UINT8_MAX) GR->SetTexture(p->_tex2d._unit, texture->_handle, flags);
       break;
     default:
       ;

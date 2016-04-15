@@ -1,16 +1,16 @@
 uniform vec3 diffuse_color;
-uniform sampler2D diffuse_tex;
+uniform sampler2D diffuse_tex: 0;
 uniform float opacity;
-uniform sampler2D opacity_tex;
+uniform sampler2D opacity_tex: 1;
 #if USE_SPECULAR_MAP
-uniform sampler2D specular_tex;
+uniform sampler2D specular_tex: 2;
 uniform float specular_power;
 #endif
 #if USE_NORMAL_MAP
-uniform sampler2D normal_tex;
+uniform sampler2D normal_tex: 3;
 #endif
 #if USE_SHADOW_MAP
-uniform sampler2DShadow shadow_tex;
+uniform sampler2DShadow shadow_tex: 15;
 #endif
 
 uniform int light_type;
@@ -22,12 +22,12 @@ in vec3 normal_varying;
 in vec3 tangent_varying;
 #endif
 in vec2 texcoord_varying;
-#if USE_SHADOW_MAP
-in vec4 light_coord;
-#endif
 in vec3 light_ref_dir_varying; 	 // light's center dir (world or tangent space)
 in vec3 light_vec_varying;		 // from light's pos to fragment's pos (world or tangent space)
 in vec3 eye_vec_varying;		 // from fragment's pos to camera
+#if USE_SHADOW_MAP
+in vec4 light_coord_varying;
+#endif
 
 out vec4 color_out;
 
@@ -79,7 +79,7 @@ void main() {
 #endif
 
 #if USE_SHADOW_MAP
-  float shadow_factor = texture(shadow_tex, light_coord.xyz);
+  float shadow_factor = texture(shadow_tex, light_coord_varying.xyz);
   color = vec3(shadow_factor);
 #endif
 

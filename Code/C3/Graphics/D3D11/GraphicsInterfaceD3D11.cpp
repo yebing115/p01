@@ -161,7 +161,7 @@ static const TextureFormatInfo s_textureFormat[] = {
   {DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN}, // RGBA_32_FLOAT_TEXTURE_FORMAT
   {DXGI_FORMAT_R16_TYPELESS, DXGI_FORMAT_R16_UNORM, DXGI_FORMAT_D16_UNORM, DXGI_FORMAT_UNKNOWN}, // DEPTH_16_TEXTURE_FORMAT
   {DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_R24_UNORM_X8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT, DXGI_FORMAT_UNKNOWN}, // DEPTH_24_TEXTURE_FORMAT
-  {DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_R24_UNORM_X8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT, DXGI_FORMAT_UNKNOWN}, // DEPTH_32_TEXTURE_FORMAT
+  {DXGI_FORMAT_R32_TYPELESS, DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_D32_FLOAT, DXGI_FORMAT_UNKNOWN}, // DEPTH_32_TEXTURE_FORMAT
   {DXGI_FORMAT_BC1_TYPELESS, DXGI_FORMAT_BC1_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC1_UNORM_SRGB}, // DXT1_RGB_TEXTURE_FORMAT
   {DXGI_FORMAT_BC1_TYPELESS, DXGI_FORMAT_BC1_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC1_UNORM_SRGB}, // DXT1_ARGB_TEXTURE_FORMAT
   {DXGI_FORMAT_BC2_TYPELESS, DXGI_FORMAT_BC2_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_BC2_UNORM_SRGB}, // DXT3_ARGB_TEXTURE_FORMAT
@@ -1687,7 +1687,7 @@ void GraphicsInterfaceD3D11::SetFrameBuffer(FrameBufferHandle fbh, bool msaa) {
     FrameBufferD3D11& frameBuffer = _frame_buffers[fbh.idx];
     _context->OMSetRenderTargets(frameBuffer._num, frameBuffer._rtv, frameBuffer._dsv);
 
-    _current_color = frameBuffer._rtv[0];
+    _current_color = (frameBuffer._num > 0) ? frameBuffer._rtv[0] : nullptr;
     _current_depth_stencil = frameBuffer._dsv;
   }
 
@@ -2172,34 +2172,34 @@ void GraphicsInterfaceD3D11::_SetConstantMatrix4(u8 flags, u32 loc, const void* 
   _SetConstant(flags, loc, val, num * 16);
 }
 
-ID3D11SamplerState* GraphicsInterfaceD3D11::GetSamplerState(u32 _flags, const float _rgba[4]) {
-  const u32 index = (_flags & C3_TEXTURE_BORDER_COLOR_MASK) >> C3_TEXTURE_BORDER_COLOR_SHIFT;
-  _flags &= C3_TEXTURE_SAMPLER_BITS_MASK;
+ID3D11SamplerState* GraphicsInterfaceD3D11::GetSamplerState(u32 flags, const float rgba[4]) {
+  const u32 index = (flags & C3_TEXTURE_BORDER_COLOR_MASK) >> C3_TEXTURE_BORDER_COLOR_SHIFT;
+  flags &= C3_TEXTURE_SAMPLER_BITS_MASK;
 
   u32 hash;
   ID3D11SamplerState* sampler;
-  if (!need_border_color(_flags)) {
+  if (!need_border_color(flags)) {
     Hasher h;
     h.Begin();
-    h.Add(_flags);
+    h.Add(flags);
     h.Add(-1);
     hash = h.End();
-    _rgba = s_zero.m_zerof;
+    rgba = s_zero.m_zerof;
 
     sampler = _sampler_state_cache.Find(hash);
   } else {
     Hasher h;
     h.Begin();
-    h.Add(_flags);
+    h.Add(flags);
     h.Add(index);
     hash = h.End();
-    _rgba = NULL == _rgba ? s_zero.m_zerof : _rgba;
+    rgba = NULL == rgba ? s_zero.m_zerof : rgba;
 
     sampler = _sampler_state_cache.Find(hash);
     if (NULL != sampler) {
       D3D11_SAMPLER_DESC sd;
       sampler->GetDesc(&sd);
-      if (0 != memcmp(_rgba, sd.BorderColor, 16)) {
+      if (0 != memcmp(rgba, sd.BorderColor, 16)) {
         // Sampler will be released when updated sampler
         // is added to cache.
         sampler = NULL;
@@ -2208,24 +2208,24 @@ ID3D11SamplerState* GraphicsInterfaceD3D11::GetSamplerState(u32 _flags, const fl
   }
 
   if (NULL == sampler) {
-    const u32 cmpFunc = (_flags&C3_TEXTURE_COMPARE_MASK) >> C3_TEXTURE_COMPARE_SHIFT;
-    const u8  minFilter = s_textureFilter[0][(_flags&C3_TEXTURE_MIN_MASK) >> C3_TEXTURE_MIN_SHIFT];
-    const u8  magFilter = s_textureFilter[1][(_flags&C3_TEXTURE_MAG_MASK) >> C3_TEXTURE_MAG_SHIFT];
-    const u8  mipFilter = s_textureFilter[2][(_flags&C3_TEXTURE_MIP_MASK) >> C3_TEXTURE_MIP_SHIFT];
+    const u32 cmpFunc = (flags&C3_TEXTURE_COMPARE_MASK) >> C3_TEXTURE_COMPARE_SHIFT;
+    const u8  minFilter = s_textureFilter[0][(flags&C3_TEXTURE_MIN_MASK) >> C3_TEXTURE_MIN_SHIFT];
+    const u8  magFilter = s_textureFilter[1][(flags&C3_TEXTURE_MAG_MASK) >> C3_TEXTURE_MAG_SHIFT];
+    const u8  mipFilter = s_textureFilter[2][(flags&C3_TEXTURE_MIP_MASK) >> C3_TEXTURE_MIP_SHIFT];
     const u8  filter = 0 == cmpFunc ? 0 : D3D11_COMPARISON_FILTERING_BIT;
 
     D3D11_SAMPLER_DESC sd;
     sd.Filter = (D3D11_FILTER)(filter | minFilter | magFilter | mipFilter);
-    sd.AddressU = s_textureAddress[(_flags&C3_TEXTURE_U_MASK) >> C3_TEXTURE_U_SHIFT];
-    sd.AddressV = s_textureAddress[(_flags&C3_TEXTURE_V_MASK) >> C3_TEXTURE_V_SHIFT];
-    sd.AddressW = s_textureAddress[(_flags&C3_TEXTURE_W_MASK) >> C3_TEXTURE_W_SHIFT];
+    sd.AddressU = s_textureAddress[(flags&C3_TEXTURE_U_MASK) >> C3_TEXTURE_U_SHIFT];
+    sd.AddressV = s_textureAddress[(flags&C3_TEXTURE_V_MASK) >> C3_TEXTURE_V_SHIFT];
+    sd.AddressW = s_textureAddress[(flags&C3_TEXTURE_W_MASK) >> C3_TEXTURE_W_SHIFT];
     sd.MipLODBias = 0.0f;
     sd.MaxAnisotropy = _max_anisotropy;
     sd.ComparisonFunc = 0 == cmpFunc ? D3D11_COMPARISON_NEVER : s_cmpFunc[cmpFunc];
-    sd.BorderColor[0] = _rgba[0];
-    sd.BorderColor[1] = _rgba[1];
-    sd.BorderColor[2] = _rgba[2];
-    sd.BorderColor[3] = _rgba[3];
+    sd.BorderColor[0] = rgba[0];
+    sd.BorderColor[1] = rgba[1];
+    sd.BorderColor[2] = rgba[2];
+    sd.BorderColor[3] = rgba[3];
     sd.MinLOD = 0;
     sd.MaxLOD = D3D11_FLOAT32_MAX;
 

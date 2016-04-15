@@ -1,7 +1,7 @@
 #pragma once
 #include "Pattern/Handle.h"
 
-#define MAX_RENDER_ITEM_BINDING_COUNT 9
+#define MAX_RENDER_ITEM_BINDING_COUNT 16
 
 struct Binding {
   enum Type {

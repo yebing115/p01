@@ -190,7 +190,7 @@ public:
                              const VertexDecl& decl, u32 num_vertices,
                              TransientIndexBuffer* tib, u32 num_indices);
 
-  ShaderHandle CreateShader(const MemoryRegion* mem);
+  ShaderHandle CreateShader(const MemoryRegion* mem, ShaderInfo::Header* header = nullptr);
   void DestroyShader(ShaderHandle handle);
   ProgramHandle CreateProgram(ShaderHandle vsh, ShaderHandle fsh, bool destroy_shaders = true);
   void DestroyProgram(ProgramHandle handle);
@@ -235,7 +235,7 @@ public:
   void SetFrameBuffer(FrameBufferHandle handle);
   void SetConstant(ConstantHandle handle, const void* value, u16 num = 1);
   void SetTexture(u8 unit, TextureHandle texture, u32 flags = UINT32_MAX);
-  void SetTexture(u8 unit, FrameBufferHandle framebuffer, AttachmentPoint attachment, u32 flags = UINT32_MAX);
+  void SetTexture(u8 unit, FrameBufferHandle framebuffer, int idx, u32 flags = UINT32_MAX);
   void SetViewRect(u8 view, u16 x, u16 y, u16 width, u16 height);
   void SetViewScissor(u8 view, i16 x = 0, i16 y = 0, i16 width = 0, i16 height = 0);
   void SetViewSeq(u8 view, bool enable);

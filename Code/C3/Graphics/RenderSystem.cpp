@@ -9,6 +9,9 @@ RenderSystem::RenderSystem() {
   _constant_light_dir = GR->CreateConstant(String::GetID("light_dir"), CONSTANT_VEC3);
   _constant_light_falloff = GR->CreateConstant(String::GetID("light_falloff"), CONSTANT_VEC4);
   _constant_light_transform = GR->CreateConstant(String::GetID("light_transform"), CONSTANT_MAT4);
+  TextureHandle th = GR->CreateTexture2D(1024, 1024, 1, DEPTH_32_FLOAT_TEXTURE_FORMAT,
+                                         C3_TEXTURE_RT);
+  _shadow_fb = GR->CreateFrameBuffer(1, &th);
 }
 
 RenderSystem::~RenderSystem() {
@@ -205,11 +208,11 @@ void RenderSystem::Render(float dt, bool paused) {
   auto n = _model_renderer_handles.GetUsed();
 
   view = GR->PushView();
-  //GR->SetViewFrameBuffer(view, _shadow_fb);
-  GR->SetViewRect(view, 0, 0, win_size.x, win_size.y);
+  GR->SetViewFrameBuffer(view, _shadow_fb);
+  GR->SetViewRect(view, 0, 0, 1024, 1024);
   GR->SetViewClear(view, C3_CLEAR_DEPTH, 0, 1.f);
   float4x4 light_view, light_proj;
-  sun_light.GetViewProjectionMatrix(light_view, light_proj);
+  GetLightViewProj(&sun_light, light_view, light_proj);
   GR->SetViewTransform(view, light_view.ptr(), light_proj.ptr());
   for (int i = 0; i < n; ++i) {
     auto& mr = _model_renderer[_model_renderer_handles.GetHandleAt(i).idx];
@@ -255,8 +258,9 @@ void RenderSystem::Render(float dt, bool paused) {
         GR->SetTransform(&m);
         GR->SetVertexBuffer(model->_vb);
         GR->SetIndexBuffer(model->_ib, part->_start_index, part->_num_indices);
+        GR->SetTexture(15, _shadow_fb, 0, C3_TEXTURE_COMPARE_LESS);
         GR->SetState(C3_STATE_RGB_WRITE | C3_STATE_ALPHA_WRITE | C3_STATE_DEPTH_WRITE |
-                     C3_STATE_DEPTH_TEST_LESS);
+                     C3_STATE_CULL_CW | C3_STATE_DEPTH_TEST_LESS);
         float dist = camera._frustum.Distance(m.TransformPos(part->_aabb.CenterPoint()));
         auto material = (Material*)model->_materials[part->_material_index]->_header->GetData();
         auto program = material->Apply("Forward", "Geometry");
@@ -280,8 +284,21 @@ void RenderSystem::ApplyLight(Light* light) {
   
   Frustum light_frustum;
   light_frustum.SetKind(FrustumSpaceD3D, FrustumRightHanded);
-  light_frustum.SetPos(light->_pos - light->_dir * 1000.f);
-  light_frustum.SetOrthographic(2000.f, 2000.f);
+  light_frustum.SetFrame(float3(0, 1000, 0), light->_dir, light->_dir.Perpendicular());
+  light_frustum.SetOrthographic(3000.f, 3000.f);
+  light_frustum.SetViewPlaneDistances(1.f, 4000.f);
   float4x4 m = float4x4::Translate(0.5f, 0.5f, 0.f) * float4x4::Scale(0.5f, 0.5f, 1.f) * light_frustum.ComputeViewProjMatrix();
+  auto kk = m.TransformPos(float3::zero);
   GR->SetConstant(_constant_light_transform, &m);
+}
+
+void RenderSystem::GetLightViewProj(Light* light, float4x4& view, float4x4& proj) const {
+  Frustum light_frustum;
+  light_frustum.SetKind(FrustumSpaceD3D, FrustumRightHanded);
+  float3 up = light->_dir.Perpendicular();
+  light_frustum.SetFrame(float3(0, 1000, 0), light->_dir, float3::unitY);
+  light_frustum.SetOrthographic(3000.f, 3000.f);
+  light_frustum.SetViewPlaneDistances(1.f, 4000.f);
+  view = light_frustum.ComputeViewMatrix();
+  proj = light_frustum.ComputeProjectionMatrix();
 }

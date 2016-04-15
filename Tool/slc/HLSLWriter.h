@@ -48,7 +48,6 @@ private:
   String _filename;
   FILE* _f;
   int _indent;
-  int _num_texture_slots;
   ShaderNode* _shader;
 };
 

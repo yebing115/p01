@@ -238,7 +238,7 @@ bool GraphicsRenderer::AllocTransientBuffers(TransientVertexBuffer* tvb, const V
   return false;
 }
 
-ShaderHandle GraphicsRenderer::CreateShader(const MemoryRegion* mem) {
+ShaderHandle GraphicsRenderer::CreateShader(const MemoryRegion* mem, ShaderInfo::Header* out_header) {
   ShaderHandle handle = _shader_handles.Alloc();
   if (!handle) {
     c3_log("Failed to alloc shader handle.\n");
@@ -263,6 +263,7 @@ ShaderHandle GraphicsRenderer::CreateShader(const MemoryRegion* mem) {
     }
   }
   _gi->CreateShader(handle, mem);
+  if (out_header) memcpy(out_header, &header, sizeof(header));
   return handle;
 }
 
@@ -610,12 +611,12 @@ void GraphicsRenderer::SetConstant(ConstantHandle handle, const void* value, u16
   _frame->SetConstant(handle, constant.type, value, min(num, constant.num));
 }
 
-void GraphicsRenderer::SetTexture(u8 unit, FrameBufferHandle handle, AttachmentPoint attachment, u32 flags) {
+void GraphicsRenderer::SetTexture(u8 unit, FrameBufferHandle handle, int idx, u32 flags) {
   TextureHandle texture_handle;
   if (handle) {
     const FrameBufferRef& ref = _frame_buffer_ref[handle.idx];
     c3_assert_return(!ref.window && "Can't sample window frame buffer.");
-    texture_handle = ref.th[attachment];
+    texture_handle = ref.th[idx];
     c3_assert_return(texture_handle && "Frame buffer texture is invalid.");
   }
   _frame->SetTexture(unit, texture_handle, flags);

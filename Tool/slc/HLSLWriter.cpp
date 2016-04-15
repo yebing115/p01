@@ -48,7 +48,7 @@ VarDeclNode* find_constant(ShaderNode* node, stringid name) {
   return nullptr;
 }
 
-HLSLWriter::HLSLWriter(): _f(nullptr), _indent(0), _num_texture_slots(0) {}
+HLSLWriter::HLSLWriter(): _f(nullptr), _indent(0) {}
 HLSLWriter::~HLSLWriter() {}
 
 void HLSLWriter::SetOutput(const String& filename) {
@@ -210,12 +210,24 @@ void HLSLWriter::WriteUniformDecl(VarDeclNode* node) {
     WriteIndent();
     WriteString("SamplerState ");
     WriteString(node->var_name.text);
-    WriteString("_sampler;\n");
+    WriteString("_sampler");
+    if (node->user_loc) {
+      char loc_str[64];
+      snprintf(loc_str, sizeof(loc_str), ": register(s%d)", node->loc);
+      WriteString(loc_str);
+    }
+    WriteString(";\n");
   } else if (node->type_decl->type == VAR_TYPE_SAMPLER_2D_SHADOW) {
       WriteIndent();
       WriteString("SamplerComparisonState ");
       WriteString(node->var_name.text);
-      WriteString("_sampler;\n");
+      WriteString("_sampler");
+      if (node->user_loc) {
+        char loc_str[64];
+        snprintf(loc_str, sizeof(loc_str), ": register(s%d)", node->loc);
+        WriteString(loc_str);
+      }
+      WriteString(";\n");
   }
 }
 
@@ -226,9 +238,11 @@ void HLSLWriter::WriteVarDecl(VarDeclNode* node, bool write_semicolon) {
   WriteString(node->var_name.text);
   if (node->type_decl->num > 1) fprintf(_f, "[%d]", node->type_decl->num);
   if (node->type_decl->type == VAR_TYPE_SAMPLER_2D || node->type_decl->type == VAR_TYPE_SAMPLER_2D_SHADOW) {
-    char loc_str[64];
-    snprintf(loc_str, sizeof(loc_str), ": register(t%d)", _num_texture_slots++);
-    WriteString(loc_str);
+    if (node->user_loc) {
+      char loc_str[64];
+      snprintf(loc_str, sizeof(loc_str), ": register(t%d)", node->loc);
+      WriteString(loc_str);
+    }
   }
   if (node->init) {
     WriteString(" = ");

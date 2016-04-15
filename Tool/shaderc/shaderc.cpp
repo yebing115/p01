@@ -62,7 +62,7 @@ void process(const char* fname) {
   char tech[64];
   char pass[64];
   char out_dir[MAX_ASSET_NAME];
-  if (reader.BeginReadObject()) {
+  while (reader.BeginReadObject()) {
     reader.ReadString("technique", tech, sizeof(tech));
     reader.ReadString("pass", pass, sizeof(pass));
     snprintf(out_dir, sizeof(out_dir), "%s/%s", tech, pass);

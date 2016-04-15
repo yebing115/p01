@@ -14,6 +14,7 @@ out vec2 texcoord_varying;
 out vec3 light_ref_dir_varying;
 out vec3 light_vec_varying;
 out vec3 eye_vec_varying;
+out vec4 light_coord;
 
 uniform mat4 u_model;
 uniform mat4 u_view_proj;
@@ -22,6 +23,8 @@ uniform vec3 u_eye;
 uniform int light_type;
 uniform vec3 light_pos;
 uniform vec3 light_dir;
+
+uniform mat4 light_transform;
 
 //const vec3 LIGHT_DIR = vec3(0.1294095, 0.9659258, 0.2241439);
 //const vec3 LIGHT_DIR = vec3(0.0, 1.0, 0.0);
@@ -45,4 +48,5 @@ void main() {
   light_ref_dir_varying = light_dir;
 #endif
   texcoord_varying = a_texcoord0;
+  light_coord = pos * light_transform;
 }

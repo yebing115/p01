@@ -1,6 +1,19 @@
 [
 	{
 		"technique": "Forward",
+		"pass": "Shadow",
+		"render_state" : [
+			"DEPTH_WRITE",
+			"DEPTH_TEST",
+		],
+		"vs_source" : "shadow.vs",
+		"vs_defines" : [],
+		"fs_source" : "shadow.fs",
+		"fs_defines" : [],
+		"properties" : {}
+	},
+	{
+		"technique": "Forward",
 		"pass": "Geometry",
 		"render_state" : [
 			"RGB_WRITE",

@@ -47,4 +47,5 @@ struct Light {
     _dist_falloff.Set(0.f, 10.f);
     _angle_falloff.Set(0.f, DegToRad(30.f));
   }
+  void GetViewProjectionMatrix(float4x4& view, float4x4& proj) const;
 };

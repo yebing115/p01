@@ -8,6 +8,7 @@ RenderSystem::RenderSystem() {
   _constant_light_pos = GR->CreateConstant(String::GetID("light_pos"), CONSTANT_VEC3);
   _constant_light_dir = GR->CreateConstant(String::GetID("light_dir"), CONSTANT_VEC3);
   _constant_light_falloff = GR->CreateConstant(String::GetID("light_falloff"), CONSTANT_VEC4);
+  _constant_light_transform = GR->CreateConstant(String::GetID("light_transform"), CONSTANT_MAT4);
 }
 
 RenderSystem::~RenderSystem() {
@@ -17,6 +18,7 @@ RenderSystem::~RenderSystem() {
   GR->DestroyConstant(_constant_light_pos);
   GR->DestroyConstant(_constant_light_dir);
   GR->DestroyConstant(_constant_light_falloff);
+  GR->DestroyConstant(_constant_light_transform);
 }
 
 bool RenderSystem::OwnComponentType(HandleType type) const {
@@ -195,15 +197,48 @@ void RenderSystem::Render(float dt, bool paused) {
   if (world->_camera_handles.GetUsed() == 0) return;
   auto GR = GraphicsRenderer::Instance();
   auto& camera = world->_cameras[world->_camera_handles.GetHandleAt(0).idx];
-  auto view = GR->PushView();
+  u8 view;
   auto win_size = GR->GetWindowSize();
   camera.SetAspect(win_size.x / win_size.y);
   camera.SetClipPlane(1, 3000);
+  auto camera_volume = camera._frustum.ToPBVolume();
+  auto n = _model_renderer_handles.GetUsed();
+
+  view = GR->PushView();
+  //GR->SetViewFrameBuffer(view, _shadow_fb);
+  GR->SetViewRect(view, 0, 0, win_size.x, win_size.y);
+  GR->SetViewClear(view, C3_CLEAR_DEPTH, 0, 1.f);
+  float4x4 light_view, light_proj;
+  sun_light.GetViewProjectionMatrix(light_view, light_proj);
+  GR->SetViewTransform(view, light_view.ptr(), light_proj.ptr());
+  for (int i = 0; i < n; ++i) {
+    auto& mr = _model_renderer[_model_renderer_handles.GetHandleAt(i).idx];
+    if (!mr._model || mr._model->_state != ASSET_STATE_READY) continue;
+    auto transform_handle = cast_to<TRANSFORM_HANDLE>(mr._entity, world->_transform_handles, world->_transform_map);
+    if (transform_handle) {
+      auto& transform = world->_transforms[transform_handle.idx];
+      float4x4 m = float4x4::FromTRS(transform._position, transform._rotation, transform._scale);
+      SpinLockGuard lock_guard(&mr._model->_lock);
+      if (mr._model->_state != ASSET_STATE_READY) continue;
+      auto model = (Model*)mr._model->_header->GetData();
+      for (auto part = model->_parts; part < model->_parts + model->_num_parts; ++part) {
+        if (camera_volume.InsideOrIntersects(part->_aabb.Transform(m).MinimalEnclosingAABB()) == TestOutside) continue;
+        GR->SetTransform(&m);
+        GR->SetVertexBuffer(model->_vb);
+        GR->SetIndexBuffer(model->_ib, part->_start_index, part->_num_indices);
+        GR->SetState(C3_STATE_DEPTH_WRITE | C3_STATE_DEPTH_TEST_LESS);
+        float dist = camera._frustum.Distance(m.TransformPos(part->_aabb.CenterPoint()));
+        auto material = (Material*)model->_materials[part->_material_index]->_header->GetData();
+        auto program = material->Apply("Forward", "Shadow");
+        GR->Submit(view, program, depth_to_bits(dist));
+      }
+    }
+  }
+
+  view = GR->PushView();
   GR->SetViewRect(view, 0, 0, win_size.x, win_size.y);
   GR->SetViewClear(view, C3_CLEAR_COLOR | C3_CLEAR_DEPTH, 0, 1.f);
   GR->SetViewTransform(view, camera.GetViewMatrix().ptr(), camera.GetProjectionMatrix().ptr());
-  auto camera_volume = camera._frustum.ToPBVolume();
-  auto n = _model_renderer_handles.GetUsed();
   for (int i = 0; i < n; ++i) {
     auto& mr = _model_renderer[_model_renderer_handles.GetHandleAt(i).idx];
     if (!mr._model || mr._model->_state != ASSET_STATE_READY) continue;
@@ -224,9 +259,8 @@ void RenderSystem::Render(float dt, bool paused) {
                      C3_STATE_DEPTH_TEST_LESS);
         float dist = camera._frustum.Distance(m.TransformPos(part->_aabb.CenterPoint()));
         auto material = (Material*)model->_materials[part->_material_index]->_header->GetData();
-        auto shader = (MaterialShader*)material->_material_shader->_header->GetData();
-        material->Apply();
-        GR->Submit(view, shader->_program, depth_to_bits(dist));
+        auto program = material->Apply("Forward", "Geometry");
+        GR->Submit(view, program, depth_to_bits(dist));
       }
     }
   }
@@ -243,4 +277,11 @@ void RenderSystem::ApplyLight(Light* light) {
   GR->SetConstant(_constant_light_pos, &light->_pos);
   GR->SetConstant(_constant_light_dir, &light->_dir);
   GR->SetConstant(_constant_light_falloff, &falloff);
+  
+  Frustum light_frustum;
+  light_frustum.SetKind(FrustumSpaceD3D, FrustumRightHanded);
+  light_frustum.SetPos(light->_pos - light->_dir * 1000.f);
+  light_frustum.SetOrthographic(2000.f, 2000.f);
+  float4x4 m = float4x4::Translate(0.5f, 0.5f, 0.f) * float4x4::Scale(0.5f, 0.5f, 1.f) * light_frustum.ComputeViewProjMatrix();
+  GR->SetConstant(_constant_light_transform, &m);
 }

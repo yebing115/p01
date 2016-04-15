@@ -211,6 +211,11 @@ void HLSLWriter::WriteUniformDecl(VarDeclNode* node) {
     WriteString("SamplerState ");
     WriteString(node->var_name.text);
     WriteString("_sampler;\n");
+  } else if (node->type_decl->type == VAR_TYPE_SAMPLER_2D_SHADOW) {
+      WriteIndent();
+      WriteString("SamplerComparisonState ");
+      WriteString(node->var_name.text);
+      WriteString("_sampler;\n");
   }
 }
 
@@ -220,7 +225,7 @@ void HLSLWriter::WriteVarDecl(VarDeclNode* node, bool write_semicolon) {
   WriteSpace();
   WriteString(node->var_name.text);
   if (node->type_decl->num > 1) fprintf(_f, "[%d]", node->type_decl->num);
-  if (node->type_decl->type == VAR_TYPE_SAMPLER_2D) {
+  if (node->type_decl->type == VAR_TYPE_SAMPLER_2D || node->type_decl->type == VAR_TYPE_SAMPLER_2D_SHADOW) {
     char loc_str[64];
     snprintf(loc_str, sizeof(loc_str), ": register(t%d)", _num_texture_slots++);
     WriteString(loc_str);
@@ -346,7 +351,9 @@ void HLSLWriter::WriteVarType(VarType type) {
   else if (type == VAR_TYPE_MAT2) WriteString("float2x2");
   else if (type == VAR_TYPE_MAT3) WriteString("float3x3");
   else if (type == VAR_TYPE_MAT4) WriteString("float4x4");
-  else if (type == VAR_TYPE_SAMPLER_2D) WriteString("Texture2D");
+  else if (type == VAR_TYPE_SAMPLER_2D || type == VAR_TYPE_SAMPLER_2D_SHADOW) {
+    WriteString("Texture2D");
+  }
 }
 
 void HLSLWriter::WriteExpression(ExpressionNode* node) {
@@ -391,7 +398,7 @@ void HLSLWriter::WriteExpression(ExpressionNode* node) {
       WriteString(")");
     }
   } else if (node->expr_type == EXPR_TYPE_FUNC_CALL) {
-    auto func_name = GetFuncName(node->func_call.func_name->text, node->func_call.argc);
+    auto func_name = GetFuncName(node->func_call.func_name->text, node->func_call.argc, node->func_call.annotation);
     if (IsSamplerFuncName(node->func_call.func_name->text)) {
       auto texture_name = node->func_call.argv[0]->var_ref->var_name->text;
       auto sampler_name = texture_name + "_sampler";
@@ -400,9 +407,17 @@ void HLSLWriter::WriteExpression(ExpressionNode* node) {
       WriteString(func_name);
       WriteString("(");
       WriteString(sampler_name);
-      for (int i = 1; i < node->func_call.argc; ++i) {
-        WriteString(", ");
-        WriteExpression(node->func_call.argv[i]);
+      if (node->func_call.annotation == FUNCTION_SAMPLE_2D_SHADOW) {
+        WriteString(", (");
+        WriteExpression(node->func_call.argv[1]);
+        WriteString(").xy, (");
+        WriteExpression(node->func_call.argv[1]);
+        WriteString(").z");
+      } else {
+        for (int i = 1; i < node->func_call.argc; ++i) {
+          WriteString(", ");
+          WriteExpression(node->func_call.argv[i]);
+        }
       }
       WriteString(")");
     } else {
@@ -616,10 +631,12 @@ String HLSLWriter::GetVarName(const String& var_name) {
   }
 }
 
-String HLSLWriter::GetFuncName(const String& func_name, int argc) {
+String HLSLWriter::GetFuncName(const String& func_name, int argc, FunctionAnnotation annotation) {
   if (func_name == "mix")  return "lerp";
-  else if (func_name == "texture")  return argc == 2 ? "Sample" : "SampleBias";
-  else if (func_name == "texelFetch")  return "__texelFetch";
+  else if (func_name == "texture") {
+    if (annotation == FUNCTION_SAMPLE_2D_SHADOW) return "SampleCmpLevelZero";
+    else return argc == 2 ? "Sample" : "SampleBias";
+  } else if (func_name == "texelFetch")  return "__texelFetch";
   else if (func_name == "textureSize")  return "__textureSize";
   return func_name;
 }

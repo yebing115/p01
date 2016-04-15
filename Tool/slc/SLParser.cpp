@@ -16,6 +16,7 @@ const char* VAR_TYPE_NAMES[VAR_TYPE_COUNT] = {
   "mat3",
   "mat4",
   "sampler2D",
+  "sampler2DShadow",
 };
 
 #define SL_CHECK(x) \
@@ -299,6 +300,7 @@ bool SLParser::TypeDecl(TypeDeclNode*& node) {
   else if (token.type == TOKEN_KWORD_MAT3) node->type = VAR_TYPE_MAT3;
   else if (token.type == TOKEN_KWORD_MAT4) node->type = VAR_TYPE_MAT4;
   else if (token.type == TOKEN_KWORD_SAMPLER_2D) node->type = VAR_TYPE_SAMPLER_2D;
+  else if (token.type == TOKEN_KWORD_SAMPLER_2D_SHADOW) node->type = VAR_TYPE_SAMPLER_2D_SHADOW;
   else {
     Error("%s: Expect type, got '%s'", token.location.ToString().GetCString(), token.text.GetCString());
     return false;

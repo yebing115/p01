@@ -76,6 +76,8 @@ enum TokenType {
   TOKEN_KWORD_MAT3,
   TOKEN_KWORD_MAT4,
   TOKEN_KWORD_SAMPLER_2D,
+  TOKEN_KWORD_SAMPLER_2D_SHADOW,
+
   TOKEN_KWORD_TRUE,
   TOKEN_KWORD_FALSE,
 
@@ -109,7 +111,7 @@ struct Token {
   float ToNumber() const { return strtof(text.GetCString(), nullptr); }
   int ToInt() const { return atoi(text.GetCString()); }
   char ToChar() const { return text[0]; }
-  bool IsDataType() const { return type >= TOKEN_KWORD_VOID && type <= TOKEN_KWORD_SAMPLER_2D; }
+  bool IsDataType() const { return type >= TOKEN_KWORD_VOID && type <= TOKEN_KWORD_SAMPLER_2D_SHADOW; }
 
   operator bool() const { return type != TOKEN_INVALID; }
 };

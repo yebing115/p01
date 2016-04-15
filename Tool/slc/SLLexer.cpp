@@ -70,6 +70,7 @@ const char* TOKEN_TYPE_STRING[TOKEN_COUNT] = {
   "mat3",
   "mat4",
   "sampler2D",
+  "sampler2DShadow",
   "true",
   "false",
 };
@@ -223,6 +224,7 @@ Token SLLexer::_Next() {
       else if (s == "mat3") return CreateToken(TOKEN_KWORD_MAT3, s);
       else if (s == "mat4") return CreateToken(TOKEN_KWORD_MAT4, s);
       else if (s == "sampler2D") return CreateToken(TOKEN_KWORD_SAMPLER_2D, s);
+      else if (s == "sampler2DShadow") return CreateToken(TOKEN_KWORD_SAMPLER_2D_SHADOW, s);
       else if (s == "true") return CreateToken(TOKEN_KWORD_TRUE, s);
       else if (s == "false") return CreateToken(TOKEN_KWORD_FALSE, s);
       else return CreateToken(TOKEN_ID, s);

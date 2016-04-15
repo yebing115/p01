@@ -41,6 +41,7 @@ enum VarType {
   VAR_TYPE_MAT3,
   VAR_TYPE_MAT4,
   VAR_TYPE_SAMPLER_2D,
+  VAR_TYPE_SAMPLER_2D_SHADOW,
   VAR_TYPE_COUNT,
 };
 
@@ -180,6 +181,11 @@ struct VarRefNode : public ASTNode {
   VarRefNode* suffix;
 };
 
+enum FunctionAnnotation {
+  FUNCTION_USER,
+  FUNCTION_SAMPLE_2D_SHADOW,
+};
+
 struct ExpressionNode : public ASTNode {
   ExpressionType expr_type;
   FileLocation location;
@@ -197,6 +203,7 @@ struct ExpressionNode : public ASTNode {
       Token* func_name;
       ExpressionNode* argv[16];
       int argc;
+      FunctionAnnotation annotation;
     } func_call;
     struct {
       ExpressionNode* first;

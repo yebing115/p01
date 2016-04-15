@@ -56,4 +56,5 @@ private:
   ConstantHandle _constant_light_pos;
   ConstantHandle _constant_light_dir;
   ConstantHandle _constant_light_falloff;
+  ConstantHandle _constant_light_transform;
 };

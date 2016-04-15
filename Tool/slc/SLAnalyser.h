@@ -17,6 +17,8 @@ struct ValueType {
   bool is_const;
   int num;
 
+  FunctionAnnotation func_call_annotation = FUNCTION_USER;
+
   ValueType(): type(VAR_TYPE_VOID), is_const(false), num(1) {}
   ValueType(VarType t, int n = 1): type(t), is_const(false), num(n) {}
   ValueType(bool c, VarType t, int n = 1): type(t), is_const(c), num(n) {}
@@ -26,6 +28,7 @@ struct ValueType {
   bool Equal(const ValueType& o) const { return type == o.type && num == o.num; }
   String ToString() const;
   static const ValueType Sampler2D;
+  static const ValueType Sampler2DShadow;
   static const ValueType Void;
   static const ValueType Bool;
   static const ValueType Int;

@@ -13,7 +13,7 @@ static ShaderHandle load_bare_shader(const char* filename) {
   return ShaderHandle();
 }
 
-static bool compute_shader_binary_filename(JsonReader& reader, MaterialShader& _shader,
+static bool compute_shader_binary_filename(JsonReader& reader, SubShader* _shader,
                                            const char* filename_key, const char* defines_key,
                                            char* binary_filename, u32 max_size) {
   char filename[MAX_ASSET_NAME];
@@ -35,7 +35,7 @@ static bool compute_shader_binary_filename(JsonReader& reader, MaterialShader& _
 
     stringid defines_id = String::GetID(defines);
     snprintf(binary_filename, max_size, "Shaders/%s/%s/%s_%08x.%sb",
-             _shader._technique, _shader._pass, filename, defines_id, suffix);
+             _shader->_technique, _shader->_pass, filename, defines_id, suffix);
     return true;
   }
   return false;
@@ -317,59 +317,57 @@ DEFINE_JOB_ENTRY(load_material_shader) {
   u16 num_textures = 0;
   char shader_binary_filename[MAX_ASSET_NAME];
   MaterialShader material_shader;
-  vector<MaterialParam> material_params;
   vector<AssetDesc> texture_descs;
   JsonReader reader((const char*)mem->data);
   c3_assert(reader.IsValid());
   
-  reader.BeginReadObject();
-  reader.ReadString("technique", material_shader._technique, sizeof(material_shader._technique));
-  reader.ReadString("pass", material_shader._pass, sizeof(material_shader._pass));
-  
-  ShaderHandle vsh, fsh;
-  if (compute_shader_binary_filename(reader, material_shader, "vs_source", "vs_defines",
-                                     shader_binary_filename, sizeof(shader_binary_filename))) {
-    vsh = load_bare_shader(shader_binary_filename);
-  }
-  if (compute_shader_binary_filename(reader, material_shader, "fs_source", "fs_defines",
-                                     shader_binary_filename, sizeof(shader_binary_filename))) {
-    fsh = load_bare_shader(shader_binary_filename);
-  }
-  material_shader._program = GraphicsRenderer::Instance()->CreateProgram(vsh, fsh);
+  material_shader._num_sub_shaders = 0;
+  while (reader.BeginReadObject()) {
+    SubShader* sub_shader = material_shader._sub_shaders + material_shader._num_sub_shaders;
+    reader.ReadString("technique", sub_shader->_technique, sizeof(sub_shader->_technique));
+    reader.ReadString("pass", sub_shader->_pass, sizeof(sub_shader->_pass));
 
-  reader.BeginReadObject("properties");
-  char mat_key[MAX_MATERIAL_KEY_LEN];
-  JsonValueType value_type;
-  while (reader.Peek(mat_key, sizeof(mat_key), &value_type)) {
-    c3_assert(value_type == JSON_VALUE_OBJECT);
-    MaterialParam param;
-    strncpy(param._name, mat_key, sizeof(mat_key));
-    if (load_material_shader_param(asset->_desc._filename, reader, param, num_textures)) {
-      material_params.push_back(param);
-      if (param._type == MATERIAL_PARAM_TEXTURE2D) {
-        texture_descs.push_back(param._tex2d._asset->_desc);
+    ShaderHandle vsh, fsh;
+    if (compute_shader_binary_filename(reader, sub_shader, "vs_source", "vs_defines",
+                                       shader_binary_filename, sizeof(shader_binary_filename))) {
+      vsh = load_bare_shader(shader_binary_filename);
+    }
+    if (compute_shader_binary_filename(reader, sub_shader, "fs_source", "fs_defines",
+                                       shader_binary_filename, sizeof(shader_binary_filename))) {
+      fsh = load_bare_shader(shader_binary_filename);
+    }
+    sub_shader->_program = GraphicsRenderer::Instance()->CreateProgram(vsh, fsh);
+
+    reader.BeginReadObject("properties");
+    char mat_key[MAX_MATERIAL_KEY_LEN];
+    JsonValueType value_type;
+    sub_shader->_num_params = 0;
+    while (reader.Peek(mat_key, sizeof(mat_key), &value_type)) {
+      c3_assert(value_type == JSON_VALUE_OBJECT);
+      MaterialParam* param = sub_shader->_params + sub_shader->_num_params;
+      strncpy(param->_name, mat_key, sizeof(mat_key));
+      if (load_material_shader_param(asset->_desc._filename, reader, *param, num_textures)) {
+        if (param->_type == MATERIAL_PARAM_TEXTURE2D) {
+          texture_descs.push_back(param->_tex2d._asset->_desc);
+        }
+        ++sub_shader->_num_params;
       }
     }
+    reader.EndReadObject(); // "properties"
+    reader.EndReadObject();
+    ++material_shader._num_sub_shaders;
   }
-  material_shader._num_params = material_params.size();
-  reader.EndReadObject(); // "properties"
-  reader.EndReadObject();
 
   mem_free(mem); // json data
 
-  auto num_params = material_params.size();
-  u32 asset_memory_size = ASSET_MEMORY_SIZE(num_textures,
-                                            MaterialShader::ComputeSize(num_params));
-  asset->_header = (AssetMemoryHeader*)C3_ALLOC(g_allocator,
-                                                asset_memory_size);
+  u32 asset_memory_size = ASSET_MEMORY_SIZE(num_textures, sizeof(MaterialShader));
+  asset->_header = (AssetMemoryHeader*)C3_ALLOC(g_allocator, asset_memory_size);
   asset->_header->_size = asset_memory_size;
   asset->_header->_num_depends = num_textures;
   if (num_textures > 0) memcpy(asset->_header->_depends, texture_descs.data(),
                                sizeof(AssetDesc) * num_textures);
   auto ms = (MaterialShader*)asset->_header->GetData();
   memcpy(ms, &material_shader, sizeof(MaterialShader));
-  if (num_params > 0) memcpy(ms->_params, material_params.data(),
-                             num_params * sizeof(MaterialParam));
   asset->_state = ASSET_STATE_READY;
 }
 
@@ -398,7 +396,7 @@ DEFINE_JOB_ENTRY(load_material) {
     if (shader_asset->_state == ASSET_STATE_READY) {
       auto shader = (MaterialShader*)shader_asset->_header->GetData();
       SpinLockGuard lock_guard(&asset->_lock);
-      u32 asset_mem_size = ASSET_MEMORY_SIZE(1 + shader_asset->_header->_num_depends, Material::ComputeSize(shader->_num_params));
+      u32 asset_mem_size = ASSET_MEMORY_SIZE(1 + shader_asset->_header->_num_depends, sizeof(Material));
       asset->_header = (AssetMemoryHeader*)C3_ALLOC(g_allocator, asset_mem_size);
       asset->_header->_size = asset_mem_size;
 
@@ -411,31 +409,20 @@ DEFINE_JOB_ENTRY(load_material) {
              shader_asset->_header->_num_depends * sizeof(AssetDesc));
       
       auto mat = (Material*)asset->_header->GetData();
-      mat->_material_shader = shader_asset;
-      mat->_num_params = shader->_num_params;
-      memcpy(mat->_params, shader->_params, mat->_num_params * sizeof(MaterialParam));
+      mat->_shader_asset = shader_asset;
+      mat->_num_params = 0;
       
       reader.BeginReadObject("properties");
       JsonValueType value_type;
       char param_name[MAX_MATERIAL_KEY_LEN];
       while (reader.Peek(param_name, sizeof(param_name), &value_type)) {
         c3_assert(value_type == JSON_VALUE_OBJECT);
-        MaterialParam* param = nullptr;
-        for (int i = 0; i < mat->_num_params; ++i) {
-          if (strcmp(mat->_params[i]._name, param_name) == 0) {
-            param = mat->_params + i;
-            break;
-          }
+        MaterialParam* param = mat->_params + mat->_num_params;
+        load_material_param(asset->_desc._filename, reader, *param);
+        if (param->_type == MATERIAL_PARAM_TEXTURE2D) {
+          asset->_header->_depends[1 + param->_tex2d._unit] = param->_tex2d._asset->_desc;
         }
-        if (param) {
-          load_material_param(asset->_desc._filename, reader, *param);
-          if (param->_type == MATERIAL_PARAM_TEXTURE2D) {
-            asset->_header->_depends[1 + param->_tex2d._unit] = param->_tex2d._asset->_desc;
-          }
-        } else {
-          reader.BeginReadObject();
-          reader.EndReadObject();
-        }
+        ++mat->_num_params;
       }
       reader.EndReadObject();
     }

@@ -173,6 +173,7 @@ void GLSLWriter::WriteVarType(VarType type) {
   else if (type == VAR_TYPE_MAT3) WriteString("mat3");
   else if (type == VAR_TYPE_MAT4) WriteString("mat4");
   else if (type == VAR_TYPE_SAMPLER_2D) WriteString("sampler2D");
+  else if (type == VAR_TYPE_SAMPLER_2D_SHADOW) WriteString("sampler2DShadow");
 }
 
 void GLSLWriter::WriteExpression(ExpressionNode* node) {

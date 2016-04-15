@@ -19,9 +19,11 @@ const char* VAR_TYPE_STRING[VAR_TYPE_COUNT] = {
   "mat3",
   "mat4",
   "sampler2D",
+  "sampler2DShadow",
 };
 
 const ValueType ValueType::Sampler2D{VAR_TYPE_SAMPLER_2D, 1};
+const ValueType ValueType::Sampler2DShadow{VAR_TYPE_SAMPLER_2D_SHADOW, 1};
 const ValueType ValueType::Void{VAR_TYPE_VOID, 1};
 const ValueType ValueType::Bool{VAR_TYPE_BOOL, 1};
 const ValueType ValueType::Int{VAR_TYPE_INT, 1};
@@ -494,6 +496,7 @@ bool SLAnalyser::EvalType(ExpressionNode* expr, ValueType* type) {
         SL_CHECK(EvalType(expr->func_call.argv[i], &arg_types[i]));
       }
       SL_CHECK(EvalType(expr->location, expr->func_call.func_name->text, arg_types, type));
+      expr->func_call.annotation = type->func_call_annotation;
     } else {
       Error("%s: Not a function name symbol '%s'", expr->location.ToString().GetCString(), expr->func_call.func_name->text.GetCString());
       return false;
@@ -791,26 +794,44 @@ bool type_check_func_texture(const FileLocation& location, const vector<ValueTyp
     g_analyser->Error("%s: 'texture' function expect 2 or 3 arguments.", location.ToString().GetCString());
     return false;
   }
-  if (arg_types[0] != ValueType::Sampler2D) {
+  if (arg_types[0] == ValueType::Sampler2D) {
+    if (arg_types[0] != ValueType::Sampler2D) {
+    }
+    if (arg_types[1] != ValueType::Vec2) {
+      g_analyser->Error("%s: 'texture' argument 2 type mismatch '%s', not 'vec2'.",
+                        location.ToString().GetCString(),
+                        arg_types[1].ToString().GetCString());
+      return false;
+    }
+    if (arg_types.size() == 3 && arg_types[2] != ValueType::Float) {
+      g_analyser->Error("%s: 'texture' argument 3 type mismatch '%s', not 'float'.",
+                        location.ToString().GetCString(),
+                        arg_types[2].ToString().GetCString());
+      return false;
+    }
+    *out_type = ValueType::Vec4;
+  } else if (arg_types[0] == ValueType::Sampler2DShadow) {
+    if (arg_types[1] != ValueType::Vec3) {
+      g_analyser->Error("%s: 'texture' argument 2 type mismatch '%s', not 'vec3'.",
+                        location.ToString().GetCString(),
+                        arg_types[1].ToString().GetCString());
+      return false;
+    }
+    if (arg_types.size() == 3 && arg_types[2] != ValueType::Float) {
+      g_analyser->Error("%s: 'texture' argument 3 type mismatch '%s', not 'float'.",
+                        location.ToString().GetCString(),
+                        arg_types[2].ToString().GetCString());
+      return false;
+    }
+    *out_type = ValueType::Float;
+    out_type->func_call_annotation = FUNCTION_SAMPLE_2D_SHADOW;
+  } else {
     g_analyser->Error("%s: 'texture' argument 1 type mismatch '%s', not 'sampler2D'.",
                       location.ToString().GetCString(),
                       arg_types[0].ToString().GetCString());
     return false;
   }
-  if (arg_types[1] != ValueType::Vec2) {
-    g_analyser->Error("%s: 'texture' argument 2 type mismatch '%s', not 'vec2'.",
-                      location.ToString().GetCString(),
-                      arg_types[1].ToString().GetCString());
-    return false;
-  }
-  if (arg_types.size() == 3 && arg_types[2] != ValueType::Float) {
-    g_analyser->Error("%s: 'texture' argument 3 type mismatch '%s', not 'float'.",
-                      location.ToString().GetCString(),
-                      arg_types[2].ToString().GetCString());
-    return false;
-  }
 
-  *out_type = ValueType::Vec4;
   return true;
 }
 

@@ -1,6 +1,19 @@
 [
 	{
 		"technique": "Forward",
+		"pass": "Shadow",
+		"render_state" : [
+			"DEPTH_WRITE",
+			"DEPTH_TEST",
+		],
+		"vs_source" : "shadow.vs",
+		"vs_defines" : [],
+		"fs_source" : "shadow.fs",
+		"fs_defines" : [],
+		"properties" : {}
+	},
+	{
+		"technique": "Forward",
 		"pass": "Geometry",
 		"render_state" : [
 			"RGB_WRITE",
@@ -10,9 +23,13 @@
 			"BLEND_NORMAL",
 		],
 		"vs_source" : "model.vs",
-		"vs_defines" : [],
+		"vs_defines" : [
+			"USE_SHADOW_MAP",
+		],
 		"fs_source" : "model.fs",
-		"fs_defines" : [],
+		"fs_defines" : [
+			"USE_SHADOW_MAP",
+		],
 		"properties" : {
 			"diffuse_color" : {
 				"type" : "vec3",
@@ -31,5 +48,5 @@
 				"value" : "WHITE",
 			},
 		}
-	}
+	},
 ]

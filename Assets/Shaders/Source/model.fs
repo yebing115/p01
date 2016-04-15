@@ -9,6 +9,9 @@ uniform float specular_power;
 #if USE_NORMAL_MAP
 uniform sampler2D normal_tex;
 #endif
+#if USE_SHADOW_MAP
+uniform sampler2DShadow shadow_tex;
+#endif
 
 uniform int light_type;
 uniform vec3 light_color;
@@ -19,7 +22,9 @@ in vec3 normal_varying;
 in vec3 tangent_varying;
 #endif
 in vec2 texcoord_varying;
-
+#if USE_SHADOW_MAP
+in vec4 light_coord;
+#endif
 in vec3 light_ref_dir_varying; 	 // light's center dir (world or tangent space)
 in vec3 light_vec_varying;		 // from light's pos to fragment's pos (world or tangent space)
 in vec3 eye_vec_varying;		 // from fragment's pos to camera
@@ -55,20 +60,29 @@ void main() {
   
   vec3 light_dir = normalize(light_vec_varying);
   vec3 eye_dir = normalize(eye_vec_varying);
+
   vec3 n;
 #if USE_NORMAL_MAP
   n = normalize(texture(normal_tex, texcoord_varying).rgb * 2.0 - vec3(1.0));
 #else
   n = normalize(normal_varying);
 #endif
+
   float intensity = compute_light(light_type, normalize(light_ref_dir_varying), light_vec_varying, light_falloff);
   vec3 lc = light_color * intensity;
   vec3 color = diff * lc * max(0.0, dot(n, -light_dir));
+
 #if USE_SPECULAR_MAP
   vec4 spec = texture(specular_tex, texcoord_varying);
   vec3 r = reflect(light_dir, n);
   color += spec.rgb * lc * pow(max(0.0, dot(eye_dir, r)), specular_power);
-#endif  
+#endif
+
+#if USE_SHADOW_MAP
+  float shadow_factor = texture(shadow_tex, light_coord.xyz);
+  color = vec3(shadow_factor);
+#endif
+
   color_out.rgb = clamp(color, vec3(0.0), vec3(1.0)) * alpha;
   color_out.a = alpha;
 }

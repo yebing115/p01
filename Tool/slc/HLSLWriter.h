@@ -37,7 +37,7 @@ public:
   void WriteNewline();
   void WriteString(const String& s);
   String GetVarName(const String& var_name);
-  String GetFuncName(const String& func_name, int arg_count);
+  String GetFuncName(const String& func_name, int arg_count, FunctionAnnotation annotation);
   static void GetPrecedence(ExpressionType type, int& out_pred, bool& right_assoc);
 
 private:

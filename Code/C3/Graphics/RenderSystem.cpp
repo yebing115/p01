@@ -254,7 +254,7 @@ void RenderSystem::Render(float dt, bool paused) {
       if (mr._model->_state != ASSET_STATE_READY) continue;
       auto model = (Model*)mr._model->_header->GetData();
       for (auto part = model->_parts; part < model->_parts + model->_num_parts; ++part) {
-        //if (camera_volume.InsideOrIntersects(part->_aabb.Transform(m).MinimalEnclosingAABB()) == TestOutside) continue;
+        if (camera_volume.InsideOrIntersects(part->_aabb.Transform(m).MinimalEnclosingAABB()) == TestOutside) continue;
         ApplyLight(&sun_light);
         GR->SetTransform(&m);
         GR->SetVertexBuffer(model->_vb);

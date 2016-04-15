@@ -31,7 +31,7 @@ in vec4 light_coord_varying;
 
 out vec4 color_out;
 
-//const vec3 AMBIENT_LIGHT = vec3(0.01, 0.01, 0.01);
+const vec3 AMBIENT_LIGHT = vec3(0.0, 0.0, 0.0);
 //const vec3 SUN_COLOR = vec3(0.06299, 0.374256, 1.0); // 64, 156, 255
 //const vec3 SUN_COLOR = vec3(1.0, 1.0, 1.0);
 //const vec3 SUN_COLOR = vec3(1.0, 0.68, 0.41); // 255, 214, 170
@@ -80,7 +80,7 @@ void main() {
 
 #if USE_SHADOW_MAP
   float shadow_factor = texture(shadow_tex, light_coord_varying.xyz);
-  color *= vec3(shadow_factor);
+  color = AMBIENT_LIGHT + color * shadow_factor;
 #endif
 
   color_out.rgb = clamp(color, vec3(0.0), vec3(1.0)) * alpha;

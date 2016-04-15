@@ -51,6 +51,6 @@ void main() {
 #endif
   texcoord_varying = a_texcoord0;
 #if USE_SHADOW_MAP
-  light_coord_varying = pos * light_transform;
+  light_coord_varying = vec4(a_position + a_normal * 10.0, 1.0) * u_model * light_transform;
 #endif
 }

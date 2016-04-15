@@ -194,7 +194,7 @@ void RenderSystem::Render(float dt, bool paused) {
   sun_light._type = DIRECTIONAL_LIGHT;
   sun_light._color = Color(1.0f, 0.68f, 0.41f);
   sun_light._intensity = 1.f;
-  sun_light._dir.Set(-0.1294095f, -0.9659258f, -0.2241439f);
+  sun_light._dir.Set(0.1294095, -0.9659258, 0.2241439);
 
   auto world = GameWorld::Instance();
   if (world->_camera_handles.GetUsed() == 0) return;
@@ -203,7 +203,7 @@ void RenderSystem::Render(float dt, bool paused) {
   u8 view;
   auto win_size = GR->GetWindowSize();
   camera.SetAspect(win_size.x / win_size.y);
-  camera.SetClipPlane(1, 3000);
+  camera.SetClipPlane(1, 4000);
   auto camera_volume = camera._frustum.ToPBVolume();
   auto n = _model_renderer_handles.GetUsed();
 
@@ -224,12 +224,13 @@ void RenderSystem::Render(float dt, bool paused) {
       SpinLockGuard lock_guard(&mr._model->_lock);
       if (mr._model->_state != ASSET_STATE_READY) continue;
       auto model = (Model*)mr._model->_header->GetData();
+      auto b = model->_aabb;
       for (auto part = model->_parts; part < model->_parts + model->_num_parts; ++part) {
         if (camera_volume.InsideOrIntersects(part->_aabb.Transform(m).MinimalEnclosingAABB()) == TestOutside) continue;
         GR->SetTransform(&m);
         GR->SetVertexBuffer(model->_vb);
         GR->SetIndexBuffer(model->_ib, part->_start_index, part->_num_indices);
-        GR->SetState(C3_STATE_DEPTH_WRITE | C3_STATE_DEPTH_TEST_LESS);
+        GR->SetState(C3_STATE_DEPTH_WRITE | C3_STATE_DEPTH_TEST_LESS | C3_STATE_CULL_CW);
         float dist = camera._frustum.Distance(m.TransformPos(part->_aabb.CenterPoint()));
         auto material = (Material*)model->_materials[part->_material_index]->_header->GetData();
         auto program = material->Apply("Forward", "Shadow");
@@ -253,14 +254,14 @@ void RenderSystem::Render(float dt, bool paused) {
       if (mr._model->_state != ASSET_STATE_READY) continue;
       auto model = (Model*)mr._model->_header->GetData();
       for (auto part = model->_parts; part < model->_parts + model->_num_parts; ++part) {
-        if (camera_volume.InsideOrIntersects(part->_aabb.Transform(m).MinimalEnclosingAABB()) == TestOutside) continue;
+        //if (camera_volume.InsideOrIntersects(part->_aabb.Transform(m).MinimalEnclosingAABB()) == TestOutside) continue;
         ApplyLight(&sun_light);
         GR->SetTransform(&m);
         GR->SetVertexBuffer(model->_vb);
         GR->SetIndexBuffer(model->_ib, part->_start_index, part->_num_indices);
         GR->SetTexture(15, _shadow_fb, 0, C3_TEXTURE_COMPARE_LESS);
         GR->SetState(C3_STATE_RGB_WRITE | C3_STATE_ALPHA_WRITE | C3_STATE_DEPTH_WRITE |
-                     C3_STATE_CULL_CW | C3_STATE_DEPTH_TEST_LESS);
+                     C3_STATE_CULL_CW | C3_STATE_DEPTH_TEST_LEQUAL);
         float dist = camera._frustum.Distance(m.TransformPos(part->_aabb.CenterPoint()));
         auto material = (Material*)model->_materials[part->_material_index]->_header->GetData();
         auto program = material->Apply("Forward", "Geometry");
@@ -284,10 +285,10 @@ void RenderSystem::ApplyLight(Light* light) {
   
   Frustum light_frustum;
   light_frustum.SetKind(FrustumSpaceD3D, FrustumRightHanded);
-  light_frustum.SetFrame(float3(0, 1000, 0), light->_dir, light->_dir.Perpendicular());
-  light_frustum.SetOrthographic(3000.f, 3000.f);
-  light_frustum.SetViewPlaneDistances(1.f, 4000.f);
-  float4x4 m = float4x4::Translate(0.5f, 0.5f, 0.f) * float4x4::Scale(0.5f, 0.5f, 1.f) * light_frustum.ComputeViewProjMatrix();
+  light_frustum.SetFrame(float3(0, 2000, 0), light->_dir, light->_dir.Perpendicular());
+  light_frustum.SetOrthographic(4000.f, 4000.f);
+  light_frustum.SetViewPlaneDistances(0.f, 2000.f);
+  float4x4 m = float4x4::Translate(0.5f, 0.5f, 0.f) * float4x4::Scale(0.5f, -0.5f, 1.f) * light_frustum.ComputeViewProjMatrix();
   auto kk = m.TransformPos(float3::zero);
   GR->SetConstant(_constant_light_transform, &m);
 }
@@ -295,10 +296,9 @@ void RenderSystem::ApplyLight(Light* light) {
 void RenderSystem::GetLightViewProj(Light* light, float4x4& view, float4x4& proj) const {
   Frustum light_frustum;
   light_frustum.SetKind(FrustumSpaceD3D, FrustumRightHanded);
-  float3 up = light->_dir.Perpendicular();
-  light_frustum.SetFrame(float3(0, 1000, 0), light->_dir, float3::unitY);
-  light_frustum.SetOrthographic(3000.f, 3000.f);
-  light_frustum.SetViewPlaneDistances(1.f, 4000.f);
+  light_frustum.SetFrame(float3(0, 2000, 0), light->_dir, light->_dir.Perpendicular());
+  light_frustum.SetOrthographic(4000.f, 4000.f);
+  light_frustum.SetViewPlaneDistances(0.f, 2000.f);
   view = light_frustum.ComputeViewMatrix();
   proj = light_frustum.ComputeProjectionMatrix();
 }

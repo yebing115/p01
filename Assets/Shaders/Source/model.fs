@@ -80,7 +80,7 @@ void main() {
 
 #if USE_SHADOW_MAP
   float shadow_factor = texture(shadow_tex, light_coord_varying.xyz);
-  color = vec3(shadow_factor);
+  color *= vec3(shadow_factor);
 #endif
 
   color_out.rgb = clamp(color, vec3(0.0), vec3(1.0)) * alpha;

@@ -76,7 +76,4 @@ typedef Handle<PROGRAM_HANDLE> ProgramHandle;
 typedef Handle<CONSTANT_HANDLE> ConstantHandle;
 
 typedef Handle<ENTITY_HANDLE> EntityHandle;
-typedef Handle<TRANSFORM_HANDLE> TransformHandle;
-typedef Handle<CAMERA_HANDLE> CameraHandle;
-typedef Handle<MODEL_RENDERER_HANDLE> ModelRendererHandle;
-typedef Handle<LIGHT_HANDLE> LightHandle;
+typedef unordered_map<EntityHandle, int> EntityMap;

@@ -9,9 +9,12 @@ RenderSystem::RenderSystem() {
   _constant_light_dir = GR->CreateConstant(String::GetID("light_dir"), CONSTANT_VEC3);
   _constant_light_falloff = GR->CreateConstant(String::GetID("light_falloff"), CONSTANT_VEC4);
   _constant_light_transform = GR->CreateConstant(String::GetID("light_transform"), CONSTANT_MAT4);
-  TextureHandle th = GR->CreateTexture2D(1024, 1024, 1, DEPTH_32_FLOAT_TEXTURE_FORMAT,
+  TextureHandle th = GR->CreateTexture2D(4096, 4096, 1, DEPTH_32_FLOAT_TEXTURE_FORMAT,
                                          C3_TEXTURE_RT);
   _shadow_fb = GR->CreateFrameBuffer(1, &th);
+
+  _num_lights = 0;
+  _num_models = 0;
 }
 
 RenderSystem::~RenderSystem() {
@@ -28,164 +31,184 @@ bool RenderSystem::OwnComponentType(HandleType type) const {
   return (type == MODEL_RENDERER_HANDLE);
 }
 
-GenericHandle RenderSystem::CreateComponent(EntityHandle entity, HandleType type) {
-  if (type == MODEL_RENDERER_HANDLE) return CreateModelRenderer(entity);
-  else return GenericHandle();
+void RenderSystem::CreateComponent(EntityHandle entity, HandleType type) {
+  if (type == MODEL_RENDERER_HANDLE) CreateModelRenderer(entity);
+  else if (type == LIGHT_HANDLE) CreateLight(entity);
 }
 
-ModelRendererHandle RenderSystem::CreateModelRenderer(EntityHandle entity) {
-  auto h = _model_renderer_handles.Alloc();
-  if (h) {
-    _model_renderer_map.insert(make_pair(entity, h));
-    _model_renderer[h.idx]._entity = entity;
-    _model_renderer[h.idx].Init();
+void RenderSystem::CreateModelRenderer(EntityHandle entity) {
+  c3_assert_return(_num_models < C3_MAX_MODEL_RENDERERS);
+  ModelRenderer* model = _models + _num_models;
+  model->_entity = entity;
+  model->Init();
+  _model_map.insert(EntityMap::value_type(entity, _num_models));
+  ++_num_models;
+}
+
+void RenderSystem::DestroyModelRenderer(EntityHandle e) {
+  auto it = _model_map.find(e);
+  if (it != _model_map.end()) {
+    auto index = it->second;
+    --_num_models;
+    if (index != _num_models) {
+      memcpy(_models + index, _models + _num_models, sizeof(ModelRenderer));
+      auto moved_entity = _models[index]._entity;
+      _model_map[moved_entity] = index;
+    }
+    _model_map.erase(e);
   }
-  return h;
 }
 
-void RenderSystem::DestroyModelRenderer(ModelRendererHandle handle) {
-  if (!_model_renderer_handles.IsValid(handle)) return;
-  _model_renderer_map.erase(_model_renderer[handle.idx]._entity);
-  //auto& c = _model_renderer[handle.idx];
+const char* RenderSystem::GetModelFilename(EntityHandle e) const {
+  auto model = FindModel(e);
+  if (!model) return "";
+  return model->_asset->_desc._filename;
 }
 
-const char* RenderSystem::GetModelFilename(GenericHandle gh) const {
-  auto h = cast_to<MODEL_RENDERER_HANDLE>(gh,
-                                          _model_renderer_handles,
-                                          _model_renderer_map);
-  if (!h) return "";
-  return _model_renderer[h.idx]._model->_desc._filename;
-}
-
-void RenderSystem::SetModelFilename(GenericHandle gh, const char* filename) {
-  auto h = cast_to<MODEL_RENDERER_HANDLE>(gh,
-                                          _model_renderer_handles,
-                                          _model_renderer_map);
-  if (!h) return;
-  auto& m = _model_renderer[h.idx];;
-  if (m._model) {
-    if (strcmp(m._model->_desc._filename, filename) == 0) return;
-    AssetManager::Instance()->Unload(m._model);
-    m._part_list.clear();
+void RenderSystem::SetModelFilename(EntityHandle e, const char* filename) {
+  auto model = FindModel(e);
+  if (!model) return;
+  if (model->_asset) {
+    if (strcmp(model->_asset->_desc._filename, filename) == 0) return;
+    AssetManager::Instance()->Unload(model->_asset);
+    model->_part_list.clear();
   }
-  m._model = AssetManager::Instance()->Load(ASSET_TYPE_MODEL, filename);
+  model->_asset = AssetManager::Instance()->Load(ASSET_TYPE_MODEL, filename);
 }
 
-LightHandle RenderSystem::CreateLight(EntityHandle e) {
-  auto h = _light_handles.Alloc();
-  if (h) {
-    _light_entity_map.insert(make_pair(e, h));
-    _model_renderer[h.idx]._entity = e;
-    _model_renderer[h.idx].Init();
+ModelRenderer* RenderSystem::FindModel(EntityHandle e) const {
+  auto it = _model_map.find(e);
+  if (it != _model_map.end()) return (ModelRenderer*)_models + it->second;
+  return nullptr;
+}
+
+void RenderSystem::CreateLight(EntityHandle e) {
+  c3_assert_return(_num_models < C3_MAX_LIGHTS);
+  Light* light = _lights + _num_lights;
+  light->_entity = e;
+  light->Init();
+  _light_map.insert(EntityMap::value_type(e, _num_lights));
+  ++_num_lights;
+}
+
+void RenderSystem::DestroyLight(EntityHandle e) {
+  auto it = _light_map.find(e);
+  if (it != _light_map.end()) {
+    auto index = it->second;
+    --_num_lights;
+    if (index != _num_lights) {
+      memcpy(_lights + index, _lights + _num_lights, sizeof(Light));
+      auto moved_entity = _lights[index]._entity;
+      _light_map[moved_entity] = index;
+    }
+    _light_map.erase(e);
   }
-  return h;
 }
 
-void RenderSystem::DestroyLight(LightHandle h) {
-  if (!_light_handles.IsValid(h)) return;
-  _light_entity_map.erase(_lights[h.idx]._entity);
+void RenderSystem::SetLightType(EntityHandle e, LightType type) {
+  auto light = FindLight(e);
+  if (!light) return;
+  light->_type = type;
 }
 
-void RenderSystem::SetLightType(GenericHandle gh, LightType type) {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return;
-  _lights[h.idx]._type = type;
+void RenderSystem::SetLightColor(EntityHandle e, const Color& color) {
+  auto light = FindLight(e);
+  if (!light) return;
+  light->_color = color;
 }
 
-void RenderSystem::SetLightColor(GenericHandle gh, const Color& color) {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return;
-  _lights[h.idx]._color = color;
+void RenderSystem::SetLightIntensity(EntityHandle e, float intensity) {
+  auto light = FindLight(e);
+  if (!light) return;
+  light->_intensity = intensity;
 }
 
-void RenderSystem::SetLightIntensity(GenericHandle gh, float intensity) {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return;
-  _lights[h.idx]._intensity = intensity;
+void RenderSystem::SetLightCastShadow(EntityHandle e, bool shadow) {
+  auto light = FindLight(e);
+  if (!light) return;
+  light->_cast_shadow = shadow;
 }
 
-void RenderSystem::SetLightCastShadow(GenericHandle gh, bool shadow) {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return;
-  _lights[h.idx]._cast_shadow = shadow;
+void RenderSystem::SetLightDir(EntityHandle e, const float3& dir) {
+  auto light = FindLight(e);
+  if (!light) return;
+  light->_dir = dir;
 }
 
-void RenderSystem::SetLightDir(GenericHandle gh, const float3& dir) {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return;
-  _lights[h.idx]._dir = dir;
+void RenderSystem::SetLightPos(EntityHandle e, const float3& pos) {
+  auto light = FindLight(e);
+  if (!light) return;
+  light->_pos = pos;
 }
 
-void RenderSystem::SetLightPos(GenericHandle gh, const float3& pos) {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return;
-  _lights[h.idx]._pos = pos;
+void RenderSystem::SetLightDistFalloff(EntityHandle e, const float2& fallof) {
+  auto light = FindLight(e);
+  if (!light) return;
+  light->_dist_falloff = fallof;
 }
 
-void RenderSystem::SetLightDistFalloff(GenericHandle gh, const float2& fallof) {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return;
-  _lights[h.idx]._dist_falloff = fallof;
+void RenderSystem::SetLightAngleFalloff(EntityHandle e, const float2& fallof) {
+  auto light = FindLight(e);
+  if (!light) return;
+  light->_angle_falloff = fallof;
 }
 
-void RenderSystem::SetLightAngleFalloff(GenericHandle gh, const float2& fallof) {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return;
-  _lights[h.idx]._angle_falloff = fallof;
+LightType RenderSystem::GetLightType(EntityHandle e) const {
+  auto light = FindLight(e);
+  if (!light) return DIRECTIONAL_LIGHT;
+  return light->_type;
 }
 
-LightType RenderSystem::GetLightType(GenericHandle gh) const {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return DIRECTIONAL_LIGHT;
-  return _lights[h.idx]._type;
+Color RenderSystem::GetLightColor(EntityHandle e) const {
+  auto light = FindLight(e);
+  if (!light) return Color::NO_COLOR;
+  return light->_color;
 }
 
-Color RenderSystem::GetLightColor(GenericHandle gh) const {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return Color::NO_COLOR;
-  return _lights[h.idx]._color;
+float RenderSystem::GetLightIntensity(EntityHandle e) const {
+  auto light = FindLight(e);
+  if (!light) return 0.f;
+  return light->_intensity;
 }
 
-float RenderSystem::GetLightIntensity(GenericHandle gh) const {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return 0.f;
-  return _lights[h.idx]._intensity;
+bool RenderSystem::GetLightCastShadow(EntityHandle e) const {
+  auto light = FindLight(e);
+  if (!light) return false;
+  return light->_cast_shadow;
 }
 
-bool RenderSystem::GetLightCastShadow(GenericHandle gh) const {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return false;
-  return _lights[h.idx]._cast_shadow;
+float3 RenderSystem::GetLightDir(EntityHandle e) const {
+  auto light = FindLight(e);
+  if (!light) return -float3::unitY;
+  return light->_dir;
 }
 
-float3 RenderSystem::GetLightDir(GenericHandle gh) const {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return float3::unitY;
-  return _lights[h.idx]._dir;
+float3 RenderSystem::GetLightPos(EntityHandle e, const float3& pos) const {
+  auto light = FindLight(e);
+  if (!light) return float3::zero;
+  return light->_pos;
 }
 
-float3 RenderSystem::GetLightPos(GenericHandle gh, const float3& pos) const {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return float3::zero;
-  return _lights[h.idx]._pos;
+float2 RenderSystem::GetLightDistFalloff(EntityHandle e) {
+  auto light = FindLight(e);
+  if (!light) return float2::zero;
+  return light->_dist_falloff;
 }
 
-float2 RenderSystem::GetLightDistFalloff(GenericHandle gh) {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return float2::zero;
-  return _lights[h.idx]._dist_falloff;
+float2 RenderSystem::GetLightAngleFalloff(EntityHandle e) {
+  auto light = FindLight(e);
+  if (!light) return float2::zero;
+  return light->_angle_falloff;
 }
 
-float2 RenderSystem::GetLightAngleFalloff(GenericHandle gh) {
-  auto h = cast_to<LIGHT_HANDLE>(gh, _light_handles, _light_entity_map);
-  if (!h) return float2::zero;
-  return _lights[h.idx]._angle_falloff;
+Light* RenderSystem::FindLight(EntityHandle e) const {
+  auto it = _light_map.find(e);
+  return (it == _light_map.end()) ? nullptr : (Light*)_lights + it->second;
 }
 
-void RenderSystem::GetLights(const LightHandle*& out_handles, u32& out_num_handles, Light*& out_lights) {
-  out_handles = _light_handles.GetPointer();
-  out_num_handles = _light_handles.GetUsed();
-  out_lights = _lights;
+Light* RenderSystem::GetLights(int* num_lights) const {
+  *num_lights = _num_lights;
+  return (Light*)_lights;
 }
 
 void RenderSystem::Render(float dt, bool paused) {
@@ -197,81 +220,78 @@ void RenderSystem::Render(float dt, bool paused) {
   sun_light._dir.Set(0.1294095, -0.9659258, 0.2241439);
 
   auto world = GameWorld::Instance();
-  if (world->_camera_handles.GetUsed() == 0) return;
+  int num_camera;
+  Camera* camera = world->GetCameras(&num_camera);
+  if (num_camera <= 0) return;
   auto GR = GraphicsRenderer::Instance();
-  auto& camera = world->_cameras[world->_camera_handles.GetHandleAt(0).idx];
   u8 view;
   auto win_size = GR->GetWindowSize();
-  camera.SetAspect(win_size.x / win_size.y);
-  camera.SetClipPlane(1, 4000);
-  auto camera_volume = camera._frustum.ToPBVolume();
-  auto n = _model_renderer_handles.GetUsed();
+  camera->SetAspect(win_size.x / win_size.y);
+  camera->SetClipPlane(1, 3000);
+  auto camera_volume = camera->_frustum.ToPBVolume();
 
   view = GR->PushView();
   GR->SetViewFrameBuffer(view, _shadow_fb);
-  GR->SetViewRect(view, 0, 0, 1024, 1024);
+  GR->SetViewRect(view, 0, 0, 4096, 4096);
   GR->SetViewClear(view, C3_CLEAR_DEPTH, 0, 1.f);
-  float4x4 light_view, light_proj;
-  GetLightViewProj(&sun_light, light_view, light_proj);
+  Frustum light_frustum = GetLightFrustum(&sun_light, &camera->_frustum);
+  float4x4 light_view = light_frustum.ComputeViewMatrix();
+  float4x4 light_proj = light_frustum.ComputeProjectionMatrix();
   GR->SetViewTransform(view, light_view.ptr(), light_proj.ptr());
-  for (int i = 0; i < n; ++i) {
-    auto& mr = _model_renderer[_model_renderer_handles.GetHandleAt(i).idx];
-    if (!mr._model || mr._model->_state != ASSET_STATE_READY) continue;
-    auto transform_handle = cast_to<TRANSFORM_HANDLE>(mr._entity, world->_transform_handles, world->_transform_map);
-    if (transform_handle) {
-      auto& transform = world->_transforms[transform_handle.idx];
-      float4x4 m = float4x4::FromTRS(transform._position, transform._rotation, transform._scale);
-      SpinLockGuard lock_guard(&mr._model->_lock);
-      if (mr._model->_state != ASSET_STATE_READY) continue;
-      auto model = (Model*)mr._model->_header->GetData();
-      auto b = model->_aabb;
-      for (auto part = model->_parts; part < model->_parts + model->_num_parts; ++part) {
-        if (camera_volume.InsideOrIntersects(part->_aabb.Transform(m).MinimalEnclosingAABB()) == TestOutside) continue;
-        GR->SetTransform(&m);
-        GR->SetVertexBuffer(model->_vb);
-        GR->SetIndexBuffer(model->_ib, part->_start_index, part->_num_indices);
-        GR->SetState(C3_STATE_DEPTH_WRITE | C3_STATE_DEPTH_TEST_LESS | C3_STATE_CULL_CW);
-        float dist = camera._frustum.Distance(m.TransformPos(part->_aabb.CenterPoint()));
-        auto material = (Material*)model->_materials[part->_material_index]->_header->GetData();
-        auto program = material->Apply("Forward", "Shadow");
-        GR->Submit(view, program, depth_to_bits(dist));
-      }
+  for (int i = 0; i < _num_models; ++i) {
+    ModelRenderer* mr = _models + i;
+    if (!mr->_asset || mr->_asset->_state != ASSET_STATE_READY) continue;
+    auto transform = world->FindTransform(mr->_entity);
+    if (!transform) continue;
+    float4x4 m = float4x4::FromTRS(transform->_position, transform->_rotation, transform->_scale);
+    SpinLockGuard lock_guard(&mr->_asset->_lock);
+    if (mr->_asset->_state != ASSET_STATE_READY) continue;
+    auto model = (Model*)mr->_asset->_header->GetData();
+    for (auto part = model->_parts; part < model->_parts + model->_num_parts; ++part) {
+      //if (camera_volume.InsideOrIntersects(part->_aabb.Transform(m).MinimalEnclosingAABB()) == TestOutside) continue;
+      GR->SetTransform(&m);
+      GR->SetVertexBuffer(model->_vb);
+      GR->SetIndexBuffer(model->_ib, part->_start_index, part->_num_indices);
+      GR->SetState(C3_STATE_DEPTH_WRITE | C3_STATE_DEPTH_TEST_LESS | C3_STATE_CULL_CW);
+      float dist = light_frustum.Distance(m.TransformPos(part->_aabb.CenterPoint()));
+      auto material = (Material*)model->_materials[part->_material_index]->_header->GetData();
+      auto program = material->Apply("Forward", "Shadow");
+      GR->Submit(view, program, depth_to_bits(dist));
     }
   }
 
   view = GR->PushView();
-  GR->SetViewRect(view, 0, 0, win_size.x, win_size.y);
+  GR->SetViewRect(view, 0, 0, (u16)win_size.x, (u16)win_size.y);
   GR->SetViewClear(view, C3_CLEAR_COLOR | C3_CLEAR_DEPTH, 0, 1.f);
-  GR->SetViewTransform(view, camera.GetViewMatrix().ptr(), camera.GetProjectionMatrix().ptr());
-  for (int i = 0; i < n; ++i) {
-    auto& mr = _model_renderer[_model_renderer_handles.GetHandleAt(i).idx];
-    if (!mr._model || mr._model->_state != ASSET_STATE_READY) continue;
-    auto transform_handle = cast_to<TRANSFORM_HANDLE>(mr._entity, world->_transform_handles, world->_transform_map);
-    if (transform_handle) {
-      auto& transform = world->_transforms[transform_handle.idx];
-      float4x4 m = float4x4::FromTRS(transform._position, transform._rotation, transform._scale);
-      SpinLockGuard lock_guard(&mr._model->_lock);
-      if (mr._model->_state != ASSET_STATE_READY) continue;
-      auto model = (Model*)mr._model->_header->GetData();
-      for (auto part = model->_parts; part < model->_parts + model->_num_parts; ++part) {
-        if (camera_volume.InsideOrIntersects(part->_aabb.Transform(m).MinimalEnclosingAABB()) == TestOutside) continue;
-        ApplyLight(&sun_light);
-        GR->SetTransform(&m);
-        GR->SetVertexBuffer(model->_vb);
-        GR->SetIndexBuffer(model->_ib, part->_start_index, part->_num_indices);
-        GR->SetTexture(15, _shadow_fb, 0, C3_TEXTURE_COMPARE_LESS);
-        GR->SetState(C3_STATE_RGB_WRITE | C3_STATE_ALPHA_WRITE | C3_STATE_DEPTH_WRITE |
-                     C3_STATE_CULL_CW | C3_STATE_DEPTH_TEST_LEQUAL);
-        float dist = camera._frustum.Distance(m.TransformPos(part->_aabb.CenterPoint()));
-        auto material = (Material*)model->_materials[part->_material_index]->_header->GetData();
-        auto program = material->Apply("Forward", "Geometry");
-        GR->Submit(view, program, depth_to_bits(dist));
-      }
+  GR->SetViewTransform(view, camera->GetViewMatrix().ptr(), camera->GetProjectionMatrix().ptr());
+  for (int i = 0; i < _num_models; ++i) {
+    ModelRenderer* mr = _models + i;
+    if (!mr->_asset || mr->_asset->_state != ASSET_STATE_READY) continue;
+    auto transform = world->FindTransform(mr->_entity);
+    if (!transform) continue;
+    
+    float4x4 m = float4x4::FromTRS(transform->_position, transform->_rotation, transform->_scale);
+    SpinLockGuard lock_guard(&mr->_asset->_lock);
+    if (mr->_asset->_state != ASSET_STATE_READY) continue;
+    auto model = (Model*)mr->_asset->_header->GetData();
+    for (auto part = model->_parts; part < model->_parts + model->_num_parts; ++part) {
+      if (camera_volume.InsideOrIntersects(part->_aabb.Transform(m).MinimalEnclosingAABB()) == TestOutside) continue;
+      ApplyLight(&sun_light, &light_frustum);
+      GR->SetTransform(&m);
+      GR->SetVertexBuffer(model->_vb);
+      GR->SetIndexBuffer(model->_ib, part->_start_index, part->_num_indices);
+      GR->SetTexture(15, _shadow_fb, 0, C3_TEXTURE_COMPARE_LESS);
+      GR->SetState(C3_STATE_RGB_WRITE | C3_STATE_ALPHA_WRITE | C3_STATE_DEPTH_WRITE |
+                    C3_STATE_CULL_CW | C3_STATE_DEPTH_TEST_LEQUAL);
+      float dist = camera->_frustum.Distance(m.TransformPos(part->_aabb.CenterPoint()));
+      auto material = (Material*)model->_materials[part->_material_index]->_header->GetData();
+      auto program = material->Apply("Forward", "Geometry");
+      GR->Submit(view, program, depth_to_bits(dist));
     }
   }
 }
 
-void RenderSystem::ApplyLight(Light* light) {
+void RenderSystem::ApplyLight(Light* light, Frustum* light_frustum) {
   int type = light->_type;
   float3 color = *(const float3*)&light->_color * light->_intensity;
   float4 falloff(light->_dist_falloff.x, light->_dist_falloff.y,
@@ -283,22 +303,33 @@ void RenderSystem::ApplyLight(Light* light) {
   GR->SetConstant(_constant_light_dir, &light->_dir);
   GR->SetConstant(_constant_light_falloff, &falloff);
   
-  Frustum light_frustum;
-  light_frustum.SetKind(FrustumSpaceD3D, FrustumRightHanded);
-  light_frustum.SetFrame(float3(0, 2000, 0), light->_dir, light->_dir.Perpendicular());
-  light_frustum.SetOrthographic(4000.f, 4000.f);
-  light_frustum.SetViewPlaneDistances(0.f, 2000.f);
-  float4x4 m = float4x4::Translate(0.5f, 0.5f, 0.f) * float4x4::Scale(0.5f, -0.5f, 1.f) * light_frustum.ComputeViewProjMatrix();
-  auto kk = m.TransformPos(float3::zero);
+  float4x4 m = float4x4::Translate(0.5f, 0.5f, 0.f) * float4x4::Scale(0.5f, -0.5f, 1.f) * light_frustum->ComputeViewProjMatrix();
   GR->SetConstant(_constant_light_transform, &m);
 }
 
-void RenderSystem::GetLightViewProj(Light* light, float4x4& view, float4x4& proj) const {
+Frustum RenderSystem::GetLightFrustum(Light* light, Frustum* camera_frustum) const {
+  vec points[8];
+  camera_frustum->GetCornerPoints(points);
+  OBB obb;
+  light->_dir.PerpendicularBasis(obb.axis[0], obb.axis[1]);
+  obb.axis[2] = light->_dir;
+
+  for (int i = 0; i < _num_models; ++i) {
+    auto mr = _models + i;
+    if (!mr->_asset || mr->_asset->_state != ASSET_STATE_READY) continue;
+    auto transform = GameWorld::Instance()->FindTransform(mr->_entity);
+    if (!transform) continue;
+    float4x4 m = float4x4::FromTRS(transform->_position, transform->_rotation, transform->_scale);
+    auto model = (Model*)mr->_asset->_header->GetData();
+    model->_aabb.GetCornerPoints(points);
+    auto r0 = obb.axis[0];
+    auto r1 = obb.axis[1];
+    obb = OBB::FixedOrientationEnclosingOBB(points, 8, r0, r1);
+  }
   Frustum light_frustum;
   light_frustum.SetKind(FrustumSpaceD3D, FrustumRightHanded);
-  light_frustum.SetFrame(float3(0, 2000, 0), light->_dir, light->_dir.Perpendicular());
-  light_frustum.SetOrthographic(4000.f, 4000.f);
-  light_frustum.SetViewPlaneDistances(0.f, 2000.f);
-  view = light_frustum.ComputeViewMatrix();
-  proj = light_frustum.ComputeProjectionMatrix();
+  light_frustum.SetFrame(obb.pos - obb.r[2] * obb.axis[2], obb.axis[2], obb.axis[1]);
+  light_frustum.SetOrthographic(obb.r[0] * 2.f, obb.r[1] * 2.f);
+  light_frustum.SetViewPlaneDistances(0.f, obb.r[2] * 2.f);
+  return light_frustum;
 }

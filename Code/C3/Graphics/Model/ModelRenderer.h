@@ -10,10 +10,10 @@ struct ModelPartRenderer {
 
 struct ModelRenderer {
   EntityHandle _entity;
-  Asset* _model;
+  Asset* _asset;
   vector<ModelPartRenderer> _part_list;
   void Init() {
-    _model = nullptr;
+    _asset = nullptr;
     _part_list.clear();
   }
 };

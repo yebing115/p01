@@ -7,11 +7,13 @@ IMPLEMENT_REFLECT(GameWorld);
 
 GameWorld::GameWorld() {
   INIT_LIST_HEAD(&_entity_list);
+  _num_cameras = 0;
+  _num_transforms = 0;
 }
 GameWorld::~GameWorld() {}
 
 EntityHandle GameWorld::CreateEntity() {
-  auto h = _entity_handles.Alloc();
+  auto h = _entity_alloc.Alloc();
   if (h) {
     _entities[h.idx].Init();
     list_add_tail(&_entities[h.idx]._sibling_link, &_entity_list);
@@ -21,11 +23,11 @@ EntityHandle GameWorld::CreateEntity() {
 
 EntityHandle GameWorld::CreateEntity(EntityHandle parent) {
   if (!parent) {
-    c3_log("CreateEntity: Invalid parent entity, idx = %d\n", parent.IsValid());
+    c3_log("CreateEntity: Invalid parent entity, idx = %d\n", parent.idx);
     return EntityHandle();
   }
   auto& p = _entities[parent.idx];
-  auto h = _entity_handles.Alloc();
+  auto h = _entity_alloc.Alloc();
   if (h) {
     _entities[h.idx].Init();
     _entities[h.idx]._parent = &p;
@@ -34,12 +36,12 @@ EntityHandle GameWorld::CreateEntity(EntityHandle parent) {
   return h;
 }
 
-void GameWorld::DestroyEntity(EntityHandle handle) {
-  if (!handle) {
-    c3_log("DestroyEntity: Invalid entity, idx = %d\n", handle.IsValid());
+void GameWorld::DestroyEntity(EntityHandle e) {
+  if (!e) {
+    c3_log("DestroyEntity: Invalid entity, idx = %d\n", e.idx);
     return;
   }
-  DestroyEntity(_entities + handle.idx);
+  DestroyEntity(_entities + e.idx);
 }
 
 void GameWorld::DestroyEntity(Entity* e) {
@@ -72,128 +74,175 @@ bool GameWorld::OwnComponentType(HandleType type) const {
   return (type == TRANSFORM_HANDLE || type == CAMERA_HANDLE);
 }
 
-GenericHandle GameWorld::CreateComponent(EntityHandle entity, HandleType type) {
+void GameWorld::CreateComponent(EntityHandle entity, HandleType type) {
   auto sys = GetSystem(type);
-  if (sys) return sys->CreateComponent(entity, type);
-  return GenericHandle();
+  if (sys) sys->CreateComponent(entity, type);
 }
 
-CameraHandle GameWorld::CreateCamera(EntityHandle eh) {
-  auto h = _camera_handles.Alloc();
-  if (h) {
-    _camera_map.insert(make_pair(eh, h));
-    _cameras[h.idx]._entity = eh;
-    _cameras[h.idx].Init();
-    _cameras[h.idx].SetFrame(vec(0, 1, 100), vec(0, 0, -1), vec(0, 1, 0));
-    auto aspect = GraphicsRenderer::Instance()->GetWindowAspect();
-    auto v_fov = DegToRad(80.f);
-    _cameras[h.idx].SetVerticalFovAndAspectRatio(v_fov, aspect);
-    _cameras[h.idx].SetClipPlane(1.f, 1000.f);
+void GameWorld::CreateCamera(EntityHandle e) {
+  c3_assert_return(_num_cameras < C3_MAX_CAMERAS);
+  Camera* camera = _cameras + _num_cameras;
+  camera->_entity = e;
+  camera->Init();
+  _camera_map.insert(EntityMap::value_type(e, _num_cameras));
+  ++_num_cameras;
+}
+
+void GameWorld::DestroyCamera(EntityHandle e) {
+  auto it = _camera_map.find(e);
+  if (it != _camera_map.end()) {
+    auto index = it->second;
+    --_num_cameras;
+    if (index != _num_cameras) {
+      memcpy(_cameras + index, _cameras + _num_cameras, sizeof(Camera));
+      auto moved_entity = _cameras[index]._entity;
+      _camera_map[moved_entity] = index;
+    }
+    _camera_map.erase(e);
   }
-  return h;
 }
 
-void GameWorld::DestroyCamera(GenericHandle gh) {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  _camera_map.erase(_cameras[handle.idx]._entity);
-  _camera_handles.Free(handle);
+void GameWorld::SetCameraVerticalFovAndAspectRatio(EntityHandle e, float v_fov, float aspect) {
+  auto camera = FindCamera(e);
+  if (!camera) return;
+  camera->SetVerticalFovAndAspectRatio(v_fov, aspect);
 }
 
-void GameWorld::SetCameraPos(GenericHandle gh, const vec& pos) {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  _cameras[handle.idx]._frustum.SetPos(pos);
+void GameWorld::SetCameraPos(EntityHandle e, const vec& pos) {
+  auto camera = FindCamera(e);
+  if (!camera) return;
+  camera->_frustum.SetPos(pos);
 }
 
-const MATH_NAMESPACE_NAME::vec& GameWorld::GetCameraPos(GenericHandle gh) const {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  return _cameras[handle.idx]._frustum.Pos();
+float3 GameWorld::GetCameraPos(EntityHandle e) const {
+  auto camera = FindCamera(e);
+  if (!camera) return float3::zero;
+  return camera->_frustum.Pos();
 }
 
-void GameWorld::SetCameraFront(GenericHandle gh, const vec& front) {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  _cameras[handle.idx]._frustum.SetFront(front);
+void GameWorld::SetCameraFront(EntityHandle e, const vec& front) {
+  auto camera = FindCamera(e);
+  if (!camera) return;
+  camera->_frustum.SetFront(front);
 }
 
-const MATH_NAMESPACE_NAME::vec& GameWorld::GetCameraFront(GenericHandle gh) const {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  return _cameras[handle.idx]._frustum.Front();
+float3 GameWorld::GetCameraFront(EntityHandle e) const {
+  auto camera = FindCamera(e);
+  if (!camera) return -float3::unitZ;
+  return camera->_frustum.Front();
 }
 
-void GameWorld::SetCameraUp(GenericHandle gh, const vec& up) {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  _cameras[handle.idx]._frustum.SetUp(up);
+void GameWorld::SetCameraUp(EntityHandle e, const vec& up) {
+  auto camera = FindCamera(e);
+  if (!camera) return;
+  camera->_frustum.SetUp(up);
 }
 
-const MATH_NAMESPACE_NAME::vec& GameWorld::GetCameraUp(GenericHandle gh) const {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  return _cameras[handle.idx]._frustum.Up();
+float3 GameWorld::GetCameraUp(EntityHandle e) const {
+  auto camera = FindCamera(e);
+  if (!camera) return float3::unitY;
+  camera->_frustum.Up();
 }
 
-vec GameWorld::GetCameraRight(GenericHandle gh) const {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  if (handle) return _cameras[handle.idx].GetRight();
-  else return vec::unitX;
+float3 GameWorld::GetCameraRight(EntityHandle e) const {
+  auto camera = FindCamera(e);
+  if (!camera) return float3::unitX;
+  return camera->GetRight();
 }
 
-void GameWorld::SetCameraClipPlane(GenericHandle gh, float near, float far) {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  _cameras[handle.idx]._frustum.SetViewPlaneDistances(near, far);
+void GameWorld::SetCameraClipPlane(EntityHandle e, float near, float far) {
+  auto camera = FindCamera(e);
+  if (!camera) return;
+  camera->SetClipPlane(near, far);
 }
 
-float GameWorld::GetCameraNear(GenericHandle gh) const {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  return _cameras[handle.idx]._frustum.NearPlaneDistance();
+float GameWorld::GetCameraNear(EntityHandle e) const {
+  auto camera = FindCamera(e);
+  if (!camera) return 0.f;
+  return camera->GetNear();
 }
 
-float GameWorld::GetCameraFar(GenericHandle gh) const {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  return _cameras[handle.idx]._frustum.FarPlaneDistance();
+float GameWorld::GetCameraFar(EntityHandle e) const {
+  auto camera = FindCamera(e);
+  if (!camera) return 0.f;
+  return camera->GetFar();
 }
 
-float GameWorld::GetDistance(GenericHandle gh, const vec& p) const {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  return _cameras[handle.idx]._frustum.Distance(p);
+float GameWorld::GetDistance(EntityHandle e, const vec& p) const {
+  auto camera = FindCamera(e);
+  if (!camera) return 0.f;
+  return camera->_frustum.Distance(p);
 }
 
-void GameWorld::PanCamera(GenericHandle gh, float dx, float dy) {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  if (handle) _cameras[handle.idx].Pan(dx, dy);
+void GameWorld::PanCamera(EntityHandle e, float dx, float dy) {
+  auto camera = FindCamera(e);
+  if (!camera) return;
+  camera->Pan(dx, dy);
 }
 
-void GameWorld::TransformCamera(GenericHandle gh, const Quat& q) {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  if (handle) _cameras[handle.idx].Transform(q);
+void GameWorld::TransformCamera(EntityHandle e, const Quat& q) {
+  auto camera = FindCamera(e);
+  if (!camera) return;
+  camera->Transform(q);
 }
 
-void GameWorld::ZoomCamera(GenericHandle gh, float zoom_factor) {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  if (handle) _cameras[handle.idx].Zoom(zoom_factor);
+void GameWorld::ZoomCamera(EntityHandle e, float zoom_factor) {
+  auto camera = FindCamera(e);
+  if (!camera) return;
+  camera->Zoom(zoom_factor);
 }
 
-float GameWorld::GetCameraVerticalFov(GenericHandle gh) const {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  if (handle) return _cameras[handle.idx]._frustum.VerticalFov();
-  return 0.f;
+float GameWorld::GetCameraVerticalFov(EntityHandle e) const {
+  auto camera = FindCamera(e);
+  if (!camera) return 0.f;
+  return camera->_frustum.VerticalFov();
 }
 
-float GameWorld::GetCameraAspect(GenericHandle gh) const {
-  auto handle = cast_to<CAMERA_HANDLE>(gh, _camera_handles, _camera_map);
-  if (handle) return _cameras[handle.idx]._frustum.AspectRatio();
-  return 1.f;
+float GameWorld::GetCameraAspect(EntityHandle e) const {
+  auto camera = FindCamera(e);
+  if (!camera) return 1.f;
+  return camera->_frustum.AspectRatio();
 }
 
-TransformHandle GameWorld::CreateTransform(EntityHandle eh) {
-  auto h = _transform_handles.Alloc();
-  if (h) {
-    _transform_map.insert(make_pair(eh, h));
-    _transforms[h.idx]._entity = eh;
-    _transforms[h.idx].Init();
+Camera* GameWorld::FindCamera(EntityHandle e) const {
+  auto it = _camera_map.find(e);
+  return (it == _camera_map.end()) ? nullptr : (Camera*)_cameras + it->second;
+}
+
+Camera* GameWorld::GetCameras(int* num_cameras) const {
+  *num_cameras = _num_cameras;
+  return (Camera*)_cameras;
+}
+
+void GameWorld::CreateTransform(EntityHandle e) {
+  c3_assert_return(_num_transforms < C3_MAX_TRANSFORMS);
+  Transform* transform = _transforms + _num_transforms;
+  transform->_entity = e;
+  transform->Init();
+  _transform_map.insert(EntityMap::value_type(e, _num_transforms));
+  ++_num_transforms;
+}
+
+void GameWorld::DestroyTransform(EntityHandle e) {
+  auto it = _transform_map.find(e);
+  if (it != _transform_map.end()) {
+    auto index = it->second;
+    --_num_transforms;
+    if (index != _num_transforms) {
+      memcpy(_transforms + index, _transforms + _num_transforms, sizeof(Transform));
+      auto moved_entity = _transforms[index]._entity;
+      _transform_map[moved_entity] = index;
+    }
+    _transform_map.erase(e);
   }
-  return h;
 }
 
-void GameWorld::DestroyTransform(GenericHandle gh) {
-  auto handle = cast_to<TRANSFORM_HANDLE>(gh, _transform_handles, _transform_map);
-  _transform_map.erase(_transforms[handle.idx]._entity);
-  _transform_handles.Free(handle);
+Transform* GameWorld::FindTransform(EntityHandle e) const {
+  auto it = _transform_map.find(e);
+  return (it == _transform_map.end()) ? nullptr : (Transform*)_transforms + it->second;
+}
+
+Transform* GameWorld::GetTransforms(int* num_transforms) const {
+  *num_transforms = _num_transforms;
+  return (Transform*)_transforms;
 }

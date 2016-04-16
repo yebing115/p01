@@ -10,6 +10,8 @@ Game::Game() {
 
   _debug_camera = world->CreateEntity();
   world->CreateCamera(_debug_camera);
+  world->SetCameraVerticalFovAndAspectRatio(_debug_camera, DegToRad(80.f), GraphicsRenderer::Instance()->GetWindowAspect());
+  world->SetCameraClipPlane(_debug_camera, 1.f, 3000.f);
 
   _model = world->CreateEntity();
   world->CreateTransform(_model);

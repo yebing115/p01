@@ -29,34 +29,39 @@ public:
 
   EntityHandle CreateEntity();
   EntityHandle CreateEntity(EntityHandle parent);
-  void DestroyEntity(EntityHandle handle);
+  void DestroyEntity(EntityHandle e);
 
   bool OwnComponentType(HandleType type) const override;
-  GenericHandle CreateComponent(EntityHandle entity, HandleType type) override;
+  void CreateComponent(EntityHandle entity, HandleType type) override;
 
-  TransformHandle CreateTransform(EntityHandle handle);
-  void DestroyTransform(GenericHandle handle);
+  void CreateTransform(EntityHandle e);
+  void DestroyTransform(EntityHandle e);
+  Transform* FindTransform(EntityHandle e) const;
+  Transform* GetTransforms(int* num_transforms) const;
   
   // Camera control
-  CameraHandle CreateCamera(EntityHandle handle);
-  void DestroyCamera(GenericHandle handle);
-  void SetCameraPos(GenericHandle handle, const vec& pos);
-  const vec& GetCameraPos(GenericHandle handle) const;
-  void SetCameraFront(GenericHandle handle, const vec& front);
-  const vec& GetCameraFront(GenericHandle handle) const;
-  void SetCameraUp(GenericHandle handle, const vec& up);
-  const vec& GetCameraUp(GenericHandle handle) const;
-  vec GetCameraRight(GenericHandle handle) const;
-  void SetCameraClipPlane(GenericHandle handle, float near, float far);
-  float GetCameraNear(GenericHandle handle) const;
-  float GetCameraFar(GenericHandle handle) const;
-  float GetDistance(GenericHandle handle, const vec& p) const;
-  void PanCamera(GenericHandle handle, const float2& p) { PanCamera(handle, p.x, p.y); }
-  void PanCamera(GenericHandle handle, float dx, float dy);
-  void TransformCamera(GenericHandle handle, const Quat& q);
-  void ZoomCamera(GenericHandle handle, float zoom_factor);
-  float GetCameraVerticalFov(GenericHandle handle) const;
-  float GetCameraAspect(GenericHandle handle) const;
+  void CreateCamera(EntityHandle e);
+  void DestroyCamera(EntityHandle e);
+  void SetCameraVerticalFovAndAspectRatio(EntityHandle e, float v_fov, float aspect);
+  void SetCameraPos(EntityHandle e, const vec& pos);
+  float3 GetCameraPos(EntityHandle e) const;
+  void SetCameraFront(EntityHandle e, const vec& front);
+  float3 GetCameraFront(EntityHandle e) const;
+  void SetCameraUp(EntityHandle e, const vec& up);
+  float3 GetCameraUp(EntityHandle e) const;
+  float3 GetCameraRight(EntityHandle e) const;
+  void SetCameraClipPlane(EntityHandle e, float near, float far);
+  float GetCameraNear(EntityHandle e) const;
+  float GetCameraFar(EntityHandle e) const;
+  float GetDistance(EntityHandle e, const vec& p) const;
+  void PanCamera(EntityHandle e, const float2& p) { PanCamera(e, p.x, p.y); }
+  void PanCamera(EntityHandle e, float dx, float dy);
+  void TransformCamera(EntityHandle e, const Quat& q);
+  void ZoomCamera(EntityHandle e, float zoom_factor);
+  float GetCameraVerticalFov(EntityHandle e) const;
+  float GetCameraAspect(EntityHandle e) const;
+  Camera* FindCamera(EntityHandle e) const;
+  Camera* GetCameras(int* num_cameras) const;
 
   void AddSystem(ISystem* system) { _systems.push_back(system); }
   ISystem* GetSystem(HandleType type) const;
@@ -68,18 +73,18 @@ private:
   void DestroyEntity(Entity* e);
 
   Entity _entities[C3_MAX_ENTITIES];
-  HandleAlloc<ENTITY_HANDLE, C3_MAX_ENTITIES> _entity_handles;
+  list_head _entity_list;
+  HandleAlloc<ENTITY_HANDLE, C3_MAX_ENTITIES> _entity_alloc;
 
-  Transform _transforms[C3_MAX_CAMERAS];
-  HandleAlloc<TRANSFORM_HANDLE, C3_MAX_TRANSFORMS> _transform_handles;
-  unordered_map<EntityHandle, TransformHandle> _transform_map;
+  Transform _transforms[C3_MAX_TRANSFORMS];
+  int _num_transforms;
+  EntityMap _transform_map;
 
   Camera _cameras[C3_MAX_CAMERAS];
-  HandleAlloc<CAMERA_HANDLE, C3_MAX_CAMERAS> _camera_handles;
-  unordered_map<EntityHandle, CameraHandle> _camera_map;
+  int _num_cameras;
+  EntityMap _camera_map;
   
   vector<ISystem*> _systems;
-  list_head _entity_list;
 
   friend class RenderSystem;
 

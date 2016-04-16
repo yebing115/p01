@@ -4,6 +4,9 @@
 void Camera::Init() {
   _frustum.SetKind(FrustumSpaceD3D, FrustumRightHanded);
   _focal_distance = 100.f;
+  SetFrame(float3::zero, -float3::unitZ, float3::unitY);
+  SetPerspective(10.f, 10.f);
+  SetClipPlane(1.f, 100.f);
 }
 
 void Camera::SetFrame(const vec& pos, const vec& front, const vec& up) {

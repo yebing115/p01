@@ -11,46 +11,48 @@ public:
   ~RenderSystem();
 
   bool OwnComponentType(HandleType type) const override;
-  GenericHandle CreateComponent(EntityHandle entity, HandleType type) override;
+  void CreateComponent(EntityHandle entity, HandleType type) override;
 
-  ModelRendererHandle CreateModelRenderer(EntityHandle entity);
-  void DestroyModelRenderer(ModelRendererHandle handle);
-  const char* GetModelFilename(GenericHandle gh) const;
-  void SetModelFilename(GenericHandle gh, const char* filename);
+  void CreateModelRenderer(EntityHandle e);
+  void DestroyModelRenderer(EntityHandle e);
+  const char* GetModelFilename(EntityHandle e) const;
+  void SetModelFilename(EntityHandle e, const char* filename);
+  ModelRenderer* FindModel(EntityHandle e) const;
 
-  LightHandle CreateLight(EntityHandle e);
-  void DestroyLight(LightHandle h);
-  void SetLightType(GenericHandle gh, LightType type);
-  void SetLightColor(GenericHandle gh, const Color& color);
-  void SetLightIntensity(GenericHandle gh, float intensity);
-  void SetLightCastShadow(GenericHandle gh, bool shadow);
-  void SetLightDir(GenericHandle gh, const float3& dir);
-  void SetLightPos(GenericHandle gh, const float3& pos);
-  void SetLightDistFalloff(GenericHandle gh, const float2& fallof);
-  void SetLightAngleFalloff(GenericHandle gh, const float2& fallof);
-  LightType GetLightType(GenericHandle gh) const;
-  Color GetLightColor(GenericHandle gh) const;
-  float GetLightIntensity(GenericHandle gh) const;
-  bool GetLightCastShadow(GenericHandle gh) const;
-  float3 GetLightDir(GenericHandle gh) const;
-  float3 GetLightPos(GenericHandle gh, const float3& pos) const;
-  float2 GetLightDistFalloff(GenericHandle gh);
-  float2 GetLightAngleFalloff(GenericHandle gh);
-  void GetLights(const LightHandle*& out_handles, u32& out_num_handles, Light*& out_lights);
+  void CreateLight(EntityHandle e);
+  void DestroyLight(EntityHandle e);
+  void SetLightType(EntityHandle e, LightType type);
+  void SetLightColor(EntityHandle e, const Color& color);
+  void SetLightIntensity(EntityHandle e, float intensity);
+  void SetLightCastShadow(EntityHandle e, bool shadow);
+  void SetLightDir(EntityHandle e, const float3& dir);
+  void SetLightPos(EntityHandle e, const float3& pos);
+  void SetLightDistFalloff(EntityHandle e, const float2& fallof);
+  void SetLightAngleFalloff(EntityHandle e, const float2& fallof);
+  LightType GetLightType(EntityHandle e) const;
+  Color GetLightColor(EntityHandle e) const;
+  float GetLightIntensity(EntityHandle e) const;
+  bool GetLightCastShadow(EntityHandle e) const;
+  float3 GetLightDir(EntityHandle e) const;
+  float3 GetLightPos(EntityHandle e, const float3& pos) const;
+  float2 GetLightDistFalloff(EntityHandle e);
+  float2 GetLightAngleFalloff(EntityHandle e);
+  Light* FindLight(EntityHandle e) const;
+  Light* GetLights(int* num_lights) const;
 
   void Render(float dt, bool paused) override;
 
 private:
-  void ApplyLight(Light* light);
-  void GetLightViewProj(Light* light, float4x4& view_matrix, float4x4& proj_matrix) const;
+  void ApplyLight(Light* light, Frustum* light_frustum);
+  Frustum GetLightFrustum(Light* light, Frustum* camera_frustum) const;
 
-  ModelRenderer _model_renderer[C3_MAX_MODEL_RENDERERS];
-  HandleAlloc<MODEL_RENDERER_HANDLE, C3_MAX_MODEL_RENDERERS> _model_renderer_handles;
-  unordered_map<EntityHandle, ModelRendererHandle> _model_renderer_map;
+  ModelRenderer _models[C3_MAX_MODEL_RENDERERS];
+  int _num_models;
+  unordered_map<EntityHandle, int> _model_map;
 
   Light _lights[C3_MAX_LIGHTS];
-  HandleAlloc<LIGHT_HANDLE, C3_MAX_LIGHTS> _light_handles;
-  unordered_map<EntityHandle, LightHandle> _light_entity_map;
+  int _num_lights;
+  unordered_map<EntityHandle, int> _light_map;
 
   ConstantHandle _constant_light_type;
   ConstantHandle _constant_light_color;

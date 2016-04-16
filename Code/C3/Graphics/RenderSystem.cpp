@@ -310,9 +310,11 @@ void RenderSystem::ApplyLight(Light* light, Frustum* light_frustum) {
 Frustum RenderSystem::GetLightFrustum(Light* light, Frustum* camera_frustum) const {
   vec points[8];
   camera_frustum->GetCornerPoints(points);
-  OBB obb;
-  light->_dir.PerpendicularBasis(obb.axis[0], obb.axis[1]);
-  obb.axis[2] = light->_dir;
+  float3 r0, r1, r2;
+  r2 = light->_dir;
+  r2.PerpendicularBasis(r0, r1);
+  AABB axis_aabb;
+  axis_aabb.SetNegativeInfinity();
 
   for (int i = 0; i < _num_models; ++i) {
     auto mr = _models + i;
@@ -322,14 +324,20 @@ Frustum RenderSystem::GetLightFrustum(Light* light, Frustum* camera_frustum) con
     float4x4 m = float4x4::FromTRS(transform->_position, transform->_rotation, transform->_scale);
     auto model = (Model*)mr->_asset->_header->GetData();
     model->_aabb.GetCornerPoints(points);
-    auto r0 = obb.axis[0];
-    auto r1 = obb.axis[1];
-    obb = OBB::FixedOrientationEnclosingOBB(points, 8, r0, r1);
+    for (int j = 0; j < 8; ++j) {
+      float d1 = points[j].Dot(r0);
+      float d2 = points[j].Dot(r1);
+      float d3 = points[j].Dot(r2);
+      axis_aabb.Enclose(vec(d1, d2, d3));
+    }
   }
   Frustum light_frustum;
   light_frustum.SetKind(FrustumSpaceD3D, FrustumRightHanded);
-  light_frustum.SetFrame(obb.pos - obb.r[2] * obb.axis[2], obb.axis[2], obb.axis[1]);
-  light_frustum.SetOrthographic(obb.r[0] * 2.f, obb.r[1] * 2.f);
-  light_frustum.SetViewPlaneDistances(0.f, obb.r[2] * 2.f);
+  auto axis_size = axis_aabb.Size();
+  auto center = axis_aabb.CenterPoint();
+  float3 p = center.x * r0 + center.y * r1 + axis_aabb.minPoint.z * r2;
+  light_frustum.SetFrame(p, r2, r1);
+  light_frustum.SetOrthographic(axis_size.x, axis_size.y);
+  light_frustum.SetViewPlaneDistances(0.f, axis_size.z);
   return light_frustum;
 }

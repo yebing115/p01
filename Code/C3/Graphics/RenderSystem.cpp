@@ -76,7 +76,6 @@ void RenderSystem::SetModelFilename(EntityHandle e, const char* filename) {
   if (model->_asset) {
     if (strcmp(model->_asset->_desc._filename, filename) == 0) return;
     AssetManager::Instance()->Unload(model->_asset);
-    model->_part_list.clear();
   }
   model->_asset = AssetManager::Instance()->Load(ASSET_TYPE_MODEL, filename);
 }

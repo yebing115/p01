@@ -11,9 +11,7 @@ struct ModelPartRenderer {
 struct ModelRenderer {
   EntityHandle _entity;
   Asset* _asset;
-  vector<ModelPartRenderer> _part_list;
   void Init() {
     _asset = nullptr;
-    _part_list.clear();
   }
 };

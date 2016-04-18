@@ -290,7 +290,7 @@ bool image_parse_dds(ImageContainer& image_container_out, BlobReader& stream) {
 
   image_container_out.data = NULL;
   image_container_out.size = 0;
-  image_container_out.offset = stream.GetPosition();
+  image_container_out.offset = stream.GetPos();
   image_container_out.width = u16(width);
   image_container_out.height = u16(height);
   image_container_out.depth = u16(depth);

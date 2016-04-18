@@ -27,13 +27,18 @@ RenderSystem::~RenderSystem() {
   GR->DestroyConstant(_constant_light_transform);
 }
 
-bool RenderSystem::OwnComponentType(HandleType type) const {
-  return (type == MODEL_RENDERER_HANDLE);
+bool RenderSystem::OwnComponentType(ComponentType type) const {
+  return (type == MODEL_RENDERER_COMPONENT);
 }
 
-void RenderSystem::CreateComponent(EntityHandle entity, HandleType type) {
-  if (type == MODEL_RENDERER_HANDLE) CreateModelRenderer(entity);
-  else if (type == LIGHT_HANDLE) CreateLight(entity);
+void RenderSystem::CreateComponent(EntityHandle entity, ComponentType type) {
+  if (type == MODEL_RENDERER_COMPONENT) CreateModelRenderer(entity);
+  else if (type == LIGHT_COMPONENT) CreateLight(entity);
+}
+
+void RenderSystem::SerializeComponents(BlobWriter& writer) {
+  SerializeModels(writer);
+  SerializeLights(writer);
 }
 
 void RenderSystem::CreateModelRenderer(EntityHandle entity) {
@@ -340,4 +345,36 @@ Frustum RenderSystem::GetLightFrustum(Light* light, Frustum* camera_frustum) con
   light_frustum.SetOrthographic(axis_size.x, axis_size.y);
   light_frustum.SetViewPlaneDistances(0.f, axis_size.z);
   return light_frustum;
+}
+
+void RenderSystem::SerializeModels(BlobWriter& writer) {
+  ComponentTypeResourceHeader header;
+  header._type = MODEL_RENDERER_COMPONENT;
+  header._size = sizeof(header) + sizeof(ModelRenderer) * _num_models;
+  header._num_entities = _num_models;
+  header._data_offset = writer.GetPos() + sizeof(header);
+  writer.Write(header);
+  void* data = nullptr;
+  writer.Write(_models, sizeof(ModelRenderer) * _num_models, &data);
+  for (u32 i = 0; i < _num_models; ++i) {
+    auto mr = (ModelRenderer*)data + i;
+    mr->_entity.idx = GameWorld::Instance()->GetEntityDenseIndex(mr->_entity);
+    intptr_t dense_idx = AssetManager::Instance()->GetAssetDenseIndex(mr->_asset);
+    mr->_asset = (Asset*)dense_idx;
+  }
+}
+
+void RenderSystem::SerializeLights(BlobWriter& writer) {
+  ComponentTypeResourceHeader header;
+  header._type = LIGHT_COMPONENT;
+  header._size = sizeof(header) + sizeof(Light) * _num_lights;
+  header._num_entities = _num_lights;
+  header._data_offset = writer.GetPos() + sizeof(header);
+  writer.Write(header);
+  void* data = nullptr;
+  writer.Write(_lights, sizeof(Light) * _num_lights, &data);
+  for (u32 i = 0; i < _num_lights; ++i) {
+    auto light = (Light*)data + i;
+    light->_entity.idx = GameWorld::Instance()->GetEntityDenseIndex(light->_entity);
+  }
 }

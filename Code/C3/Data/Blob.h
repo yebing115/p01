@@ -10,15 +10,30 @@ public:
 
   void Reserve(int size);
   const void* GetData() const { return _mem->data; }
-  int GetSize() const { return (int)_mem->size; }
-  void Write(const void* data, int size);
+  int GetCapacity() const { return (int)_mem->size; }
+  void Write(const void* data, int size, void** data_ptr = nullptr);
   void WriteString(const char* string);
-  template <class T> void Write(const T& value) { Write(&value, sizeof(T)); }
-  template <> void Write<bool>(const bool& value) {
+  template <class T> void Write(const T& value, void** data_ptr = nullptr) {
+    Write(&value, sizeof(T), data_ptr);
+  }
+  template <> void Write<bool>(const bool& value, void** data_ptr) {
     u32 v = value;
     Write(&v, sizeof(v));
   }
-  void Clear() { _pos = 0; }
+  
+  u32 GetPos() const { return _pos; }
+  void Skip(u32 n) {
+    if (n > 0) {
+      Reserve(_pos + n);
+      memset((u8*)_mem->data + _pos, 0, n);
+      _pos += n;
+    }
+  }
+  void Seek(u32 pos) {
+    if (_pos <= pos) _pos = pos;
+    else Skip(pos - _pos);
+  }
+  void Reset() { _pos = 0; }
 
 private:
   AllocatedMemory* _mem;
@@ -47,15 +62,15 @@ public:
   }
   const void* Skip(int size);
   const void* GetData() const { return (const void*)_data; }
-  int GetSize() const { return _size; }
-  void SetPosition(int pos) { _pos = pos; }
-  int GetPosition() const { return _pos; }
-  void Rewind() { _pos = 0; }
+  u32 GetSize() const { return _size; }
+  void SetPos(int pos) { _pos = pos; }
+  u32 GetPos() const { return _pos; }
+  void Reset() { _pos = 0; }
 
 private:
   const u8* _data;
-  int _size;
-  int _pos;
+  u32 _size;
+  u32 _pos;
 
   NON_COPYABLE(BlobReader);
 };

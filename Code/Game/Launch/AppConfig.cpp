@@ -1,7 +1,8 @@
 #include "AppConfig.h"
-#include "Game.h"
 #include "Game/GameApplication.h"
 #include "Debug/C3Debug.h"
+#include "Game.h"
+#include "Editor.h"
 
 String AppConfig::RESOURCES_FOLDER = "Assets";
 String AppConfig::WINDOW_TITLE = "Untitled";
@@ -29,5 +30,5 @@ void AppConfig::LoadConfig() {
 }
 
 GameApplication* AppConfig::CreateApplication() {
-  return new GameApplication(new Game);
+  return new GameApplication(new Editor);
 }

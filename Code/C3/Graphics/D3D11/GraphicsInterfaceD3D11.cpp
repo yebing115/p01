@@ -1233,7 +1233,7 @@ void GraphicsInterfaceD3D11::ResizeTexture(TextureHandle handle, u16 width, u16 
   stream.Write(tc);
 
   texture.Destroy();
-  texture.Create(mem_copy(stream.GetData(), stream.GetSize()), tc.flags, 0);
+  texture.Create(mem_copy(stream.GetData(), stream.GetCapacity()), tc.flags, 0);
 }
 
 void GraphicsInterfaceD3D11::DestroyTexture(TextureHandle handle) {

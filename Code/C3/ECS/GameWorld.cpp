@@ -1,14 +1,17 @@
 #include "C3PCH.h"
 #include "GameWorld.h"
 #include "System.h"
+#include "ECS/EntityResource.h"
 
 DEFINE_SINGLETON_INSTANCE(GameWorld);
 IMPLEMENT_REFLECT(GameWorld);
 
 GameWorld::GameWorld() {
-  INIT_LIST_HEAD(&_entity_list);
+  _num_name_annotations = 0;
   _num_cameras = 0;
   _num_transforms = 0;
+  INIT_LIST_HEAD(&_entity_list);
+  _entity_dense_map_dirty = true;
 }
 GameWorld::~GameWorld() {}
 
@@ -17,21 +20,22 @@ EntityHandle GameWorld::CreateEntity() {
   if (h) {
     _entities[h.idx].Init();
     list_add_tail(&_entities[h.idx]._sibling_link, &_entity_list);
+    _entity_dense_map_dirty = true;
   }
   return h;
 }
 
 EntityHandle GameWorld::CreateEntity(EntityHandle parent) {
-  if (!parent) {
+  if (!_entity_alloc.IsValid(parent)) {
     c3_log("CreateEntity: Invalid parent entity, idx = %d\n", parent.idx);
     return EntityHandle();
   }
-  auto& p = _entities[parent.idx];
   auto h = _entity_alloc.Alloc();
   if (h) {
     _entities[h.idx].Init();
-    _entities[h.idx]._parent = &p;
-    list_add_tail(&_entities[h.idx]._sibling_link, &p._child_list);
+    _entities[h.idx]._parent = parent;
+    list_add_tail(&_entities[h.idx]._sibling_link, &_entities[parent.idx]._child_list);
+    _entity_dense_map_dirty = true;
   }
   return h;
 }
@@ -50,11 +54,84 @@ void GameWorld::DestroyEntity(Entity* e) {
     DestroyEntity(child);
   }
   c3_assert(list_empty(&e->_child_list));
-  e->_parent = nullptr;
+  e->_parent = EntityHandle();
   list_del(&e->_sibling_link);
+  _entity_dense_map_dirty = true;
 }
 
-ISystem* GameWorld::GetSystem(HandleType type) const {
+void GameWorld::SerializeEntities(BlobWriter& writer) {
+  u32 n = _entity_alloc.GetUsed();
+  u32* parent = (u32*)C3_ALLOC(g_allocator, sizeof(u32) * n);
+  auto ehs = _entity_alloc.GetPointer();
+  for (u32 i = 0; i < n; ++i) {
+    Entity* e = _entities + ehs[i].idx;
+    parent[i] = GetEntityDenseIndex(e->_parent);
+  }
+  writer.Write(parent, sizeof(u32) * n);
+  C3_FREE(g_allocator, parent);
+}
+
+void GameWorld::SerializeTransforms(BlobWriter& writer) {
+  ComponentTypeResourceHeader header;
+  header._type = TRANSFORM_COMPONENT;
+  header._size = sizeof(header) + sizeof(Transform) * _num_transforms;
+  header._num_entities = _num_transforms;
+  header._data_offset = writer.GetPos() + sizeof(header);
+  writer.Write(header);
+  void* data = nullptr;
+  writer.Write(_transforms, sizeof(Transform) * _num_transforms, &data);
+  for (u32 i = 0; i < _num_transforms; ++i) {
+    auto t = (Transform*)data + i;
+    t->_entity.idx = GetEntityDenseIndex(t->_entity);
+  }
+}
+
+void GameWorld::SerializeCameras(BlobWriter& writer) {
+  ComponentTypeResourceHeader header;
+  header._type = CAMERA_COMPONENT;
+  header._size = sizeof(header) + sizeof(Camera) * _num_cameras;
+  header._num_entities = _num_cameras;
+  header._data_offset = writer.GetPos() + sizeof(header);
+  writer.Write(header);
+  void* data = nullptr;
+  writer.Write(_cameras, sizeof(Camera) * _num_cameras, &data);
+  for (u32 i = 0; i < _num_transforms; ++i) {
+    auto c = (Camera*)data + i;
+    c->_entity.idx = GetEntityDenseIndex(c->_entity);
+  }
+}
+
+void GameWorld::SerializeNameAnnotations(BlobWriter& writer) {
+  ComponentTypeResourceHeader header;
+  header._type = NAME_ANNOTATION_COMPONENT;
+  header._size = sizeof(header) + sizeof(NameAnnotation) * _num_name_annotations;
+  header._num_entities = _num_name_annotations;
+  header._data_offset = writer.GetPos() + sizeof(header);
+  writer.Write(header);
+  void* data = nullptr;
+  writer.Write(_transforms, sizeof(NameAnnotation) * _num_name_annotations, &data);
+  for (u32 i = 0; i < _num_name_annotations; ++i) {
+    auto name_anno = (NameAnnotation*)data + i;
+    name_anno->_entity.idx = GetEntityDenseIndex(name_anno->_entity);
+  }
+}
+
+int GameWorld::GetEntityDenseIndex(EntityHandle e) const {
+  if (_entity_dense_map_dirty) {
+    _entity_dense_map.clear();
+    u32 n = _entity_alloc.GetUsed();
+    auto entities = _entity_alloc.GetPointer();
+    _entity_dense_map.reserve(n);
+    for (u32 i = 0; i < n; ++i) {
+      _entity_dense_map[entities[i]] = i;
+    }
+    _entity_dense_map_dirty = false;
+  }
+  auto it = _entity_dense_map.find(e);
+  return (it == _entity_dense_map.end()) ? -1 : it->second;
+}
+
+ISystem* GameWorld::GetSystem(ComponentType type) const {
   if (OwnComponentType(type)) return (ISystem*)this;
   for (auto sys : _systems) {
     if (sys->OwnComponentType(type)) return sys;
@@ -70,13 +147,79 @@ void GameWorld::Render(float dt, bool paused) {
   for (auto& sys : _systems) sys->Render(dt, paused);
 }
 
-bool GameWorld::OwnComponentType(HandleType type) const {
-  return (type == TRANSFORM_HANDLE || type == CAMERA_HANDLE);
+void GameWorld::SerializeWorld(BlobWriter& writer) {
+  u32 num_comp_types = 0;
+  for (u32 i = 0; i < NUM_COMPONENT_TYPES; ++i) {
+    if (GetSystem((ComponentType)i)) ++num_comp_types;
+  }
+  EntityResourceHeader header;
+  header._magic = C3_CHUNK_MAGIC_ENT;
+  header._num_asset_refs = AssetManager::Instance()->GetUsed();
+  header._num_entites = _entity_alloc.GetUsed();
+  header._num_component_types = num_comp_types;
+  header.InitDataOffsets();
+  writer.Write(header);
+  
+  writer.Seek(header._asset_refs_data_offset);
+  AssetManager::Instance()->Serialize(writer);
+  
+  writer.Seek(header._entity_parents_data_offset);
+  SerializeEntities(writer);
+  
+  writer.Seek(header._component_types_data_offset);
+  SerializeComponents(writer);
+  for (auto sys : _systems) sys->SerializeComponents(writer);
 }
 
-void GameWorld::CreateComponent(EntityHandle entity, HandleType type) {
+void GameWorld::DeserializeWorld(BlobReader& reader) {
+
+}
+
+bool GameWorld::OwnComponentType(ComponentType type) const {
+  return (type == TRANSFORM_COMPONENT || type == CAMERA_COMPONENT);
+}
+
+void GameWorld::CreateComponent(EntityHandle entity, ComponentType type) {
   auto sys = GetSystem(type);
   if (sys) sys->CreateComponent(entity, type);
+}
+
+void GameWorld::SerializeComponents(BlobWriter& writer) {
+  SerializeTransforms(writer);
+  SerializeCameras(writer);
+  SerializeNameAnnotations(writer);
+}
+
+void GameWorld::SetEntityName(EntityHandle e, const char* name) {
+  if (!_entity_alloc.IsValid(e)) return;
+  auto name_anno = FindNameAnnotation(e);
+  if (!name_anno) {
+    name_anno = _name_annotations + _num_name_annotations;
+    _name_annotation_map[e] = _num_name_annotations;
+    _num_name_annotations++;
+    name_anno->_entity = e;
+  }
+  strncpy(name_anno->_name, name, MAX_NAME_ANNOTATION);
+  name_anno->_id = String::GetID(name);
+}
+
+const char* GameWorld::GetEntityName(EntityHandle e) const {
+  auto name_anno = FindNameAnnotation(e);
+  return name_anno ? name_anno->_name : "";
+}
+
+EntityHandle GameWorld::FindEntityByName(const char* name) const {
+  auto id = String::GetID(name);
+  for (u32 i = 0; i < _num_name_annotations; ++i) {
+    const NameAnnotation* name_anno = _name_annotations + i;
+    if (name_anno->_id == id && strcmp(name_anno->_name, name) == 0) return name_anno->_entity;
+  }
+  return EntityHandle();
+}
+
+NameAnnotation* GameWorld::FindNameAnnotation(EntityHandle e) const {
+  auto it = _name_annotation_map.find(e);
+  return (it == _name_annotation_map.end()) ? nullptr : (NameAnnotation*)_name_annotations + it->second;
 }
 
 void GameWorld::CreateCamera(EntityHandle e) {

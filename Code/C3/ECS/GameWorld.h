@@ -1,11 +1,20 @@
 #pragma once
 
 #include "Data/DataType.h"
+#include "Data/Blob.h"
 #include "Reflection/Object.h"
 #include "ComponentTypes.h"
 #include "Pattern/Singleton.h"
 #include "Camera/Camera.h"
 #include "Entity.h"
+
+#define MAX_NAME_ANNOTATION 56
+struct NameAnnotation {
+  EntityHandle _entity;
+  stringid _id;
+  char _name[MAX_NAME_ANNOTATION];
+};
+static_assert(sizeof(NameAnnotation) == 64, "Invalid sizeof(NameAnnotation), expect 64.");
 
 struct Transform {
   EntityHandle _entity;
@@ -27,13 +36,24 @@ public:
   GameWorld();
   ~GameWorld();
 
+  // ISystem interfaces
+  bool OwnComponentType(ComponentType type) const override;
+  void CreateComponent(EntityHandle entity, ComponentType type) override;
+  void SerializeComponents(BlobWriter& writer) override;
+
+  // Entity
   EntityHandle CreateEntity();
   EntityHandle CreateEntity(EntityHandle parent);
   void DestroyEntity(EntityHandle e);
+  int GetEntityDenseIndex(EntityHandle e) const;
 
-  bool OwnComponentType(HandleType type) const override;
-  void CreateComponent(EntityHandle entity, HandleType type) override;
+  // Name
+  void SetEntityName(EntityHandle e, const char* name);
+  const char* GetEntityName(EntityHandle e) const;
+  EntityHandle FindEntityByName(const char* name) const;
+  NameAnnotation* FindNameAnnotation(EntityHandle e) const;
 
+  // Transform
   void CreateTransform(EntityHandle e);
   void DestroyTransform(EntityHandle e);
   Transform* FindTransform(EntityHandle e) const;
@@ -64,24 +84,37 @@ public:
   Camera* GetCameras(int* num_cameras) const;
 
   void AddSystem(ISystem* system) { _systems.push_back(system); }
-  ISystem* GetSystem(HandleType type) const;
+  ISystem* GetSystem(ComponentType type) const;
 
   void Update(float dt, bool paused);
   void Render(float dt, bool paused);
 
+  void SerializeWorld(BlobWriter& writer);
+  void DeserializeWorld(BlobReader& reader);
+
 private:
   void DestroyEntity(Entity* e);
+  void SerializeEntities(BlobWriter& writer);
+  void SerializeTransforms(BlobWriter& writer);
+  void SerializeCameras(BlobWriter& writer);
+  void SerializeNameAnnotations(BlobWriter& writer);
 
   Entity _entities[C3_MAX_ENTITIES];
   list_head _entity_list;
   HandleAlloc<ENTITY_HANDLE, C3_MAX_ENTITIES> _entity_alloc;
+  mutable unordered_map<EntityHandle, int> _entity_dense_map;
+  mutable bool _entity_dense_map_dirty;
+  
+  NameAnnotation _name_annotations[C3_MAX_ENTITIES];
+  u32 _num_name_annotations;
+  EntityMap _name_annotation_map;
 
   Transform _transforms[C3_MAX_TRANSFORMS];
-  int _num_transforms;
+  u32 _num_transforms;
   EntityMap _transform_map;
 
   Camera _cameras[C3_MAX_CAMERAS];
-  int _num_cameras;
+  u32 _num_cameras;
   EntityMap _camera_map;
   
   vector<ISystem*> _systems;

@@ -1,9 +1,9 @@
-#include "Game.h"
+#include "Editor.h"
 #include "AppConfig.h"
 #include "C3PCH.h"
 #include "Graphics/RenderSystem.h"
 
-Game::Game() {
+Editor::Editor() {
   auto world = GameWorld::CreateInstance();
   auto renderer = new RenderSystem;
   world->AddSystem(renderer);
@@ -19,33 +19,61 @@ Game::Game() {
   world->CreateTransform(_model);
   world->CreateComponent(_model, MODEL_RENDERER_COMPONENT);
   renderer->SetModelFilename(_model, "Models/Sponza/sponza.mex");
+
+  BlobWriter writer;
+  world->SerializeWorld(writer);
+  c3_log("size: %d\n", writer.GetPos());
 }
 
-void Game::OnUpdate(float dt, bool paused) {
-  (void)dt;
-  (void)paused;
+void Editor::OnUpdate(float dt, bool paused) {
+  if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+      ShowMenuFile();
+      ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Edit")) {
+      ShowMenuEdit();
+      ImGui::EndMenu();
+    }
+
+    ImGui::EndMainMenuBar();
+  }
+
   GameWorld::Instance()->Update(dt, paused);
 
   UpdateDebugCamera(dt);
 }
 
-void Game::OnRender(float dt, bool paused) {
-  (void)dt;
-  (void)paused;
-
+void Editor::OnRender(float dt, bool paused) {
   GameWorld::Instance()->Render(dt, paused);
   return;
-
-  auto GR = GraphicsRenderer::Instance();
-  auto view = GR->PushView();
-  auto win_size = GR->GetWindowSize();
-  GR->SetViewRect(view, 0, 0, win_size.x, win_size.y);
-  GR->SetViewClear(view, C3_CLEAR_COLOR | C3_CLEAR_DEPTH, 0x808080ff, 1.f);
-  GR->Touch(view);
-  GR->PopView();
 }
 
-void Game::UpdateDebugCamera(float dt) {
+void Editor::ShowMenuFile() {
+  if (ImGui::MenuItem("Open...", "CTRL+O")) {
+  }
+  if (ImGui::MenuItem("Save", "CTRL+S")) {
+  }
+  if (ImGui::MenuItem("Save As...", "CTRL+SHIFT+S")) {
+  }
+  if (ImGui::MenuItem("Close", "CTRL+F4")) {
+  }
+  ImGui::Separator();
+  if (ImGui::MenuItem("Quit...", "ALT+F4")) {
+    exit(0);
+  }
+}
+
+void Editor::ShowMenuEdit() {
+  if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
+  if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+  ImGui::Separator();
+  if (ImGui::MenuItem("Cut", "CTRL+X")) {}
+  if (ImGui::MenuItem("Copy", "CTRL+C")) {}
+  if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+}
+
+void Editor::UpdateDebugCamera(float dt) {
   ImGui::Begin("Camera");
   auto world = GameWorld::Instance();
   auto IM = InputManager::Instance();

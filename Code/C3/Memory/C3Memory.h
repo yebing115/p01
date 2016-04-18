@@ -6,3 +6,4 @@
 #include "Memory/MemoryMacros.h"
 #include "Memory/PoolAllocator.h"
 #include "Memory/Pool.h"
+#include "Memory/LinearAllocator.h"

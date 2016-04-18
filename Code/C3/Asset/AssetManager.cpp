@@ -129,6 +129,18 @@ void AssetManager::InitBuiltinAssets() {
   }
 }
 
+void AssetManager::Serialize(BlobWriter& writer) {
+  for (u32 i = 0; i < _num_assets; ++i) {
+    writer.Write(_assets[i]._desc);
+  }
+}
+
+int AssetManager::GetAssetDenseIndex(Asset* asset) const {
+  auto asset_id = String::GetID(asset->_desc._filename);
+  auto it = _asset_map.find(asset_id);
+  return it == _asset_map.end() ? -1: it->second;
+}
+
 bool AssetManager::Resolve(AssetType type, const char* filename, AssetDesc& out_desc, AssetOperations*& out_ops) {
   out_desc._type = type;
   out_desc._flags = 0;

@@ -13,9 +13,10 @@ void BlobWriter::Reserve(int size) {
   if (_mem->size < size) _mem->Resize(size);
 }
 
-void BlobWriter::Write(const void* data, int size) {
+void BlobWriter::Write(const void* data, int size, void** data_ptr) {
   if (size > 0) {
     if (_pos + size > _mem->size) _mem->Resize(ALIGN_256(_pos + size));
+    if (data_ptr) *data_ptr = (u8*)_mem->data + _pos;
     memcpy((u8*)_mem->data + _pos, data, size);
     _pos += size;
   }

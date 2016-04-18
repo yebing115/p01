@@ -424,7 +424,7 @@ TextureHandle GraphicsRenderer::CreateTexture2D(BackbufferRatio ratio, u16 width
   tc.mem = data_mem;
   stream.Write(tc);
 
-  return CreateTexture(mem_copy(stream.GetData(), stream.GetSize()), flags, 0, info_out, ratio);
+  return CreateTexture(mem_copy(stream.GetData(), stream.GetCapacity()), flags, 0, info_out, ratio);
 }
 
 void GraphicsRenderer::DestroyTexture(TextureHandle handle) {

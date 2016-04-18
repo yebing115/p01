@@ -10,8 +10,9 @@ public:
   RenderSystem();
   ~RenderSystem();
 
-  bool OwnComponentType(HandleType type) const override;
-  void CreateComponent(EntityHandle entity, HandleType type) override;
+  bool OwnComponentType(ComponentType type) const override;
+  void CreateComponent(EntityHandle entity, ComponentType type) override;
+  void SerializeComponents(BlobWriter& writer) override;
 
   void CreateModelRenderer(EntityHandle e);
   void DestroyModelRenderer(EntityHandle e);
@@ -45,6 +46,8 @@ public:
 private:
   void ApplyLight(Light* light, Frustum* light_frustum);
   Frustum GetLightFrustum(Light* light, Frustum* camera_frustum) const;
+  void SerializeModels(BlobWriter& writer);
+  void SerializeLights(BlobWriter& writer);
 
   ModelRenderer _models[C3_MAX_MODEL_RENDERERS];
   int _num_models;

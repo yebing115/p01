@@ -49,7 +49,7 @@ public:
 
   bool Read(void* data, u32 size);
   bool ReadString(char* data, u32 max_size);
-  template <class T> void Read(T& value) { Read(&value, sizeof(T)); }
+  template <class T> bool Read(T& value) { return Read(&value, sizeof(T)); }
   template <class T> T Read() {
     T v;
     Read(&v, sizeof(v));
@@ -58,6 +58,19 @@ public:
   template <> bool Read<bool>() {
     u32 v;
     Read(&v, sizeof(v));
+    return v != 0;
+  }
+  bool Peek(void* data, u32 size);
+  bool PeekString(char* data, u32 max_size);
+  template <class T> bool Peek(T& value) { return Peek(&value, sizeof(T)); }
+  template <class T> T Peek() {
+    T v;
+    Peek(&v, sizeof(v));
+    return v;
+  }
+  template <> bool Peek<bool>() {
+    u32 v;
+    Peek(&v, sizeof(v));
     return v != 0;
   }
   const void* Skip(int size);

@@ -15,13 +15,13 @@ public:
   void SerializeComponents(BlobWriter& writer) override;
   void DeserializeComponents(BlobReader& reader, EntityResourceDeserializeContext& ctx) override;
 
-  void CreateModelRenderer(EntityHandle e);
+  ModelRenderer* CreateModelRenderer(EntityHandle e);
   void DestroyModelRenderer(EntityHandle e);
   const char* GetModelFilename(EntityHandle e) const;
   void SetModelFilename(EntityHandle e, const char* filename);
   ModelRenderer* FindModel(EntityHandle e) const;
 
-  void CreateLight(EntityHandle e);
+  Light* CreateLight(EntityHandle e);
   void DestroyLight(EntityHandle e);
   void SetLightType(EntityHandle e, LightType type);
   void SetLightColor(EntityHandle e, const Color& color);
@@ -49,6 +49,8 @@ private:
   Frustum GetLightFrustum(Light* light, Frustum* camera_frustum) const;
   void SerializeModels(BlobWriter& writer);
   void SerializeLights(BlobWriter& writer);
+  void DeserializeModels(BlobReader& reader, EntityResourceDeserializeContext& ctx);
+  void DeserializeLights(BlobReader& reader, EntityResourceDeserializeContext& ctx);
 
   ModelRenderer _models[C3_MAX_MODEL_RENDERERS];
   int _num_models;

@@ -56,13 +56,13 @@ public:
   NameAnnotation* FindNameAnnotation(EntityHandle e) const;
 
   // Transform
-  void CreateTransform(EntityHandle e);
+  Transform* CreateTransform(EntityHandle e);
   void DestroyTransform(EntityHandle e);
   Transform* FindTransform(EntityHandle e) const;
   Transform* GetTransforms(int* num_transforms) const;
   
   // Camera control
-  void CreateCamera(EntityHandle e);
+  Camera* CreateCamera(EntityHandle e);
   void DestroyCamera(EntityHandle e);
   void SetCameraVerticalFovAndAspectRatio(EntityHandle e, float v_fov, float aspect);
   void SetCameraPos(EntityHandle e, const vec& pos);
@@ -100,6 +100,9 @@ private:
   void SerializeTransforms(BlobWriter& writer);
   void SerializeCameras(BlobWriter& writer);
   void SerializeNameAnnotations(BlobWriter& writer);
+  void DeserializeTransforms(BlobReader& reader, EntityResourceDeserializeContext& ctx);
+  void DeserializeCameras(BlobReader& reader, EntityResourceDeserializeContext& ctx);
+  void DeserializeNameAnnotations(BlobReader& reader, EntityResourceDeserializeContext& ctx);
 
   Entity _entities[C3_MAX_ENTITIES];
   list_head _entity_list;

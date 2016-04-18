@@ -61,7 +61,30 @@ bool BlobReader::Read(void* data, u32 size) {
 
 bool BlobReader::ReadString(char* data, u32 max_size) {
   u32 size;
-  Read(size);
+  if (!Read(size)) return false;
   if (size > max_size) return false;
   return Read(data, size < max_size ? size : max_size);
+}
+
+bool BlobReader::Peek(void* data, u32 size) {
+  u32 pos = _pos;
+  bool ok = Read(data, size);
+  _pos = pos;
+  return ok;
+}
+
+bool BlobReader::PeekString(char* data, u32 max_size) {
+  u32 pos = _pos;
+  u32 size;
+  if (!Read(size)) {
+    _pos = pos;
+    return false;
+  }
+  if (size > max_size) {
+    _pos = pos;
+    return false;
+  }
+  bool ok = Read(data, size < max_size ? size : max_size);
+  _pos = pos;
+  return ok;
 }

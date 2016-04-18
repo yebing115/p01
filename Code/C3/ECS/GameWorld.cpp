@@ -60,7 +60,14 @@ void GameWorld::DestroyEntity(Entity* e) {
 }
 
 void GameWorld::SetEntityParent(EntityHandle e, EntityHandle parent) {
-
+  if (!_entity_alloc.IsValid(e)) return;
+  Entity* ent = _entities + e.idx;
+  Entity* old_pent = nullptr;
+  Entity* pent = nullptr;
+  if (ent->_parent) old_pent = _entities + ent->_parent.idx;
+  if (parent) pent = _entities + parent.idx;
+  if (old_pent) list_del_init(&ent->_sibling_link);
+  if (pent) list_add_tail(&ent->_sibling_link, &pent->_child_list);
 }
 
 void GameWorld::SerializeEntities(BlobWriter& writer) {
@@ -117,6 +124,46 @@ void GameWorld::SerializeNameAnnotations(BlobWriter& writer) {
   for (u32 i = 0; i < _num_name_annotations; ++i) {
     auto name_anno = (NameAnnotation*)data + i;
     name_anno->_entity.idx = GetEntityDenseIndex(name_anno->_entity);
+  }
+}
+
+void GameWorld::DeserializeTransforms(BlobReader& reader, EntityResourceDeserializeContext& ctx) {
+  ComponentTypeResourceHeader header;
+  reader.Read(header);
+  reader.Seek(header._data_offset);
+  u32 n = header._num_entities;
+  for (u32 i = 0; i < n; ++i) {
+    u32 idx;
+    reader.Peek(idx);
+    Transform* t = CreateTransform(ctx._entities[idx]);
+    reader.Read(t, sizeof(Transform));
+    t->_entity = ctx._entities[idx];
+  }
+}
+
+void GameWorld::DeserializeCameras(BlobReader& reader, EntityResourceDeserializeContext& ctx) {
+  ComponentTypeResourceHeader header;
+  reader.Read(header);
+  reader.Seek(header._data_offset);
+  u32 n = header._num_entities;
+  for (u32 i = 0; i < n; ++i) {
+    u32 idx;
+    reader.Peek(idx);
+    Camera* c = CreateCamera(ctx._entities[idx]);
+    reader.Read(c, sizeof(Camera));
+    c->_entity = ctx._entities[idx];
+  }
+}
+
+void GameWorld::DeserializeNameAnnotations(BlobReader& reader, EntityResourceDeserializeContext& ctx) {
+  ComponentTypeResourceHeader header;
+  reader.Read(header);
+  reader.Seek(header._data_offset);
+  u32 n = header._num_entities;
+  for (u32 i = 0; i < n; ++i) {
+    NameAnnotation name_anno;
+    reader.Peek(name_anno);
+    SetEntityName(ctx._entities[name_anno._entity.ToRaw()], name_anno._name);
   }
 }
 
@@ -219,7 +266,15 @@ void GameWorld::SerializeComponents(BlobWriter& writer) {
 }
 
 void GameWorld::DeserializeComponents(BlobReader& reader, EntityResourceDeserializeContext& ctx) {
-
+  reader.Seek(ctx._header._component_types_data_offset);
+  for (u32 i = 0; i < ctx._header._num_component_types; ++i) {
+    ComponentTypeResourceHeader comp_header;
+    reader.Peek(comp_header);
+    if (comp_header._type == TRANSFORM_COMPONENT) DeserializeTransforms(reader, ctx);
+    else if (comp_header._type == CAMERA_COMPONENT) DeserializeCameras(reader, ctx);
+    else if (comp_header._type == NAME_ANNOTATION_COMPONENT) DeserializeNameAnnotations(reader, ctx);
+    else reader.Skip(comp_header._size);
+  }
 }
 
 void GameWorld::SetEntityName(EntityHandle e, const char* name) {
@@ -254,13 +309,14 @@ NameAnnotation* GameWorld::FindNameAnnotation(EntityHandle e) const {
   return (it == _name_annotation_map.end()) ? nullptr : (NameAnnotation*)_name_annotations + it->second;
 }
 
-void GameWorld::CreateCamera(EntityHandle e) {
-  c3_assert_return(_num_cameras < C3_MAX_CAMERAS);
+Camera* GameWorld::CreateCamera(EntityHandle e) {
+  c3_assert_return_x(_num_cameras < C3_MAX_CAMERAS, nullptr);
   Camera* camera = _cameras + _num_cameras;
   camera->_entity = e;
   camera->Init();
   _camera_map.insert(EntityMap::value_type(e, _num_cameras));
   ++_num_cameras;
+  return camera;
 }
 
 void GameWorld::DestroyCamera(EntityHandle e) {
@@ -389,13 +445,14 @@ Camera* GameWorld::GetCameras(int* num_cameras) const {
   return (Camera*)_cameras;
 }
 
-void GameWorld::CreateTransform(EntityHandle e) {
-  c3_assert_return(_num_transforms < C3_MAX_TRANSFORMS);
+Transform* GameWorld::CreateTransform(EntityHandle e) {
+  c3_assert_return_x(_num_transforms < C3_MAX_TRANSFORMS, nullptr);
   Transform* transform = _transforms + _num_transforms;
   transform->_entity = e;
   transform->Init();
   _transform_map.insert(EntityMap::value_type(e, _num_transforms));
   ++_num_transforms;
+  return transform;
 }
 
 void GameWorld::DestroyTransform(EntityHandle e) {

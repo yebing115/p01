@@ -42,16 +42,24 @@ void RenderSystem::SerializeComponents(BlobWriter& writer) {
 }
 
 void RenderSystem::DeserializeComponents(BlobReader& reader, EntityResourceDeserializeContext& ctx) {
-
+  reader.Seek(ctx._header._component_types_data_offset);
+  for (u32 i = 0; i < ctx._header._num_component_types; ++i) {
+    ComponentTypeResourceHeader comp_header;
+    reader.Peek(comp_header);
+    if (comp_header._type == MODEL_RENDERER_COMPONENT) DeserializeModels(reader, ctx);
+    else if (comp_header._type == LIGHT_COMPONENT) DeserializeLights(reader, ctx);
+    else reader.Skip(comp_header._size);
+  }
 }
 
-void RenderSystem::CreateModelRenderer(EntityHandle entity) {
-  c3_assert_return(_num_models < C3_MAX_MODEL_RENDERERS);
-  ModelRenderer* model = _models + _num_models;
-  model->_entity = entity;
-  model->Init();
+ModelRenderer* RenderSystem::CreateModelRenderer(EntityHandle entity) {
+  c3_assert_return_x(_num_models < C3_MAX_MODEL_RENDERERS, nullptr);
+  ModelRenderer* mr = _models + _num_models;
+  mr->_entity = entity;
+  mr->Init();
   _model_map.insert(EntityMap::value_type(entity, _num_models));
   ++_num_models;
+  return mr;
 }
 
 void RenderSystem::DestroyModelRenderer(EntityHandle e) {
@@ -90,13 +98,14 @@ ModelRenderer* RenderSystem::FindModel(EntityHandle e) const {
   return nullptr;
 }
 
-void RenderSystem::CreateLight(EntityHandle e) {
-  c3_assert_return(_num_models < C3_MAX_LIGHTS);
+Light* RenderSystem::CreateLight(EntityHandle e) {
+  c3_assert_return_x(_num_models < C3_MAX_LIGHTS, nullptr);
   Light* light = _lights + _num_lights;
   light->_entity = e;
   light->Init();
   _light_map.insert(EntityMap::value_type(e, _num_lights));
   ++_num_lights;
+  return light;
 }
 
 void RenderSystem::DestroyLight(EntityHandle e) {
@@ -379,5 +388,35 @@ void RenderSystem::SerializeLights(BlobWriter& writer) {
   for (u32 i = 0; i < _num_lights; ++i) {
     auto light = (Light*)data + i;
     light->_entity.idx = GameWorld::Instance()->GetEntityDenseIndex(light->_entity);
+  }
+}
+
+void RenderSystem::DeserializeModels(BlobReader& reader, EntityResourceDeserializeContext& ctx) {
+  ComponentTypeResourceHeader header;
+  reader.Read(header);
+  reader.Seek(header._data_offset);
+  u32 n = header._num_entities;
+  for (u32 i = 0; i < n; ++i) {
+    u32 idx;
+    reader.Peek(idx);
+    ModelRenderer* mr = CreateModelRenderer(ctx._entities[idx]);
+    reader.Read(mr, sizeof(ModelRenderer));
+    mr->_entity = ctx._entities[idx];
+    uintptr_t asset_iptr = (uintptr_t)mr->_asset;
+    mr->_asset = ctx._assets[asset_iptr];
+  }
+}
+
+void RenderSystem::DeserializeLights(BlobReader& reader, EntityResourceDeserializeContext& ctx) {
+  ComponentTypeResourceHeader header;
+  reader.Read(header);
+  reader.Seek(header._data_offset);
+  u32 n = header._num_entities;
+  for (u32 i = 0; i < n; ++i) {
+    u32 idx;
+    reader.Peek(idx);
+    Light* light = CreateLight(ctx._entities[idx]);
+    reader.Read(light, sizeof(Light));
+    light->_entity = ctx._entities[idx];
   }
 }

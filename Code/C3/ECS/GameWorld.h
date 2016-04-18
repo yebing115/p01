@@ -40,11 +40,13 @@ public:
   bool OwnComponentType(ComponentType type) const override;
   void CreateComponent(EntityHandle entity, ComponentType type) override;
   void SerializeComponents(BlobWriter& writer) override;
+  void DeserializeComponents(BlobReader& reader, EntityResourceDeserializeContext& ctx) override;
 
   // Entity
   EntityHandle CreateEntity();
   EntityHandle CreateEntity(EntityHandle parent);
   void DestroyEntity(EntityHandle e);
+  void SetEntityParent(EntityHandle e, EntityHandle parent);
   int GetEntityDenseIndex(EntityHandle e) const;
 
   // Name

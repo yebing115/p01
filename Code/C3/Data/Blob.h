@@ -66,6 +66,8 @@ public:
   void SetPos(int pos) { _pos = pos; }
   u32 GetPos() const { return _pos; }
   void Reset() { _pos = 0; }
+  void Skip(u32 n) { Seek(_pos + n); }
+  void Seek(u32 pos);
 
 private:
   const u8* _data;

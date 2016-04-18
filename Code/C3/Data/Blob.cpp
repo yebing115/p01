@@ -45,6 +45,10 @@ const void* BlobReader::Skip(int size) {
   return (const void*)pos;
 }
 
+void BlobReader::Seek(u32 pos) {
+  _pos = clamp<u32>(pos, 0, _size);
+}
+
 bool BlobReader::Read(void* data, u32 size) {
   if (_pos + (int)size > _size) {
     for (u32 i = 0; i < size; ++i) ((unsigned char*)data)[i] = 0;

@@ -41,6 +41,10 @@ void RenderSystem::SerializeComponents(BlobWriter& writer) {
   SerializeLights(writer);
 }
 
+void RenderSystem::DeserializeComponents(BlobReader& reader, EntityResourceDeserializeContext& ctx) {
+
+}
+
 void RenderSystem::CreateModelRenderer(EntityHandle entity) {
   c3_assert_return(_num_models < C3_MAX_MODEL_RENDERERS);
   ModelRenderer* model = _models + _num_models;

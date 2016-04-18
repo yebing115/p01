@@ -38,3 +38,9 @@ struct EntityResourceHeader {
     _component_types_data_offset = ALIGN_16(_entity_parents_data_offset + _num_entites * sizeof(u32));
   }
 };
+
+struct EntityResourceDeserializeContext {
+  Asset** _assets;
+  EntityHandle* _entities;
+  EntityResourceHeader _header;
+};

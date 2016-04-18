@@ -13,6 +13,7 @@ public:
   bool OwnComponentType(ComponentType type) const override;
   void CreateComponent(EntityHandle entity, ComponentType type) override;
   void SerializeComponents(BlobWriter& writer) override;
+  void DeserializeComponents(BlobReader& reader, EntityResourceDeserializeContext& ctx) override;
 
   void CreateModelRenderer(EntityHandle e);
   void DestroyModelRenderer(EntityHandle e);

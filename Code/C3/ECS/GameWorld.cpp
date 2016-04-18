@@ -59,6 +59,10 @@ void GameWorld::DestroyEntity(Entity* e) {
   _entity_dense_map_dirty = true;
 }
 
+void GameWorld::SetEntityParent(EntityHandle e, EntityHandle parent) {
+
+}
+
 void GameWorld::SerializeEntities(BlobWriter& writer) {
   u32 n = _entity_alloc.GetUsed();
   u32* parent = (u32*)C3_ALLOC(g_allocator, sizeof(u32) * n);
@@ -172,7 +176,31 @@ void GameWorld::SerializeWorld(BlobWriter& writer) {
 }
 
 void GameWorld::DeserializeWorld(BlobReader& reader) {
-
+  EntityResourceHeader header;
+  reader.Read(header);
+  c3_assert_return(header._magic == C3_CHUNK_MAGIC_ENT);
+  
+  EntityResourceDeserializeContext ctx;
+  ctx._assets = (Asset**)C3_ALLOC(g_allocator, sizeof(Asset*) * header._num_asset_refs);
+  auto AM = AssetManager::Instance();
+  reader.Seek(header._asset_refs_data_offset);
+  AssetDesc desc;
+  for (u32 i = 0; i < header._num_asset_refs; ++i) {
+    reader.Read(desc);
+    ctx._assets[i] = AM->Load((AssetType)desc._type, desc._filename);
+  }
+  ctx._entities = (EntityHandle*)C3_ALLOC(g_allocator, sizeof(Asset*) * header._num_entites);
+  for (u32 i = 0; i < header._num_entites; ++i) {
+    ctx._entities[i] = CreateEntity();
+  }
+  reader.Seek(header._entity_parents_data_offset);
+  for (u32 i = 0; i < header._num_entites; ++i) {
+    u32 parent;
+    reader.Read(parent);
+    if (parent != UINT32_MAX) SetEntityParent(ctx._entities[i], ctx._entities[parent]);
+  }
+  DeserializeComponents(reader, ctx);
+  for (auto sys : _systems) sys->DeserializeComponents(reader, ctx);
 }
 
 bool GameWorld::OwnComponentType(ComponentType type) const {
@@ -188,6 +216,10 @@ void GameWorld::SerializeComponents(BlobWriter& writer) {
   SerializeTransforms(writer);
   SerializeCameras(writer);
   SerializeNameAnnotations(writer);
+}
+
+void GameWorld::DeserializeComponents(BlobReader& reader, EntityResourceDeserializeContext& ctx) {
+
 }
 
 void GameWorld::SetEntityName(EntityHandle e, const char* name) {

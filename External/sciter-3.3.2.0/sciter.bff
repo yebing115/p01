@@ -1,0 +1,35 @@
+// Sciter
+//------------------------------------------------------------------------------
+.SciterBasePath			= '../External/Sciter-3.3.2.0'
+.Sciter_Windows_MSVC	= [	.SciterIncludePaths		= ' /I"$SciterBasePath$/include"'
+						]
+
+{
+	.ProjectName		= 'Sciter'
+	.ProjectPath		= '$SciterBasePath$'
+
+	// Visual Studio Project Generation
+	//--------------------------------------------------------------------------
+	VCXProject( '$ProjectName$-proj' )
+	{
+		.ProjectOutput				= '../tmp/VisualStudio/Projects/$ProjectName$.vcxproj'
+		.ProjectInputPaths			= '$ProjectPath$\'
+		.ProjectBasePath			= '$ProjectPath$\'
+	}
+	.Configs = { 'Debug', 'Release', 'Profile' }
+	ForEach( .Config in .Configs )
+	{
+		.OutputBase + '\x86-$Config$'
+		
+		Copy( 'Copy-$ProjectName$-DLL-x86-$Config$' )
+		{
+			.Source   = { '$SciterBasePath$/bin/sciter32.dll' }
+			.Dest     = '$OutputBase$/'
+		}
+		Alias( '$ProjectName$-Lib-x86-$Config$' )
+		{
+			Using( .Sciter_Windows_MSVC )
+ 			.Targets 				= '$SciterBasePath$/lib/sciter32.lib'
+		}
+	}
+}

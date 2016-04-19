@@ -22,7 +22,7 @@
 										}
 
 		.LocalDebuggerCommand		= '^$(SolutionDir)..\^$(Configuration)\editor.exe'
-		.LocalDebuggerWorkingDirectory = '^$(SolutionDir)..\..\Tool\editor\res'
+		.LocalDebuggerWorkingDirectory = '^$(SolutionDir)..\..\Assets'
 	}
 
     // Unity

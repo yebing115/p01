@@ -121,8 +121,11 @@ void imgui_state_init() {
   unsigned char* pixel = nullptr;
   int width = 0;
   int height = 0;
+  /*
   ImFontConfig font_config;
   IO.Fonts->AddFontFromFileTTF("Fonts/simhei.ttf", 18, &font_config, IO.Fonts->GetGlyphRangesChinese());
+  */
+  IO.Fonts->AddFontDefault();
   IO.Fonts->GetTexDataAsAlpha8(&pixel, &width, &height);
   g_imgui._font_texture = GR->CreateTexture2D((u16)width, (u16)height, 1, RED_8_TEXTURE_FORMAT,
                                               C3_TEXTURE_MIN_POINT | C3_TEXTURE_MAG_POINT, mem_ref(pixel, width * height));

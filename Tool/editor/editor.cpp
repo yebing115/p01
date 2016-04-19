@@ -1,4 +1,4 @@
-#include "AppConfig.h"
+#include "Launch/AppConfig.h"
 #include "Reflection/Reflector.h"
 #include "Reflection/Object.h"
 #include "Reflection/ReflectMethod.h"
@@ -7,6 +7,7 @@
 #include "Graphics/imgui_helpers.h"
 #include "Asset/AssetManager.h"
 #include "Platform/Windows/WindowsHeader.h"
+#include "Behaviors/EngineAPI.h"
 #include "C3PCH.h"
 #include <shellapi.h>
 #include <sciter-x.h>
@@ -40,47 +41,6 @@ void ParseCommandLine(LPTSTR /*lpCmdLine*/) {
   for (int i = 0; i < argc; ++i) g_platform_data.arguments.emplace_back((wchar_t*)argv[i]);
 }
 
-// handle SC_LOAD_DATA requests - get data from resources of this application
-UINT DoLoadData(LPSCN_LOAD_DATA pnmld) {
-  LPCBYTE pb = 0; UINT cb = 0;
-  aux::wchars wu = aux::chars_of(pnmld->uri);
-  if (wu.like(WSTR("res:*"))) {
-    // then by calling possibly overloaded load_resource_data method
-    if (sciter::load_resource_data(g_hinstance, wu.start + 4, pb, cb))
-      ::SciterDataReady(pnmld->hwnd, pnmld->uri, pb, cb);
-  } else if (wu.like(WSTR("this://app/*"))) {
-    // try to get them from archive (if any, you need to call sciter::archive::open() first)
-    aux::bytes adata = sciter::archive::instance().get(wu.start + 11);
-    if (adata.length)
-      ::SciterDataReady(pnmld->hwnd, pnmld->uri, adata.start, adata.length);
-  }
-  return LOAD_OK;
-}
-
-// fulfill SC_ATTACH_BEHAVIOR request 
-UINT DoAttachBehavior(LPSCN_ATTACH_BEHAVIOR lpab) {
-  sciter::event_handler *pb = sciter::behavior_factory::create(lpab->behaviorName, lpab->element);
-  if (pb) {
-    lpab->elementTag = pb;
-    lpab->elementProc = sciter::event_handler::element_proc;
-    return TRUE;
-  }
-  return FALSE;
-}
-
-UINT SC_CALLBACK SciterCallback(LPSCITER_CALLBACK_NOTIFICATION pns, LPVOID callbackParam) {
-  // here are all notifiactions
-  switch (pns->code) {
-  case SC_LOAD_DATA:          return DoLoadData((LPSCN_LOAD_DATA)pns);
-  case SC_ATTACH_BEHAVIOR:    return DoAttachBehavior((LPSCN_ATTACH_BEHAVIOR)pns);
-  }
-  return 0;
-}
-
-VOID SC_CALLBACK on_debug_output(LPVOID param, UINT subsystem /*OUTPUT_SUBSYTEMS*/, UINT severity, LPCWSTR text, UINT text_length) {
-  OutputDebugString(text);
-}
-
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                       _In_opt_ HINSTANCE /*hPrevInstance*/,
                       _In_ LPTSTR    lpCmdLine,
@@ -105,12 +65,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     0, /*WS_EX_LAYOUTRTL,*/
     ::SciterClassName(),
     L"Editor",
-    WS_OVERLAPPEDWINDOW,
+    WS_OVERLAPPEDWINDOW | WS_VISIBLE,
     CW_USEDEFAULT, 0,
     800, 600,
     0, 0, 0, 0);
-  ::SciterSetCallback(s_sciter_hwnd, &SciterCallback, NULL);
-  ::SciterSetupDebugOutput(NULL, NULL, on_debug_output);
+
+  EngineAPI::CreateInstance(s_sciter_hwnd);
+  ::ShowWindow(s_sciter_hwnd, nCmdShow);
 
   if (!InitWindow(hInstance, nCmdShow) ||
       !GraphicsRenderer::Instance()->Init(D3D11_WIN_API)) {
@@ -132,8 +93,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
   GR->Reset((u16)s_window_size.x, (u16)s_window_size.y,
             C3_RESET_SRGB_BACKBUFFER);
 
-  auto ok =::SciterLoadFile(s_sciter_hwnd, L"../Tool/editor/res/main.htm");
-  ::ShowWindow(s_sciter_hwnd, nCmdShow);
+  EngineAPI::Instance()->load_file(L"main.htm");
 
   auto& IO = ImGui::GetIO();
   MSG msg;

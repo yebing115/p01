@@ -9,15 +9,26 @@
             height: *;
         }
     </style>
+	<script type="text/tiscript">
+		include "log.tis";
+log("Hi!");		
+	    function alert(msg) { view.msgbox(#information, msg.htmlEscape()); }
+		function self.ready() {
+			var btn = $(#test-btn);
+			btn.on("click", function () { alert("miao");});
+			alert(view.api_test().d)
+			stdout.println(btn);
+		}
+	</script>
 </head>
 <body>
     <frameset cols="120px,*">
-        <select|tree>
+       <select|tree>
             <caption>Entity List</caption>
             <option>
                 <caption>ab</caption>
                 <option>
-                    <button>dd</button>
+                    <button #test-btn>dd</button>
                 </option>
             </option>
         </select>

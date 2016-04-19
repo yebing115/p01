@@ -153,7 +153,7 @@ namespace sciter
       {
 #if defined(WINDOWS) && defined(_DEBUG)
         // Direct2D critical error (on layered window) - it rendered nothing. Most probably bad video driver. 
-        ::MessageBox(NULL,TEXT("Direct2D graphics critical error"), TEXT("Critical Error"), MB_OK | MB_ICONERROR);
+        MessageBox(NULL,TEXT("Direct2D graphics critical error"), TEXT("Critical Error"), MB_OK | MB_ICONERROR);
 #endif
       }
       

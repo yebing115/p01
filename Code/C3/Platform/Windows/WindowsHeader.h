@@ -15,7 +15,7 @@
 #define NOCTLMGR
 #define NODRAWTEXT
 //#define NOGDI
-#define NOMB
+//#define NOMB
 #define NOMEMMGR
 #define NOMETAFILE
 #define NOMINMAX

@@ -1,5 +1,4 @@
-class EntityTree : Behavior
-{
+class EntityTree : Behavior {
   this var _ds = null; // the data source
   
   function onMouse(evt) {

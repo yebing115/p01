@@ -34,7 +34,7 @@ class Entity {
       this._components.push(component);
     }
   }
-  function EachComponent(el, cb) {
-    for (var c in this._components) cb(el, c);
+  function EachComponent(obj, cb) {
+    for (var c in this._components) cb.call(obj, c);
   }
 }

@@ -63,7 +63,7 @@ void EngineAPI::SerializeTransform(Transform* transform, JsonWriter& writer) {
 
 void EngineAPI::SerializeCamera(Camera* camera, JsonWriter& writer) {
   if (!camera) return;
-  writer.BeginWriteObject("transform");
+  writer.BeginWriteObject("camera");
   auto pos = camera->GetPos();
   writer.WriteFloat("x", pos.x);
   writer.WriteFloat("y", pos.y);

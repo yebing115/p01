@@ -4,8 +4,54 @@ class EntityInspector: Behavior {
   function onControlEvent(evt) {
   }
   
-  function AddComponent(el, component) {
-    el.$append(<div>{component.type}</div>)
+  function AddComponent(component) {
+    var el = this;
+    switch (component.type) {
+    case "transform":
+      this.AddTransform(el, component);
+      break;
+    case "camera":
+      el.AddCamera(el, component);
+      break;
+    case "model_renderer":
+      el.AddModel(el, component);
+      break;
+    default:
+      el.$append(<div>{component.type}</div>)
+    }
+  }
+  
+  function AddTransform(el, component) {
+    var title = component.type.toUpperCase();
+    var cel = el.$append(<div class="component">
+      <section type="component-title">{title}</section>
+      <div><label>Position:</label><input type="number" value={component.x}/><input type="number" value={component.y}/><input type="number" value={component.z}/></div>
+      <div><label>Rotation:</label><input type="number" value={component.rx}/><input type="number" value={component.ry}/><input type="number" value={component.rz}/></div>
+      <div><label>Scale:</label><input type="number" value={component.sx}/><input type="number" value={component.sy}/><input type="number" value={component.sz}/></div>
+    </div>);
+    
+    @change cel: evt {
+      log("changed", evt.type, evt.target.text);
+    }
+    @key VK_RETURN cel: evt {
+      log("return pressed");
+    }
+  }
+  function AddCamera(el, component) {
+    var title = component.type.toUpperCase();
+    el.$append(<div class="component">
+      <section type="component-title">{title}</section>
+      <div><label>Position:</label><input type="number" value={component.x}/><input type="number" value={component.y}/><input type="number" value={component.z}/></div>
+      <div><label>Near:</label><input type="number" value={component.near}/></div>
+      <div><label>Far:</label><input type="number" value={component.far}/></div>
+    </div>);
+  }
+  function AddModel(el, component) {
+    var title = component.type.toUpperCase();
+    el.$append(<div class="component">
+      <section type="component-title">{title}</section>
+      <div><label>Asset:</label><input type="text" readonly value="{component.asset}"/></div>
+    </div>);
   }
 
   property entity(v) {

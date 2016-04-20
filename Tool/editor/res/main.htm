@@ -8,36 +8,31 @@
             width: *;
             height: *;
         }
+		widget#entity_tree {
+			size: 300px *;
+			overflow-x:hidden;
+			prototype: EntityTree;
+		}
+		widget#entity_inspector {
+			size: 300px *;
+			prototype: EntityInspector;
+		}
     </style>
+	<script type="text/tiscript" src="main.tis" />
 	<script type="text/tiscript">
-		include "log.tis";
-log("Hi!");		
-	    function alert(msg) { view.msgbox(#information, msg.htmlEscape()); }
 		function self.ready() {
-			var btn = $(#test-btn);
-			btn.on("click", function () { alert("miao");});
-			alert(view.api_test().d)
-			stdout.println(btn);
+			var tree = $(widget#entity_tree);
+			tree.data_source = new EntityDataSource();
 		}
 	</script>
 </head>
 <body>
     <frameset cols="120px,*">
-       <select|tree>
-            <caption>Entity List</caption>
-            <option>
-                <caption>ab</caption>
-                <option>
-                    <button #test-btn>dd</button>
-                </option>
-            </option>
-        </select>
+		<widget #entity_tree />
         <splitter/>
         <game_world/>
         <splitter />
-        <div>
-            <p>Inspector</p>
-        </div>
+		<widget #entity_inspector />
     </frameset>
 </body>
 </html>

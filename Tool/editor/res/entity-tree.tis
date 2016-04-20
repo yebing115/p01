@@ -1,0 +1,83 @@
+class EntityTree : Behavior
+{
+  this var _ds = null; // the data source
+  
+  function onMouse(evt) {
+    // click on empty space
+    if (evt.type == Event.MOUSE_DOWN && evt.target == $(widget#entity_tree)) {
+      $(widget#entity_inspector).entity = null;
+    }
+  }
+  
+  // overridables:
+  function OnOptionExpanded(option) {}
+  function OnOptionCollapsed(option) {}
+  function OnSelectionChanged() {
+  }
+  function OnOptionClick(option) {
+    var id = option.attributes["entity_id"].toInteger(-1, 16);
+    var entity = this._ds.FindEntity(id);
+    $(widget#entity_inspector).entity = entity;
+  }
+
+  // implementation
+  function AppendOption(parent_option, entity, node_state) {
+    var opt = parent_option.$append(<option entity_id="{entity._id.toString(16)}"><text>{entity._name}</text></option>);
+    if( node_state === true ) { // expanded folder
+      opt.state.expanded = true;
+    } else if( node_state === false ) {// collapsed folder
+      opt.state.collapsed = true;
+    }
+    // else 
+    //   neither state.expanded nor state.collapsed
+    
+    opt.on(#click, function () { (this super).OnOptionClick(this); return true; })
+    
+    return opt;
+  }
+
+  function ExpandOption(opt) {
+    //stdout.println("expand");
+    function append_child(entity, has_child) {
+      (this super).AppendOption(entity, has_child ? false: undefined);
+    }
+    this._ds.EachChild(opt.attributes["entity_id"].toInteger(-1, 16), append_child);
+    opt.state.expanded = true;
+  }
+  function CollapseOption(opt) {
+    //stdout.println("collapse");
+    opt.state.collapsed = true; 
+    while(opt.length > 1)
+      opt.last.remove();
+  }
+   
+  function onControlEvent(evt) {
+    if (evt.type == Event.ELEMENT_EXPANDED) {
+      this.ExpandOption(evt.target);
+      this.OnOptionExpanded(evt.target);
+      return true;
+    } else if (evt.type == Event.ELEMENT_COLLAPSED) {
+      this.CollapseOption(evt.target);
+      this.OnOptionCollapsed(evt.target);
+      return true;
+    }
+  }
+  
+  function AppendRoot(entity, has_child) {
+    var rn = this.AppendOption(this, entity, has_child ? true: undefined);
+    if(has_child) this.ExpandOption(rn);
+  }
+   
+  property data_source(v) {
+    get return this._ds;
+    set { 
+       this._ds = v; 
+       this.clear(); 
+       function root_appender(entity, has_child) {
+         (this super).AppendRoot(entity, has_child);
+       }
+       this._ds.EachRoot(root_appender); 
+    }
+  }
+}
+

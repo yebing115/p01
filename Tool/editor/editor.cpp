@@ -11,7 +11,6 @@
 #include "C3PCH.h"
 #include <shellapi.h>
 #include <sciter-x.h>
-using namespace sciter;
 
 static HINSTANCE g_hinstance;
 static LPCTSTR WINDOW_CLASS_NAME = __TEXT("Main");
@@ -56,6 +55,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
   mem_init();
   FileSystem::CreateInstance();
+  FileSystem::Instance()->SetRootDir("../../../Assets");
   auto JS = JobScheduler::CreateInstance();
   JS->Init(thread::hardware_concurrency());
   AssetManager::CreateInstance();

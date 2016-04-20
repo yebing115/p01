@@ -55,13 +55,16 @@ FileSystem::~FileSystem() {
 
 IFile* FileSystem::Open(const char* filename, bool writable) {
   IFile* f = nullptr;
+  char full_path[1024];
   if (g_platform_data.use_archive) {
     auto it = _filename_map.find(String::GetID(filename));
     if (it == _filename_map.end()) {
-      f = new CrtFile(filename, writable);
+      GetFullPath(filename, full_path);
+      f = new CrtFile(full_path, writable);
     } else f = new Lz4File(&it->second);
   } else {
-    f = new CrtFile(filename, writable);
+    GetFullPath(filename, full_path);
+    f = new CrtFile(full_path, writable);
   }
   if (f && !f->IsValid()) safe_delete(f);
   return f;
@@ -108,11 +111,21 @@ vector<String> FileSystem::GetFileList(const String& dir_, bool recursive) {
   }
 }
 
+void FileSystem::SetRootDir(const char* dir) {
+  strcpy(_root_dir, dir);
+  auto n = strlen(_root_dir);
+  while (n > 1 && _root_dir[n - 1] == '/') {
+    --n;
+  }
+  _root_dir[n] = 0;
+}
+
 static inline const char* next_string(const char* p) {
   return p + strlen(p) + 1;
 }
 
 void FileSystem::Init() {
+  strcpy(_root_dir, "");
   if (g_platform_data.use_archive) {
     FILE* f = nullptr;
 #if ON_PS4
@@ -181,5 +194,15 @@ void FileSystem::Init() {
         abort();
       }
     }
+  }
+}
+
+void FileSystem::GetFullPath(const char* filename, char* full_path) {
+  int n = strlen(_root_dir);
+  if (n == 0) strcpy(full_path, filename);
+  else {
+    strcpy(full_path, _root_dir);
+    if (full_path[n - 1] != '/') strcat(full_path, "/");
+    strcat(full_path, filename);
   }
 }

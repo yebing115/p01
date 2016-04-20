@@ -19,6 +19,7 @@ EntityHandle GameWorld::CreateEntity() {
   auto h = _entity_alloc.Alloc();
   if (h) {
     _entities[h.idx].Init();
+    _entities[h.idx]._handle = h;
     list_add_tail(&_entities[h.idx]._sibling_link, &_entity_list);
     _entity_dense_map_dirty = true;
   }
@@ -33,6 +34,7 @@ EntityHandle GameWorld::CreateEntity(EntityHandle parent) {
   auto h = _entity_alloc.Alloc();
   if (h) {
     _entities[h.idx].Init();
+    _entities[h.idx]._handle = h;
     _entities[h.idx]._parent = parent;
     list_add_tail(&_entities[h.idx]._sibling_link, &_entities[parent.idx]._child_list);
     _entity_dense_map_dirty = true;
@@ -182,6 +184,29 @@ int GameWorld::GetEntityDenseIndex(EntityHandle e) const {
   return (it == _entity_dense_map.end()) ? -1 : it->second;
 }
 
+int GameWorld::GetAllEntities(Entity* entities, int max_size) {
+  int n = min<int>(max_size, _entity_alloc.GetUsed());
+  for (int i = 0; i < n; ++i) {
+    auto eh = _entity_alloc.GetHandleAt(i);
+    entities[i] = _entities[eh.idx];
+  }
+  return n;
+}
+
+int GameWorld::GetSortedEntities(Entity* entities, int max_size) {
+  int n = 0;
+  function<void(list_head*)> walk_siblings = [&] (list_head* list) {
+    Entity* e;
+    list_for_each_entry(e, list, _sibling_link) {
+      if (n >= max_size) return;
+      entities[n++] = *e;
+      walk_siblings(&e->_child_list);
+    }
+  };
+  walk_siblings(&_entity_list);
+  return n;
+}
+
 ISystem* GameWorld::GetSystem(ComponentType type) const {
   if (OwnComponentType(type)) return (ISystem*)this;
   for (auto sys : _systems) {
@@ -277,6 +302,11 @@ void GameWorld::DeserializeComponents(BlobReader& reader, EntityResourceDeserial
   }
 }
 
+Entity* GameWorld::FindEntity(EntityHandle e) const {
+  if (!_entity_alloc.IsValid(e)) return nullptr;
+  return (Entity*)_entities + e.idx;
+}
+
 void GameWorld::SetEntityName(EntityHandle e, const char* name) {
   if (!_entity_alloc.IsValid(e)) return;
   auto name_anno = FindNameAnnotation(e);
@@ -293,6 +323,20 @@ void GameWorld::SetEntityName(EntityHandle e, const char* name) {
 const char* GameWorld::GetEntityName(EntityHandle e) const {
   auto name_anno = FindNameAnnotation(e);
   return name_anno ? name_anno->_name : "";
+}
+
+void GameWorld::RemoveEntityName(EntityHandle e) {
+  auto it = _name_annotation_map.find(e);
+  if (it != _name_annotation_map.end()) {
+    auto index = it->second;
+    --_num_name_annotations;
+    if (index != _num_name_annotations) {
+      memcpy(_name_annotations + index, _name_annotations + _num_name_annotations, sizeof(NameAnnotation));
+      auto moved_entity = _name_annotations[index]._entity;
+      _name_annotation_map[moved_entity] = index;
+    }
+    _name_annotation_map.erase(e);
+  }
 }
 
 EntityHandle GameWorld::FindEntityByName(const char* name) const {

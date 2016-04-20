@@ -2,6 +2,7 @@
 #include "Data/DataType.h"
 #include "Debug/C3Debug.h"
 #include "Pattern/Handle.h"
+#include "Platform/PlatformSync.h"
 
 template <HandleType TYPE, u32 COUNT>
 class HandleAlloc {

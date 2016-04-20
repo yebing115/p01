@@ -262,6 +262,8 @@ Compiler( 'Compiler-x64' )
     .IncludeSearchPath          = '^$(SolutionDir)..\..\External\MathGeoLib-20160215\src;'
 								+ '^$(SolutionDir)..\..\External\imgui-20160326;'
 								+ '^$(SolutionDir)..\..\External\libiconv-1.9.2-1-lib\include;'
+								+ '^$(SolutionDir)..\..\External\sciter-3.3.2.0\include;'
+								+ '^$(SolutionDir)..\..\External\lz4-20150629;'
 								+ '^$(SolutionDir)..\..\Code\C3;'
 								+ '^$(SolutionDir)..\..\Code\Game;'
 								+ '.\'

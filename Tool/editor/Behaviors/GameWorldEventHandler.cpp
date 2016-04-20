@@ -1,15 +1,14 @@
 #include "C3PCH.h"
 #include "GameWorldEventHandler.h"
-using namespace sciter;
 
 extern HWND g_game_world_hwnd;
 
-struct GameWorldFactory : public behavior_factory {
+struct GameWorldFactory : public sciter::behavior_factory {
 
-  GameWorldFactory() : behavior_factory("game_world") {}
+  GameWorldFactory() : sciter::behavior_factory("game_world") {}
 
   // the only behavior_factory method:
-  event_handler* create(HELEMENT he) override { return new GameWorldEventHandler(); }
+  sciter::event_handler* create(HELEMENT he) override { return new GameWorldEventHandler(); }
 
 };
 
@@ -17,12 +16,12 @@ struct GameWorldFactory : public behavior_factory {
 static GameWorldFactory game_world_factor_instance;
 
 void GameWorldEventHandler::attached(HELEMENT he) {
-  dom::element el = he;
+  sciter::dom::element el = he;
   el.attach_hwnd(g_game_world_hwnd);
 }
 
 void GameWorldEventHandler::detached(HELEMENT he) {
-  dom::element el = he;
+  sciter::dom::element el = he;
   el.attach_hwnd(NULL);
   delete this;
 }

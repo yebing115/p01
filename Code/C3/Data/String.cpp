@@ -8,6 +8,7 @@
 #endif
 #include <string.h>
 #include <regex>
+#include <stdarg.h>
 
 #define ROUND_UP(x) ((x + 15) & ~15)
 
@@ -82,6 +83,11 @@ String String::FromSystemEncoding(const String& s) {
 
 String String::GetSystemString() const {
   return EncodingUtil::UTF8ToSystem(*this);
+}
+
+std::wstring String::GetWString() const {
+  String s = EncodingUtil::Convert(*this, UTF_8, UTF_16);
+  return std::wstring((const wchar_t*)s._buf, s._size / 2);
 }
 
 stringid String::GetID() const {
@@ -232,6 +238,19 @@ String String::CanonicalPath() const {
   }
   if (!sections.empty()) result += sections.back();
   return result;
+}
+
+String& String::Format(int capacity, const char* fmt, ...) {
+  Reserve(capacity);
+  va_list ap_list;
+  va_start(ap_list, fmt);
+  _size = vsnprintf(_buf, _capacity, fmt, ap_list);
+  va_end(ap_list);
+  if (_size < 0) {
+    _buf[0] = 0;
+    _size = 0;
+  }
+  return *this;
 }
 
 int String::Compare(const String& other) const {

@@ -1,0 +1,20 @@
+class EntityInspector: Behavior {
+  this var _entity = null;
+
+  function onControlEvent(evt) {
+  }
+  
+  function AddComponent(el, component) {
+    el.$append(<div>{component.type}</div>)
+  }
+
+  property entity(v) {
+    get return this._entity;
+    set { 
+       this._entity = v; 
+       this.clear();
+       if (v) v.EachComponent(this, this.AddComponent);
+    }
+  }
+}
+

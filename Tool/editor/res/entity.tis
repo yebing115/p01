@@ -1,0 +1,40 @@
+class Entity {
+  this var _id;
+  this var _name;
+  this var _parent_id;
+  this var _children;
+  this var _components;
+  
+  function this(data) {
+    this._id = data.id;
+    if (data.name.length == 0) this._name = String.$(<#{data.id.toString(16)}>);
+    else this._name = data.name;
+    this._parent_id = data.parent;
+    this._children = [];
+    this._components = [];
+    
+    if (data.transform) {
+      var component = data.transform;
+      component.type = "transform";
+      this._components.push(component);
+    }
+    if (data.camera) {
+      var component = data.camera;
+      component.type = "camera";
+      this._components.push(component);
+    }
+    if (data.model_renderer) {
+      var component = data.model_renderer;
+      component.type = "model_renderer";
+      this._components.push(component);
+    }
+    if (data.light) {
+      var component = data.light;
+      component.type = "light";
+      this._components.push(component);
+    }
+  }
+  function EachComponent(el, cb) {
+    for (var c in this._components) cb(el, c);
+  }
+}

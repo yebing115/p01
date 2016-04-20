@@ -48,10 +48,15 @@ public:
   void DestroyEntity(EntityHandle e);
   void SetEntityParent(EntityHandle e, EntityHandle parent);
   int GetEntityDenseIndex(EntityHandle e) const;
+  int GetAllEntities(Entity* entities, int max_size);
+  int GetSortedEntities(Entity* entities, int max_size);
+  int GetNumEntities() const { return _entity_alloc.GetUsed(); }
+  Entity* FindEntity(EntityHandle e) const;
 
   // Name
   void SetEntityName(EntityHandle e, const char* name);
   const char* GetEntityName(EntityHandle e) const;
+  void RemoveEntityName(EntityHandle e);
   EntityHandle FindEntityByName(const char* name) const;
   NameAnnotation* FindNameAnnotation(EntityHandle e) const;
 

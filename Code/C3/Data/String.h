@@ -25,6 +25,7 @@ public:
 
   String GetSystemString() const;
   std::string GetString() const { return std::string(_buf, _size); }
+  std::wstring GetWString() const;
   const char* GetCString() const { return _buf; }
   stringid GetID() const;
   static stringid GetID(const char *s);
@@ -53,6 +54,7 @@ public:
   inline String Right(int count) const;
   String& StripSpaces();
   String CanonicalPath() const;
+  String& Format(int capacity, const char* fmt, ...);
 
   int Compare(const String& other) const;
   int CompareI(const String& other) const;

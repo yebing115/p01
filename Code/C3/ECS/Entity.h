@@ -9,6 +9,7 @@ enum EntityFlag {
 };
 
 struct Entity {
+  EntityHandle _handle;
   EntityHandle _parent;
   u32 _flags;
   list_head _sibling_link;

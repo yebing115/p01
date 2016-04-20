@@ -1,0 +1,42 @@
+include "entity.tis"
+
+class EntityDataSource {
+  this var _entities = [];
+  // mandatory public interface methods:
+  
+  // constructor
+  function this() {
+    var entities = view.c3_get_entity_list()
+    for (var e in entities) {
+      this.AddEntity(e);
+    }
+  }
+ 
+  // call cb(entity, has_child) for each root item
+  function EachRoot(cb) {
+    for (var e in this._entities) {
+      if (e._parent_id == -1) cb(e, e._children.length > 0);
+    }
+  }
+  
+  // call cb(entity, has_child) for each child item of the path"
+  function EachChild(entity, cb) {
+    for(var e in entity._children) {
+      cb(e, e._children.length > 0);
+    }
+  }
+  
+  function AddEntity(entity_data) {
+    var entity = new Entity(entity_data);
+    var p = FindEntity(entity._parent_id);
+    if (p) p._children.push(entity._id);
+    this._entities.push(entity);
+  }
+
+  function FindEntity(id) {
+    for (var e in this._entities) {
+      if (e._id == id) return e;
+    }
+  }
+}
+

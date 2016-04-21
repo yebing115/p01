@@ -10,7 +10,7 @@ class Entity {
     if (data.name.length == 0) this._name = String.$(<#{data.id.toString(16)}>);
     else this._name = data.name;
     this._parent_id = data.parent;
-    this._children = [];
+    this._children = [];	
     this._components = [];
     this.AddComponent(data);
   }

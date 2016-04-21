@@ -1,0 +1,43 @@
+class PropertyBinding {
+  // static members
+  var _instance;
+  function Instance() {
+    if (!_instance) _instance = new PropertyBinding();
+    return _instance;
+  }
+  
+  // instance members
+  this var _em;
+  this var _properties = {}
+  this var _commit_handlers = {}
+  function this() {
+    this._em = PubSub{}
+  }
+  function Register(event_name, value, handler) {
+    this._properties[event_name] = value;
+    this._commit_handlers[event_name] = handler;
+    this._em.post(event_name, value);
+  }
+  function Unregister(event_name, value) {
+    this._properties.remove(event_name);
+  }
+  function Update(event_name, new_value) {
+    this._properties[event_name] = new_value;
+    this._em.post(event_name, new_value);
+  }
+
+  function Bind(event_name, handler) {
+    this._em.on(event_name, handler);
+    return this._properties[event_name];
+  }
+  function Unbind(event_name, handler) {
+    this._em.off(event_name, handler);
+  }
+  function Commit(event_name, value) {
+    var old_value = this._properties[event_name]
+    if (old_value != value) {
+      var handler = this._commit_handlers[event_name];
+      if (handler) handler(value);
+    }
+  }
+}

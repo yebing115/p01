@@ -1,0 +1,28 @@
+class InputName : Behavior {
+  this var _name = "";
+  this var _binding = "";
+  function attached() {
+    log("ccc")
+    this._name = this.@#name;
+    this._binding = this.@#binding;
+    var handler = :value: (this super).OnValueChange(value);
+    var value = PropertyBinding.Instance().Bind(this._binding, handler);
+    if (!value) value = "";
+    var el = this.$append(<div>
+      <label>{this._name}:</label><input|text value="{value}"/>
+    </div>);
+    @focus true : {
+      log("get focus");
+    }
+    @focus false : {
+      log("lost focus");
+    }
+    @key Event.VK_RETURN : evt {
+      log("return", evt.keyCode)
+      return true;
+    }
+  }
+  function OnValueChange(value) {
+    this.$(input).value = value;
+  }
+}

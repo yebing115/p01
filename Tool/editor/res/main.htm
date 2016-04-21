@@ -49,6 +49,9 @@
       overflow-x:hidden;
       prototype: EntityTree;
     }
+    widget#entity-tree option:current {
+      background-color: cyan;
+    }
     widget#entity-inspector {
       prototype: EntityInspector;
     }
@@ -69,6 +72,9 @@
     ul#menu-bar {
       aspect: "MainMenu.Aspect" url(main-menu.tis);
     }
+    input[type="name"] {
+      prototype: InputName;
+    }
   </style>
 	<script type="text/tiscript" src="main.tis" />
 	<script type="text/tiscript">
@@ -76,10 +82,16 @@
 			var proj = Project.Current();
       proj.OpenProject("file://D:/Projects/p01/Assets/p01.prj");
       proj.OpenLevel("file://D:/Projects/p01/Assets/Levels/sponza.lvl");
+      PropertyBinding.Instance().Register("EntityName", "initial");
+      $(button#test-btn).on(#click, function (evt) {
+        PropertyBinding.Instance().Update("EntityName", "test-btn-set-value");
+      });
 		}
 	</script>
 </head>
 <body>
+  <input type="name" name="cc", binding="EntityName"/>
+  <button #test-btn/>
 	<ul id="menu-bar">
 		<li>
 			<caption>File</caption>

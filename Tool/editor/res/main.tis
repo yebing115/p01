@@ -1,12 +1,15 @@
-include "log.tis"
-include "decorators.tis"
+include "lib/log.tis"
+include "lib/decorators.tis"
+include "lib/pub-sub.tis"
 
 include "engine-callback.tis"
 include "document/undo.tis"
 include "document/project.tis"
 
+include "property-binding.tis"
+
 include "entity-data-source.tis"
 include "entity-tree.tis"
 include "entity-inspector.tis"
 
-
+include "ui/input-name.tis"

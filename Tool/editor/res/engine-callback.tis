@@ -9,7 +9,6 @@ namespace EngineCallback {
     var lvl = Project.CurrentLevel();
     if (lvl) {
       var e = lvl._entity_data_source.FindEntity(entity_id);
-      log(e, entity_id, new_name);
       if (e && e._name != new_name) e._name = new_name;
     }
   }

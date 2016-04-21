@@ -1,3 +1,6 @@
 [C3] Logger created.
 renderer size: 666464, frame size: 4917520
 DriverConcurrentCreates support: YES.
+[TIF] ccc
+[TIF] get focus
+[TIF] lost focus

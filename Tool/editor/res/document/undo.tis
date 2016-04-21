@@ -36,37 +36,37 @@ class UndoStack {
   this var _redo_stack = []
   this var _group_index = 0;
   
-  function CanUndo() { return _undo_stack.length > 0; }
-  function CanRedo() { return _redo_stack.length > 0; }
+  function CanUndo() { return this._undo_stack.length > 0; }
+  function CanRedo() { return this._redo_stack.length > 0; }
   function Clear() {
-    _undo_stack.clear();
-    _redo_stack.clear();
+    this._undo_stack = [];
+    this._redo_stack = [];
   }
   function Push(cmd) {
-    _redo_stack.clear();
+    this._redo_stack = [];
     cmd.Redo();
-    var last = _undo_stack.last;
-    if (last && last._group_index == _group_index) {
+    var last = this._undo_stack.last;
+    if (last && last._group_index == this._group_index) {
       if (last.MergeWith(cmd)) return;
     }
-    cmd._group_index = _group_index;
-    _undo_stack.push(cmd);
+    cmd._group_index = this._group_index;
+    this._undo_stack.push(cmd);
   }
   function Undo() {
-    var cmd = _undo_stack.pop();
+    var cmd = this._undo_stack.pop();
     if (cmd) {
       cmd.Undo();
-      _redo_stack.push(cmd);
+      this._redo_stack.push(cmd);
     }
   }
   function Redo() {
-    var cmd = _redo_stack.pop();
+    var cmd = this._redo_stack.pop();
     if (cmd) {
       cmd.Redo();
-      _undo_stack.push(cmd);
+      this._undo_stack.push(cmd);
     }
   }
   function NewGroup() {
-    ++_group_index;
+    ++this._group_index;
   }
 }

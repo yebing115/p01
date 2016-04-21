@@ -1,8 +1,14 @@
+include "commands/entity-cmds.tis"
+
 class Project {
   var _instance;
-  function Instance() {
+  function Current() {
     if (!_instance) _instance = new Project();
     return _instance;
+  }
+  function CurrentLevel() {
+    if (!_instance) return;
+    return _instance._current_level;
   }
   
   this var _project = null;
@@ -50,8 +56,23 @@ class Project {
 class Level {
   this var _filename; // relative to project dir.
   this var _entity_data_source;
+  this var _undo_stack;
   function this(filename) {
     this._filename = filename;
-    this._entity_data_source = new EntityDataSource()
+    this._entity_data_source = new EntityDataSource();
+    this._undo_stack = new UndoStack();
+  }
+  function SetEntityName(id, text) {
+    var e = this._entity_data_source.FindEntity(id);
+    if (e && e._text != text) {
+      var cmd = new SetEntityNameCommand(id, text, e._name);
+      this._undo_stack.Push(cmd);
+    }
+  }
+  function EditUndo() {
+    this._undo_stack.Undo();
+  }
+  function EditRedo() {
+    this._undo_stack.Redo();
   }
 }

@@ -73,8 +73,9 @@
 	<script type="text/tiscript" src="main.tis" />
 	<script type="text/tiscript">
 		function self.ready() {
-			var tree = $(widget#entity-tree);
-			tree.data_source = new EntityDataSource();
+			var proj = Project.Current();
+      proj.OpenProject("file://D:/Projects/p01/Assets/p01.prj");
+      proj.OpenLevel("file://D:/Projects/p01/Assets/Levels/sponza.lvl");
 		}
 	</script>
 </head>

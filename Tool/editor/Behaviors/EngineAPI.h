@@ -11,8 +11,7 @@ struct Camera;
 struct ModelRenderer;
 struct Light;
 class EngineAPI : public sciter::host<EngineAPI>
-                , public sciter::event_handler
-                , public sciter::debug_output {
+                , public sciter::event_handler {
 public:
   EngineAPI(HWND hwnd);
   ~EngineAPI();
@@ -28,11 +27,13 @@ public:
   sciter::value GetEntityList();
   sciter::value GetEntity(sciter::value eh_value);
   sciter::value GetComponent(sciter::value eh_value, sciter::value comp_value);
+  sciter::value SetEntityName(sciter::value eh_value, sciter::value name_value);
 
   // Callbacks
   void OnEntityCreate(EntityHandle eh);
   void OnEntityDestroy(EntityHandle eh);
   void OnEntityReparent(EntityHandle eh, EntityHandle new_parent);
+  void OnEntityNameChange(EntityHandle eh);
   void OnComponentCreate(EntityHandle eh, ComponentType type);
   void OnComponentDestroy(EntityHandle eh, ComponentType type);
   void OnComponentChange(EntityHandle eh, ComponentType type);
@@ -44,9 +45,11 @@ public:
     FUNCTION_0("c3_get_entity_list", GetEntityList)
     FUNCTION_1("c3_get_entity", GetEntity)
     FUNCTION_2("c3_get_component", GetComponent)
+    FUNCTION_2("c3_set_entity_name", SetEntityName)
   END_FUNCTION_MAP
 
 private:
+  static VOID SC_CALLBACK DebugOutput(LPVOID param, UINT subsystem /*OUTPUT_SUBSYTEMS*/, UINT severity, LPCWSTR text, UINT text_length);
   const char* GetComponentTypeName(ComponentType type) const;
   void SerializeEntity(Entity* entity, JsonWriter& writer);
   void SerializeTransform(Transform* transform, JsonWriter& writer);

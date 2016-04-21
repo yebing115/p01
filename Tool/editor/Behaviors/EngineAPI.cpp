@@ -3,11 +3,12 @@
 
 DEFINE_SINGLETON_INSTANCE(EngineAPI);
 
-EngineAPI::EngineAPI(HWND hwnd): debug_output(hwnd), _hwnd(hwnd) {
+EngineAPI::EngineAPI(HWND hwnd): _hwnd(hwnd) {
   setup_callback(hwnd);
   attach_dom_event_handler(hwnd, this);
   SciterSetOption(NULL, SCITER_SET_UX_THEMING, TRUE);
   SciterSetOption(hwnd, SCITER_SET_DEBUG_MODE, TRUE);
+  SciterSetupDebugOutput(NULL, this, &EngineAPI::DebugOutput);
 }
 
 EngineAPI::~EngineAPI() {
@@ -373,4 +374,33 @@ sciter::value EngineAPI::SetRootDir(sciter::value dir_value) {
   String dir = aux::w2utf(dir_value.get_chars()).c_str();
   if (dir.StartsWith("file://")) dir = dir.Substr(7);
   FileSystem::Instance()->SetRootDir(dir.GetCString());
+}
+
+VOID SC_CALLBACK EngineAPI::DebugOutput(LPVOID param, UINT subsystem, UINT severity, LPCWSTR text, UINT text_length) {
+  aux::w2utf converter(text);
+  static const char* subsystem_names[] = {
+    "DOM",
+    "CSSS",
+    "CSS",
+    "TIF",
+  };
+  static const char* severity_names[] = {
+    "INFO",
+    "WARNING",
+    "ERROR",
+  };
+  c3_log("[%s] %s", subsystem_names[subsystem], converter.c_str());
+}
+
+sciter::value EngineAPI::SetEntityName(sciter::value eh_value, sciter::value name_value) {
+  if (!eh_value.is_int() || !name_value.is_string()) return sciter::value(false);
+  EntityHandle eh((u32)eh_value.get<int>());
+  GameWorld::Instance()->SetEntityName(eh, aux::w2utf(name_value.get_chars()).c_str());
+  OnEntityNameChange(eh);
+  return sciter::value(true);
+}
+
+void EngineAPI::OnEntityNameChange(EntityHandle eh) {
+  aux::utf2w cvt(GameWorld::Instance()->GetEntityName(eh));
+  call_function("EngineCallback.OnEntityNameChange", (int)eh.ToRaw(), cvt.chars());
 }

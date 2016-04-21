@@ -15,21 +15,39 @@ namespace MainMenu {
       case "close-level":
         MainMenu.CloseLevel();
         break;
+
+      case "edit-undo":
+        MainMenu.EditUndo();
+        break;
+      case "edit-redo":
+        MainMenu.EditRedo();
+        break;
+      default:
+        view.msgbox(#information, evt.target.id, "Not implemented.");
       }
     }
   }
   function OpenProject() {
     var proj_file = view.selectFile(#open, "Project file (*.prj)|*.prj");
-    if (proj_file) Project.Instance().OpenProject(proj_file);
+    if (proj_file) Project.Current().OpenProject(proj_file);
   }
   function CloseProject() {
-    Project.Instance().CloseProject();
+    Project.Current().CloseProject();
   }
   function OpenLevel() {
     var lvl_file = view.selectFile(#open, "Level file (*.lvl)|*.lvl");
-    if (lvl_file) Project.Instance().OpenLevel(lvl_file);
+    if (lvl_file) Project.Current().OpenLevel(lvl_file);
   }
   function CloseLevel() {
-    Project.Instance().CloseLevel();
+    Project.Current().CloseLevel();
+  }
+  
+  function EditUndo() {
+    var lvl = Project.CurrentLevel();
+    if (lvl) lvl.EditUndo();
+  }
+  function EditRedo() {
+    var lvl = Project.CurrentLevel();
+    if (lvl) lvl.EditRedo();
   }
 }

@@ -1,12 +1,20 @@
 namespace EngineCallback {
   function OnEntityCreate(entity_data) {
-    var lvl = Project.Instance()._current_level;
-    lvl._entity_data_source.AddEntity(entity_data);
+    var lvl = Project.CurrentLevel();
+    if (lvl) lvl._entity_data_source.AddEntity(entity_data);
   }
   function OnEntityDestroy(entity_id) {
   }
+  function OnEntityNameChange(entity_id, new_name) {
+    var lvl = Project.CurrentLevel();
+    if (lvl) {
+      var e = lvl._entity_data_source.FindEntity(entity_id);
+      log(e, entity_id, new_name);
+      if (e && e._name != new_name) e._name = new_name;
+    }
+  }
   function OnComponentCreate(entity_id, comp_data) {
-    var lvl = Project.Instance()._current_level;
+    var lvl = Project.Current()._current_level;
     lvl._entity_data_source.AddComponent(entity_id, comp_data);
   }
   function OnComponentDestroy(entity_id, comp_type_name) {

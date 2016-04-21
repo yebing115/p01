@@ -7,12 +7,10 @@ class EntityTree : Behavior {
       $(widget#entity-inspector).entity = null;
     }
   }
-  
+
   // overridables:
   function OnOptionExpanded(option) {}
   function OnOptionCollapsed(option) {}
-  function OnSelectionChanged() {
-  }
   function OnOptionClick(option) {
     var id = option.attributes["entity_id"].toInteger(-1, 16);
     var entity = this._ds.FindEntity(id);
@@ -31,6 +29,14 @@ class EntityTree : Behavior {
     //   neither state.expanded nor state.collapsed
     
     opt.on(#click, function () { (this super).OnOptionClick(this); return true; })
+    entity.addObserver(function (tup) {
+      var prop_name = tup[2];
+      var new_value = tup[3];
+      var old_value = tup[4];
+      if (prop_name == "_name") {
+        opt.$(text).text = (new_value.length == 0) ? "<Entity>" : new_value;
+      }
+    })
     
     return opt;
   }

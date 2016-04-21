@@ -1,0 +1,16 @@
+class SetEntityNameCommand : UndoCommand {
+  this var _id;
+  this var _new_text;
+  this var _old_text;
+  function this(id, new_text, old_text) {
+    this._id = id;
+    this._new_text = new_text;
+    this._old_text = old_text;
+  }
+  function Redo() {
+    view.c3_set_entity_name(this._id, this._new_text);
+  }
+  function Undo() {
+    view.c3_set_entity_name(this._id, this._old_text);
+  }
+}

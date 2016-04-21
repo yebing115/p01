@@ -4,11 +4,29 @@ class EntityInspector: Behavior {
   function onControlEvent(evt) {
   }
   
+  function OnEntityChange(tup) {
+    var change_type = tup[0];
+    var obj = tup[1];
+    var prop_name = tup[2];
+    var new_value = tup[3];
+    var old_value = tup[4];
+    var me = $(widget#entity-inspector);
+    if (obj == me._entity && change_type == #update) {
+      var name_input = me.$(input#entity-name);
+      if (name_input.value != new_value) name_input.value = new_value;
+    }
+  }
   function AddEntitySelf() {
-    this.$append(<div class="component">
+    this._entity.addObserver(this.OnEntityChange);
+    var cel = this.$append(<div class="component">
       <section type="component-title">ENTITY</section>
-      <div><label>Name:</label><input type="text" value="{this._entity._name}"/></div>
+      <div><label>Name:</label><input #entity-name type="text" value="{this._entity._name}"/></div>
     </div>);
+    @change cel: evt {
+      var text = evt.target.value;
+      var lvl = Project.CurrentLevel();
+      if (lvl) lvl.SetEntityName($(widget#entity-inspector)._entity._id, text);
+    }
   }
   function AddComponent(component) {
     var el = this;
@@ -37,10 +55,10 @@ class EntityInspector: Behavior {
     </div>);
     
     @change cel: evt {
-      log("changed", evt.type, evt.target.text);
+      //log("changed", evt.type, evt.target.text);
     }
     @key VK_RETURN cel: evt {
-      log("return pressed");
+      //log("return pressed");
     }
   }
   function AddCamera(el, component) {
@@ -64,13 +82,14 @@ class EntityInspector: Behavior {
 
   property entity(v) {
     get return this._entity;
-    set { 
-       this._entity = v; 
-       this.clear();
-       if (v) {
-         this.AddEntitySelf();
-         v.EachComponent(this, this.AddComponent);
-       }
+    set {
+      if (this._entity) this._entity.removeObserver(this.OnEntityChange);
+      this._entity = v; 
+      this.clear();
+      if (v) {
+        this.AddEntitySelf();
+        v.EachComponent(this, this.AddComponent);
+      }
     }
   }
 }

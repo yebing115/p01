@@ -7,7 +7,8 @@ function log(params..)
   var file = tr[1][2];
   var line = tr[1][0];
   Stream.print.apply(stdout,params);
-  stdout.printf("\r\tat %s (%s(%d))\n", fnme,file,line);
+  stdout.print("\n");
+  //stdout.printf("\r\tat %s (%s(%d))\n", fnme,file,line);
 }
 
 log.$ = function(params..) // log.$(something{ anything == 1});
@@ -17,7 +18,8 @@ log.$ = function(params..) // log.$(something{ anything == 1});
   var file = tr[1][2];
   var line = tr[1][0];
   stdout.print(String.$.apply(String,params));
-  stdout.printf("\r\tat %s (%s(%d))\n", fnme,file,line);
+  stdout.print("\n");
+  //stdout.printf("\r\tat %s (%s(%d))\n", fnme,file,line);
 }
 
 log.f = function(params..) // printf version
@@ -27,7 +29,8 @@ log.f = function(params..) // printf version
   var file = tr[1][2];
   var line = tr[1][0];
   Stream.printf.apply(stdout,params);
-  stdout.printf("\r\tat %s (%s(%d))\n", fnme,file,line);
+  stdout.print("\n");
+  //stdout.printf("\r\tat %s (%s(%d))\n", fnme,file,line);
   //stdout.print("%V\n",tr);
 }
 

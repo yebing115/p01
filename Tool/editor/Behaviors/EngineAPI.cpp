@@ -6,6 +6,8 @@ DEFINE_SINGLETON_INSTANCE(EngineAPI);
 EngineAPI::EngineAPI(HWND hwnd): debug_output(hwnd), _hwnd(hwnd) {
   setup_callback(hwnd);
   attach_dom_event_handler(hwnd, this);
+  SciterSetOption(NULL, SCITER_SET_UX_THEMING, TRUE);
+  SciterSetOption(hwnd, SCITER_SET_DEBUG_MODE, TRUE);
 }
 
 EngineAPI::~EngineAPI() {
@@ -48,13 +50,14 @@ sciter::value EngineAPI::GetEntity(EntityHandle e) {
 void EngineAPI::SerializeTransform(Transform* transform, JsonWriter& writer) {
   if (!transform) return;
   writer.BeginWriteObject("transform");
+  writer.WriteInt("entity", (int)transform->_entity.ToRaw());
   writer.WriteFloat("x", transform->_position.x);
   writer.WriteFloat("y", transform->_position.y);
   writer.WriteFloat("z", transform->_position.z);
   auto r = transform->_rotation.ToEulerZXY();
-  writer.WriteFloat("rx", r.x);
-  writer.WriteFloat("ry", r.y);
-  writer.WriteFloat("rz", r.z);
+  writer.WriteFloat("rx", r[1]);
+  writer.WriteFloat("ry", r[2]);
+  writer.WriteFloat("rz", r[0]);
   writer.WriteFloat("sx", transform->_scale.x);
   writer.WriteFloat("sy", transform->_scale.y);
   writer.WriteFloat("sz", transform->_scale.z);
@@ -64,18 +67,29 @@ void EngineAPI::SerializeTransform(Transform* transform, JsonWriter& writer) {
 void EngineAPI::SerializeCamera(Camera* camera, JsonWriter& writer) {
   if (!camera) return;
   writer.BeginWriteObject("camera");
+  writer.WriteInt("entity", (int)camera->_entity.ToRaw());
   auto pos = camera->GetPos();
   writer.WriteFloat("x", pos.x);
   writer.WriteFloat("y", pos.y);
   writer.WriteFloat("z", pos.z);
+  auto front = camera->GetFront();
+  auto up = camera->GetUp();
+  auto right = camera->GetRight();
+  float3 rotation = float3x3(right, up, front).ToEulerZXY();
+  writer.WriteFloat("rx", RadToDeg(rotation[1]));
+  writer.WriteFloat("ry", RadToDeg(rotation[2]));
+  writer.WriteFloat("rz", RadToDeg(rotation[0]));
   writer.WriteFloat("near", camera->GetNear());
   writer.WriteFloat("far", camera->GetFar());
+  writer.WriteFloat("v_fov", RadToDeg(camera->GetVerticalFov()));
+  writer.WriteFloat("aspect", RadToDeg(camera->GetAspectRatio()));
   writer.EndWriteObject();
 }
 
 void EngineAPI::SerializeModel(ModelRenderer* mr, JsonWriter& writer) {
   if (!mr) return;
   writer.BeginWriteObject("model_renderer");
+  writer.WriteInt("entity", (int)mr->_entity.ToRaw());
   if (!mr->_asset) writer.WriteString("asset", "");
   else writer.WriteString("asset", mr->_asset->_desc._filename);
   writer.EndWriteObject();
@@ -84,6 +98,7 @@ void EngineAPI::SerializeModel(ModelRenderer* mr, JsonWriter& writer) {
 void EngineAPI::SerializeLight(Light* light, JsonWriter& writer) {
   if (!light) return;
   writer.BeginWriteObject("light");
+  writer.WriteInt("entity", (int)light->_entity.ToRaw());
   writer.WriteFloat("x", light->_pos.x);
   writer.WriteFloat("y", light->_pos.y);
   writer.WriteFloat("z", light->_pos.z);
@@ -99,7 +114,7 @@ void EngineAPI::SerializeLight(Light* light, JsonWriter& writer) {
 
 void EngineAPI::OnEntityCreate(EntityHandle e) {
   auto data = GetEntity(e);
-  call_function("EngineCallback.on_entity_create", data);
+  call_function("EngineCallback.OnEntityCreate", data);
 }
 
 void EngineAPI::SerializeEntity(Entity* e, JsonWriter& writer) {
@@ -153,18 +168,22 @@ sciter::value EngineAPI::GetComponent(EntityHandle eh, ComponentType type) {
   }
   writer.EndWriteObject();
   aux::utf2w cvt((const char*)mem->data);
-  return sciter::value::from_string(cvt.c_str(), cvt.length());
+  return sciter::value::from_string(cvt.c_str(), cvt.length(), CVT_JSON_LITERAL);
 }
 
 bool EngineAPI::LoadWorld(sciter::value filename_value) {
   if (!filename_value.is_string()) return false;
-  aux::w2utf cvt(filename_value.get_chars());
-  auto file = FileSystem::Instance()->OpenRead(cvt.c_str());
-  if (!file) return false;
+  String filename = aux::w2utf(filename_value.get_chars()).c_str();
+  if (filename.StartsWith("file://")) filename = filename.Substr(7);
+  auto file = new CrtFile(filename);
+  if (!file || !file->IsValid()) {
+    delete file;
+    return false;
+  }
   auto n = file->GetSize();
   auto mem = mem_alloc(n + 1);
   file->ReadBytes(mem->data, n);
-  FileSystem::Instance()->Close(file);
+  delete file;
   *((u8*)mem->data + n) = 0;
   JsonReader reader((const char*)mem->data);
   _deserialize_entity_map.clear();
@@ -202,23 +221,23 @@ bool EngineAPI::SaveWorld(sciter::value filename_value) {
 }
 
 void EngineAPI::OnEntityDestroy(EntityHandle eh) {
-  call_function("EngineCallback.on_entity_destroy", (int)eh.ToRaw());
+  call_function("EngineCallback.OnEntityDestroy", (int)eh.ToRaw());
 }
 
 void EngineAPI::OnEntityReparent(EntityHandle eh, EntityHandle new_parent) {
-  call_function("EngineCallback.on_entity_reparent", (int)eh.ToRaw(), (int)new_parent.ToRaw());
+  call_function("EngineCallback.OnEntityReparent", (int)eh.ToRaw(), (int)new_parent.ToRaw());
 }
 
 void EngineAPI::OnComponentCreate(EntityHandle eh, ComponentType type) {
-  call_function("EngineCallback.on_component_create", GetComponent(eh, type));
+  call_function("EngineCallback.OnComponentCreate", (int)eh.ToRaw(), GetComponent(eh, type));
 }
 
 void EngineAPI::OnComponentDestroy(EntityHandle eh, ComponentType type) {
-  call_function("EngineCallback.on_component_destroy", (int)eh.ToRaw(), GetComponentTypeName(type));
+  call_function("EngineCallback.OnComponentDestroy", (int)eh.ToRaw(), GetComponentTypeName(type));
 }
 
 void EngineAPI::OnComponentChange(EntityHandle eh, ComponentType type) {
-  call_function("EngineCallback.on_component_change", GetComponent(eh, type));
+  call_function("EngineCallback.OnComponentChange", (int)eh.ToRaw(), GetComponent(eh, type));
 }
 
 EntityHandle EngineAPI::DeserializeEntity(JsonReader& reader) {
@@ -277,10 +296,21 @@ void EngineAPI::DeserializeCamera(EntityHandle e, JsonReader& reader) {
     reader.ReadFloat("y", pos.y);
     reader.ReadFloat("z", pos.z);
     camera->SetPos(pos);
+    float rx, ry, rz;
+    reader.ReadFloat("rx", rx);
+    reader.ReadFloat("ry", ry);
+    reader.ReadFloat("rz", rz);
+    float3x3 rotation_matrix = float3x3::FromEulerZXY(DegToRad(rz), DegToRad(rx), DegToRad(ry));
+    camera->SetFront(rotation_matrix.Col(2));
+    camera->SetUp(rotation_matrix.Col(1));
     float near, far;
     reader.ReadFloat("near", near);
     reader.ReadFloat("far", far);
     camera->SetClipPlane(near, far);
+    float v_fov, aspect;
+    reader.ReadFloat("v_fov", v_fov);
+    reader.ReadFloat("aspect", aspect);
+    camera->SetVerticalFovAndAspectRatio(DegToRad(v_fov), aspect);
     OnComponentCreate(e, CAMERA_COMPONENT);
     reader.EndReadObject();
   }
@@ -303,7 +333,7 @@ void EngineAPI::DeserializeModel(EntityHandle e, JsonReader& reader) {
 }
 
 void EngineAPI::DeserializeLight(EntityHandle e, JsonReader& reader) {
-  if (reader.BeginReadObject("model_renderer")) {
+  if (reader.BeginReadObject("light")) {
     auto GW = GameWorld::Instance();
     auto renderer = (RenderSystem*)GameWorld::Instance()->GetSystem(MODEL_RENDERER_COMPONENT);
     if (renderer) {
@@ -336,4 +366,11 @@ const char* EngineAPI::GetComponentTypeName(ComponentType type) const {
   default:
     return "";
   }
+}
+
+sciter::value EngineAPI::SetRootDir(sciter::value dir_value) {
+  if (!dir_value.is_string()) return sciter::value(false);
+  String dir = aux::w2utf(dir_value.get_chars()).c_str();
+  if (dir.StartsWith("file://")) dir = dir.Substr(7);
+  FileSystem::Instance()->SetRootDir(dir.GetCString());
 }

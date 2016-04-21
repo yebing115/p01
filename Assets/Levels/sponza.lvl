@@ -1,0 +1,40 @@
+{
+	"entities": [
+		{
+			"name": "MainCamera",
+			"id": 0,
+			"parent": -1,
+			"camera": {
+				"x": -180,
+				"y": 80,
+				"z": 70,
+				"rx": 0,
+				"ry": 90,
+				"rz": 0,
+				"near": 1.0,
+				"far": 3000.0,
+				"v_fov": 80,
+				"aspect": 1.0,
+			},
+		},
+		{
+			"name": "Sponza",
+			"id": 1,
+			"parent": -1,
+			"transform": {
+				"x": 0,
+				"y": 0,
+				"z": 0,
+				"rx": 0,
+				"ry": 0,
+				"rz": 0,
+				"sx": 1,
+				"sy": 1,
+				"sz": 1,
+			},
+			"model_renderer": {
+				"asset": "Models/Sponza/sponza.mex"
+			},
+		}
+	]
+}

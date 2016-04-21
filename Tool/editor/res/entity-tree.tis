@@ -4,7 +4,7 @@ class EntityTree : Behavior {
   function onMouse(evt) {
     // click on empty space
     if (evt.type == Event.MOUSE_DOWN && evt.target == $(widget#entity_tree)) {
-      $(widget#entity_inspector).entity = null;
+      $(widget#entity-inspector).entity = null;
     }
   }
   
@@ -16,7 +16,7 @@ class EntityTree : Behavior {
   function OnOptionClick(option) {
     var id = option.attributes["entity_id"].toInteger(-1, 16);
     var entity = this._ds.FindEntity(id);
-    $(widget#entity_inspector).entity = entity;
+    $(widget#entity-inspector).entity = entity;
   }
 
   // implementation

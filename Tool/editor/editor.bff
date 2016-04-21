@@ -80,6 +80,7 @@
 										+ .LibSquishIncludePaths
 										+ .FreeImageIncludePaths
 										+ .SciterIncludePaths
+										+ .SciterCompilerOptions
 										+ .Lz4IncludePaths
 										+ ' /wd4201'
 										+ ' /wd4263'

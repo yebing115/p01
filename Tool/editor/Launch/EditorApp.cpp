@@ -8,6 +8,7 @@ EditorApp::EditorApp() {
   auto renderer = new RenderSystem;
   world->AddSystem(renderer);
 
+  /*
   _debug_camera = world->CreateEntity();
   world->CreateCamera(_debug_camera);
   world->SetCameraVerticalFovAndAspectRatio(_debug_camera, DegToRad(80.f), GraphicsRenderer::Instance()->GetWindowAspect());
@@ -19,6 +20,7 @@ EditorApp::EditorApp() {
   world->CreateTransform(_model);
   world->CreateComponent(_model, MODEL_RENDERER_COMPONENT);
   renderer->SetModelFilename(_model, "Models/Sponza/sponza.mex");
+  */
 }
 
 void EditorApp::OnUpdate(float dt, bool paused) {
@@ -26,7 +28,7 @@ void EditorApp::OnUpdate(float dt, bool paused) {
   (void)paused;
   GameWorld::Instance()->Update(dt, paused);
 
-  UpdateDebugCamera(dt);
+  //UpdateDebugCamera(dt);
 }
 
 void EditorApp::OnRender(float dt, bool paused) {

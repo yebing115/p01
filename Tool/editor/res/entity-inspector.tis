@@ -4,6 +4,12 @@ class EntityInspector: Behavior {
   function onControlEvent(evt) {
   }
   
+  function AddEntitySelf() {
+    this.$append(<div class="component">
+      <section type="component-title">ENTITY</section>
+      <div><label>Name:</label><input type="text" value="{this._entity._name}"/></div>
+    </div>);
+  }
   function AddComponent(component) {
     var el = this;
     switch (component.type) {
@@ -42,8 +48,10 @@ class EntityInspector: Behavior {
     el.$append(<div class="component">
       <section type="component-title">{title}</section>
       <div><label>Position:</label><input type="number" value={component.x}/><input type="number" value={component.y}/><input type="number" value={component.z}/></div>
+      <div><label>Rotation:</label><input type="number" value={component.rx}/><input type="number" value={component.ry}/><input type="number" value={component.rz}/></div>
       <div><label>Near:</label><input type="number" value={component.near}/></div>
       <div><label>Far:</label><input type="number" value={component.far}/></div>
+      <div><label>Vertical Fov:</label><input type="number" value={component.v_fov}/></div>
     </div>);
   }
   function AddModel(el, component) {
@@ -59,7 +67,10 @@ class EntityInspector: Behavior {
     set { 
        this._entity = v; 
        this.clear();
-       if (v) v.EachComponent(this, this.AddComponent);
+       if (v) {
+         this.AddEntitySelf();
+         v.EachComponent(this, this.AddComponent);
+       }
     }
   }
 }

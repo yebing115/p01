@@ -1,0 +1,57 @@
+class Project {
+  var _instance;
+  function Instance() {
+    if (!_instance) _instance = new Project();
+    return _instance;
+  }
+  
+  this var _project = null;
+  this var _current_level = null;
+  this var _valid = false;
+  
+  function OpenProject(proj_file) {
+    var bytes = Bytes.load(proj_file);
+    this._project = JSON.parse(bytes.toString("UTF-8"));
+    this._valid = (typeof this._project.work_dir == #string);
+    if (!this._valid) {
+      view.msgbox(#alert, "Failed to open project.", "Error");
+      return;
+    }
+    view.c3_set_root_dir(this._project.work_dir);
+  }
+  function CloseProject() {
+    if (!this._valid) {
+      view.msgbox(#alert, "No project open.", "Error");
+      return;
+    }
+  }
+  function OpenLevel(filename) {
+    if (!this._valid) {
+      view.msgbox(#alert, "Failed to open level: No project open.", "Error");
+      return;
+    }
+    this.CloseLevel();
+    this._current_level = new Level(filename);
+    if (!view.c3_load_world(filename)) {
+      view.msgbox(#alert, "Failed to load level.", "Error");
+      this._current_level._entity_data_source.destroy();
+      this._current_level = null;
+      return;
+    }
+    $(widget#entity-tree).data_source = this._current_level._entity_data_source;
+  }
+  function CloseLevel() {
+    if (this._current_level) {
+      this._current_level = null;
+    }
+  }
+}
+
+class Level {
+  this var _filename; // relative to project dir.
+  this var _entity_data_source;
+  function this(filename) {
+    this._filename = filename;
+    this._entity_data_source = new EntityDataSource()
+  }
+}

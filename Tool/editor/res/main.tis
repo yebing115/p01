@@ -1,6 +1,10 @@
 include "log.tis"
 include "decorators.tis"
 
+include "engine-callback.tis"
+include "document/undo.tis"
+include "document/project.tis"
+
 include "entity-data-source.tis"
 include "entity-tree.tis"
 include "entity-inspector.tis"

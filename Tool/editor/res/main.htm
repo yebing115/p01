@@ -1,51 +1,121 @@
 <html>
 <head>
-    <style>
-        select {height:*;}
-        game_world {
-            behavior: game_world;
-            display: block;
-            width: *;
-            height: *;
-        }
-		widget#entity_tree {
-			size: 300px *;
-			overflow-x:hidden;
-			prototype: EntityTree;
-		}
-		widget#entity_inspector {
-			size: 300px *;
-			prototype: EntityInspector;
-		}
-		div.component section {
-			font-weight: bold;
-			color: #808080;
-		}
-		div.component > div > label {
-			float: left;
-			width: 80px;
-			text-align:right;
-			margin-right: 10px;
-		}
-		div.component > div > div {
-		
-		}
-    </style>
+  <style>
+    @import url(std-menu.css);
+    ul#menu-bar 
+    {
+      padding:0;
+      margin:0;
+      border-bottom:1px solid threedface;
+      border-left:1px solid transparent;
+    }
+    //ul#menu-bar menu menu { background:yellow; }
+    
+
+    ul#menu-bar > li 
+    {
+      margin:0 8px;
+      background-color:threedface;
+    }
+    
+    /* table menu */    
+    menu.table 
+    {
+      border-spacing:1px;
+    }
+    menu.table td[role="menu-item"]
+    { 
+      border:1px solid threedface; 
+    }
+    menu.table td[role="menu-item"]:current
+    { 
+      background-color:highlight; color:highlighttext; 
+    }
+    menu.table caption
+    {
+      padding:2px;
+      font-size:8.5pt;
+      background-color: threedlightshadow;
+      color: threedshadow;
+    }
+
+    game_world {
+      behavior: game_world;
+      display: block;
+      width: *;
+      height: *;
+    }
+    widget#entity-tree {
+      overflow-x:hidden;
+      prototype: EntityTree;
+    }
+    widget#entity-inspector {
+      prototype: EntityInspector;
+    }
+    div.component section {
+      font-weight: bold;
+      color: #808080;
+    }
+    div.component > div > label {
+      float: left;
+      width: 80px;
+      text-align:right;
+      margin-right: 10px;
+    }
+    div.component > div > div {
+    
+    }
+    
+    ul#menu-bar {
+      aspect: "MainMenu.Aspect" url(main-menu.tis);
+    }
+  </style>
 	<script type="text/tiscript" src="main.tis" />
 	<script type="text/tiscript">
 		function self.ready() {
-			var tree = $(widget#entity_tree);
+			var tree = $(widget#entity-tree);
 			tree.data_source = new EntityDataSource();
 		}
 	</script>
 </head>
 <body>
-    <frameset cols="120px,*">
-		<widget #entity_tree />
-        <splitter/>
-        <game_world/>
-        <splitter />
-		<widget #entity_inspector />
-    </frameset>
+	<ul id="menu-bar">
+		<li>
+			<caption>File</caption>
+			<menu>
+				<li id="open-project">Open Project ...<span.accesskey>Ctrl+SHIFT+O</span></li>
+				<li id="close-project">Close Project <span.accesskey>Ctrl+SHIFT+F4</span></li>
+				<hr>
+				<li id="open-level">Open Level...<span.accesskey>Ctrl+O</span></li>
+				<li id="close-level">Close Level<span.accesskey>Ctrl+F4</span></li>
+				<li id="save-level">Save Level <span.accesskey>Ctrl+S</span></li>
+				<li id="save-level-as">Save Level as ...<span.accesskey>Ctrl+Shift+S</span></li>
+			</menu>
+		</li>
+		<li>
+			<caption>Edit</caption>
+			<menu>
+				<li id="edit-undo">Undo<span.accesskey>Ctrl+Z</span></li>
+				<li id="edit-redo">Redo<span.accesskey>Ctrl+Y</span></li>
+				<hr>
+				<li id="edit-copy">Copy<span.accesskey>Ctrl+C</span></li>
+				<li id="edit-cut">Cut<span.accesskey>Ctrl+X</span></li>
+				<li id="edit-paste">Paste<span.accesskey>Ctrl+V</span></li>
+			</menu>
+		</li>
+		<li>
+			<caption>Help</caption>
+			<menu>
+				<li id="help-about">About ...<span.accesskey>Ctrl+F1</span></li>
+			</menu>
+		</li>
+	</ul>
+  <frameset cols="120px,*,300px">
+    <widget #entity-tree />
+    <splitter/>
+    <game_world/>
+    <splitter />
+    <widget #entity-inspector />
+  </frameset>
 </body>
 </html>

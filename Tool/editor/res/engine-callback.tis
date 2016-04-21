@@ -1,0 +1,14 @@
+namespace EngineCallback {
+  function OnEntityCreate(entity_data) {
+    var lvl = Project.Instance()._current_level;
+    lvl._entity_data_source.AddEntity(entity_data);
+  }
+  function OnEntityDestroy(entity_id) {
+  }
+  function OnComponentCreate(entity_id, comp_data) {
+    var lvl = Project.Instance()._current_level;
+    lvl._entity_data_source.AddComponent(entity_id, comp_data);
+  }
+  function OnComponentDestroy(entity_id, comp_type_name) {
+  }
+}

@@ -22,6 +22,7 @@ public:
   HINSTANCE get_resource_instance() const { return GetModuleHandle(NULL); }
 
   // Script interfaces
+  sciter::value SetRootDir(sciter::value dir_value);
   bool LoadWorld(sciter::value filename);
   bool SaveWorld(sciter::value filename);
   sciter::value GetEntityList();
@@ -37,6 +38,7 @@ public:
   void OnComponentChange(EntityHandle eh, ComponentType type);
 
   BEGIN_FUNCTION_MAP
+    FUNCTION_1("c3_set_root_dir", SetRootDir)
     FUNCTION_1("c3_load_world", LoadWorld)
     FUNCTION_1("c3_save_world", SaveWorld)
     FUNCTION_0("c3_get_entity_list", GetEntityList)

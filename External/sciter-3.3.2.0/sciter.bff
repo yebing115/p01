@@ -2,6 +2,7 @@
 //------------------------------------------------------------------------------
 .SciterBasePath			= '../External/Sciter-3.3.2.0'
 .Sciter_Windows_MSVC	= [	.SciterIncludePaths		= ' /I"$SciterBasePath$/include"'
+							.SciterCompilerOptions	= ' /D"SCITER_SUPPRESS_SCRIPT_ERROR_THROW"'
 						]
 
 {

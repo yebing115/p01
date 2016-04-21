@@ -1,0 +1,35 @@
+namespace MainMenu {
+  function Aspect() {
+    @click : evt {
+      var proj_file;
+      switch (evt.target.id) {
+      case "open-project":
+        MainMenu.OpenProject();
+        break;
+      case "close-project":
+        MainMenu.CloseProject();
+        break;
+      case "open-level":
+        MainMenu.OpenLevel();
+        break;
+      case "close-level":
+        MainMenu.CloseLevel();
+        break;
+      }
+    }
+  }
+  function OpenProject() {
+    var proj_file = view.selectFile(#open, "Project file (*.prj)|*.prj");
+    if (proj_file) Project.Instance().OpenProject(proj_file);
+  }
+  function CloseProject() {
+    Project.Instance().CloseProject();
+  }
+  function OpenLevel() {
+    var lvl_file = view.selectFile(#open, "Level file (*.lvl)|*.lvl");
+    if (lvl_file) Project.Instance().OpenLevel(lvl_file);
+  }
+  function CloseLevel() {
+    Project.Instance().CloseLevel();
+  }
+}

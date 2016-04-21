@@ -29,6 +29,10 @@ struct Camera {
   vec GetRight() const { return _frustum.WorldRight(); }
   float GetNear() const { return _frustum.NearPlaneDistance(); }
   float GetFar() const { return _frustum.FarPlaneDistance(); }
+  float GetVerticalFov() const { return _frustum.VerticalFov(); }
+  float GetHorizontalFov() const { return _frustum.HorizontalFov(); }
+  float2 GetFov() const { return float2(_frustum.HorizontalFov(), _frustum.VerticalFov()); }
+  float GetAspectRatio() const { return _frustum.AspectRatio(); }
   void Pan(const float2& d) { Pan(d.x, d.y); }
   void Pan(float dx, float dy);
   void Zoom(float ratio);

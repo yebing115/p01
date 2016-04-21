@@ -12,7 +12,9 @@ class Entity {
     this._parent_id = data.parent;
     this._children = [];
     this._components = [];
-    
+    this.AddComponent(data);
+  }
+  function AddComponent(data) {
     if (data.transform) {
       var component = data.transform;
       component.type = "transform";
@@ -33,6 +35,7 @@ class Entity {
       component.type = "light";
       this._components.push(component);
     }
+
   }
   function EachComponent(obj, cb) {
     for (var c in this._components) cb.call(obj, c);
